@@ -12,10 +12,10 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# core lib
+# vm2 core lib
 source "$lib_dir/gh_core.sh"
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri err_missing_argument
@@ -27,10 +27,10 @@ declare -xri err_tool_error
 declare -xri err_logic_error
 declare -xri err_io_failure
 
-# core lib constants
+# vm2 core lib constants
 declare -xr check_em
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this script's components

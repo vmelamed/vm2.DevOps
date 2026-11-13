@@ -83,13 +83,13 @@ function parse_arguments()
                 ;;
         esac
     done
-    
+
     return "$success"
 }
 
 function verify_environment()
 {
-    is_git_present                                                              || true
+    is_git_present                                                              || return "$success"
 
     # Verify we're on main branch
     current_branch=$(git branch --show-current)
@@ -111,8 +111,9 @@ function resolve_arguments()
 
     # Verify we have a valid and existing SHA
     _rc=$success
-    is_valid_commit_sha "$commit_sha"                                           || with_error _rc "$err_argument_value" "The '--commit-sha' is mandatory and  must be a valid 7 to 40 hexadecimal digits string"
-    (( _rc != success )) || git cat-file -e "$commit_sha^{commit}" 2>"$_ignore" || error "Commit '$commit_sha' does not exist" -ec "$err_argument_value"
+    is_valid_commit_sha "$commit_sha"                                           || with_error _rc "$err_argument_value" "The '--commit-sha' is mandatory and must be a valid 4 to 64 hexadecimal digits string"
+    (( _rc != success )) || { is_git_present && git cat-file -e "$commit_sha^{commit}" 2>"$_ignore"; } \
+                                                                                || error "Commit '$commit_sha' does not exist" -ec "$err_argument_value"
 
     # freeze the arguments
     readonly new_branch

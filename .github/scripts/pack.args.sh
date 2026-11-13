@@ -7,6 +7,7 @@ declare -xr script_name
 
 # reference error codes defined in the core library
 declare -xri success
+declare -xri err_argument_value
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
@@ -95,7 +96,7 @@ function parse_arguments()
 function verify_environment
 {
     is_dotnet_present                                                           || true
-    
+
     return "$success"
 }
 
@@ -105,7 +106,7 @@ function resolve_arguments()
     # validate the values of the variables common for many vm2.DevOps scripts,
     # usually set from CLI arguments, environment variables, or defaults
     is_safe_existing_file "$package_project"                                    || true
-    [[ $package_project == *.csproj ]]                                          || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+    [[ $package_project == *.csproj ]]                                          || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
     is_safe_boolean "$build"                                                    || true
     is_safe_reason "$reason"                                                    || true
     sanitize_common_dotnet_args "$package_project"

@@ -56,6 +56,11 @@ _install_fake_gh() {
     mkdir -p "$_dir"
     cat > "$_dir/gh" <<'EOF'
 #!/usr/bin/env bash
+# 'gh version' / 'gh --version' (is_gh_present): answered first, in gh's real two-line format (Debian's first line), and
+# before the call log, so it never shifts the logged calls. $gh_min_version is inherited from the script under test (core.sh
+# exports it).
+[[ ${1:-} != version && ${1:-} != --version ]] ||
+    { printf 'gh version %s (2026-01-01 Debian %s-3)\nhttps://github.com/cli/cli/releases/tag/v%s\n' "$gh_min_version" "$gh_min_version" "$gh_min_version"; exit 0; }
 _all="$*"
 echo "$_all" >> "$GH_CALL_LOG"
 case "$_all" in
@@ -149,6 +154,7 @@ _run_rebuild_history() {
     assert_output --partial "repeat must be a positive integer"
 }
 
+# bats test_tags=time:7
 @test "rebuild-bench-history: fails cleanly when the gh CLI is not on PATH" {
     local _bin
     _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR" gh)"
@@ -156,7 +162,7 @@ _run_rebuild_history() {
         cd '$BATS_TEST_TMPDIR' && bash '$_rebuild_history' --quiet --owner acme
     "
     assert_failure
-    assert_output --partial "The GitHub CLI 'gh' was not found on PATH"
+    assert_output --partial "'gh' is not installed."
 }
 
 # --- argument handling ---------------------------------------------------------------------

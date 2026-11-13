@@ -34,8 +34,25 @@ declare -gxi failure
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 
+declare BATS_TEST_TMPDIR
+
+# A fake 'gh' first on PATH answers verify_environment()'s version and auth queries, so the tests never depend on the
+# machine's gh login; $FAKE_UNAUTHENTICATED fails 'gh auth status'.
+setup() {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+[[ ${1:-} != version && ${1:-} != --version ]] || { echo "gh version $gh_min_version"; exit 0; }
+[[ "$*" == "auth status" ]] && { [[ -z ${FAKE_UNAUTHENTICATED:-} ]]; exit; }
+exit 99
+EOF
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
+}
+
+# Runs the snippet $1 with the optional environment assignments $2 (several, space-separated).
 _sr() {
-    env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
+    # shellcheck disable=SC2086 # $2 holds zero or more assignments: word splitting is intended
+    env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" ${2:-} bash -c "
         source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         source '$_src_dir/setup-repo.args.sh'
         source '$_src_dir/setup-repo.usage.sh'
@@ -159,4 +176,89 @@ _sr() {
     run _sr "get_arguments --OWNER acme; declare -p repo_owner"
     assert_success
     assert_output --partial 'repo_owner="acme"'
+}
+
+# =====================================================================================
+# verify_environment()
+# =====================================================================================
+
+@test "verify_environment: succeeds silently when git, an authenticated gh, jq, and yq are present" {
+    run _sr "verify_environment; echo \"rc=\$?\"; has_errors && echo HAS_ERRORS || echo NO_ERRORS"
+    assert_success
+    assert_output "rc=0
+NO_ERRORS"
+}
+
+@test "verify_environment: reports every missing tool together, and returns instead of exiting" {
+    run _sr "is_tool_present() { [[ \$1 != git && \$1 != gh && \$1 != jq && \$1 != yq ]]; }
+             verify_environment
+             echo REACHED
+             echo \"errors=\$(get_errors)\""
+    assert_success
+    assert_output --partial "'git' is not installed"
+    assert_output --partial "'gh' is not installed"
+    assert_output --partial "'jq' is not installed"
+    assert_output --partial "'yq' is not installed"
+    assert_output --partial "REACHED"
+    assert_output --partial "errors=4"
+}
+
+@test "verify_environment: reports an unauthenticated gh" {
+    run _sr "verify_environment
+             has_errors && echo HAS_ERRORS || echo NO_ERRORS" "FAKE_UNAUTHENTICATED=1"
+    assert_success
+    assert_output --partial "'gh' is not authenticated"
+    assert_output --partial "HAS_ERRORS"
+}
+
+# =====================================================================================
+# resolve_arguments()
+# =====================================================================================
+
+@test "resolve_arguments: requires the vm2 repositories on 'main' by default" {
+    run _sr "resolve_arguments
+             declare -p branches"
+    assert_success
+    assert_output --partial 'branches="main"'
+}
+
+@test "resolve_arguments: --current-branch lifts the 'main' requirement" {
+    run _sr "current_branch=true
+             resolve_arguments
+             declare -p branches"
+    assert_success
+    assert_output --partial 'branches=""'
+}
+
+@test "resolve_arguments: freezes the switches" {
+    run _sr "resolve_arguments
+             declare -p current_branch branches interactive_vars interactive_secrets purge_vars purge_secrets configure_local audit"
+    assert_success
+    assert_output --partial "declare -rx current_branch="
+    assert_output --partial "declare -rx branches="
+    assert_output --partial "declare -rx interactive_vars="
+    assert_output --partial "declare -rx interactive_secrets="
+    assert_output --partial "declare -rx purge_vars="
+    assert_output --partial "declare -rx purge_secrets="
+    assert_output --partial "declare -rx configure_local="
+    assert_output --partial "declare -rx audit="
+}
+
+# =====================================================================================
+# get_arguments(): the pipeline end to end
+# =====================================================================================
+
+@test "get_arguments: -h prints the usage and exits 0, even with an unauthenticated gh" {
+    run _sr "get_arguments -h; echo AFTER" "FAKE_UNAUTHENTICATED=1"
+    assert_success
+    assert_output --partial "Usage:"
+    refute_output --partial "AFTER"
+}
+
+@test "get_arguments: an unauthenticated gh ends the run with the error and the usage" {
+    run _sr "get_arguments myrepo; echo AFTER" "FAKE_UNAUTHENTICATED=1"
+    assert_failure
+    assert_output --partial "'gh' is not authenticated"
+    assert_output --partial "Usage:"
+    refute_output --partial "AFTER"
 }

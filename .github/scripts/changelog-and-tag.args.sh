@@ -6,7 +6,7 @@
 declare -xr script_name
 declare -xr lib_dir
 
-# core lib errors
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
@@ -15,13 +15,13 @@ declare -xri err_logic_error
 declare -xri err_argument_value
 declare -xri err_tool_not_found
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 
-# core lib defaults
+# vm2 core lib defaults
 declare -xr default_minver_tag_prefix
 
-# core lib variables
+# vm2 core lib variables
 
 # this script's arguments
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
@@ -107,9 +107,8 @@ function resolve_arguments()
         error "Tag '$tag' is not a valid semver release or prerelease tag." -ec "$err_argument_value"
     fi
 
-    is_safe_reason "$reason" || true
-
-    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "GITHUB_REPOSITORY and/or RELEASE_PAT are not set." -ec "$err_argument_value"
+    is_safe_boolean "$needs_empty_commit"                                       || true
+    is_safe_reason "$reason"                                                    || true
 
     readonly tag
     readonly reason

@@ -22,9 +22,10 @@ load '../helpers/setup'
 declare -gx lib_dir
 
 declare -gxi failure
+declare -gxi negative
 declare -gxi err_invalid_arguments
 declare -gxi err_invalid_nameref
-declare -gxi err_invalid_path
+declare -gxi err_argument_value
 
 # --- is_variable_name ---------------------------------------------------------------------------
 
@@ -442,98 +443,77 @@ declare -gxi err_invalid_path
     assert_failure "$failure"
 }
 
-# --- is_valid_dotnet_version -------------------------------------------------------------------
+# --- is_valid_nuget_server ---------------------------------------------------------------------
 
-@test "is_valid_dotnet_version: accepts a well-formed SDK version, rejects garbage" {
-    run is_valid_dotnet_version "10.0.100"
+@test "is_valid_nuget_server: accepts nuget, github, and https URLs; rejects garbage" {
+    run is_valid_nuget_server "nuget"
     assert_success
-    run is_valid_dotnet_version "garbage"
-    assert_failure "$failure"
-}
-
-@test "is_valid_dotnet_version: bug-exits with the wrong argument count" {
-    run is_valid_dotnet_version
-    assert_failure "$err_invalid_arguments"
-}
-
-# --- is_tool_present -----------------------------------------------------------------------------
-
-@test "is_tool_present: true for a tool on PATH, false for one that isn't" {
-    run is_tool_present bash
+    run is_valid_nuget_server "github"
     assert_success
-    run is_tool_present definitely-not-a-real-tool-xyz
-    assert_failure "$failure"
+    run is_valid_nuget_server "https://example.com/index.json"
+    assert_success
+    run is_valid_nuget_server "ftp://example.com"
+    assert_failure
 }
 
-@test "is_tool_present: bug-exits with the wrong argument count" {
-    run is_tool_present
-    assert_failure "$err_invalid_arguments"
+# --- configuration / framework / runtime validation -----------------------------------------------
+
+@test "is_valid_configuration / is_safe_configuration: accepts identifiers, warns on unknown ones" {
+    run is_valid_configuration "Release"
+    assert_success
+    run is_safe_configuration "Release"
+    assert_success
+    run is_safe_configuration "Custom"
+    assert_success
+    run is_safe_configuration "not valid!"
+    assert_failure "$negative"
 }
 
-# Calls is_tool_present with PATH replaced for the duration of the call only (a local PATH also resets bash's command
-# hash table, so no lookup cached from the outer PATH can leak in).
-_is_tool_present_with_path() {
-    local PATH=$1
-    is_tool_present "$2"
+@test "is_valid_framework / is_safe_framework: accepts a TFM, rejects garbage" {
+    run is_valid_framework "net10.0"
+    assert_success
+    run is_safe_framework "net10.0"
+    assert_success
+    run is_safe_framework "not-a-tfm"
+    assert_failure "$err_argument_value"
 }
 
-@test "is_tool_present: true for an executable in a directory on PATH that is not on the system default PATH" {
-    # e.g. bencher in ~/.cargo/bin, dotnet in ~/.dotnet: 'command -v -p' would miss these
-    # shellcheck disable=SC2154 # BATS_TEST_TMPDIR is set by bats for each test at run time
-    mkdir -p "$BATS_TEST_TMPDIR/bin"
-    printf '#!/usr/bin/env bash\n' > "$BATS_TEST_TMPDIR/bin/fake-tool"
-    chmod +x "$BATS_TEST_TMPDIR/bin/fake-tool"
+@test "is_valid_runtime / is_safe_runtime: accepts empty and known RIDs, rejects injection-shaped input" {
+    run is_valid_runtime ""
+    assert_success
+    run is_safe_runtime "linux-x64"
+    assert_success
+    run is_safe_runtime "linux-x64; rm -rf /"
+    assert_failure "$err_argument_value"
+}
 
-    run _is_tool_present_with_path "$BATS_TEST_TMPDIR/bin:$PATH" fake-tool
+# --- percentage validation ---------------------------------------------------------------------
+
+@test "is_valid_percentage: accepts 0-100, rejects out of range and non-integers" {
+    run is_valid_percentage 0
+    assert_success
+    run is_valid_percentage 100
+    assert_success
+    run is_valid_percentage 101
+    assert_failure
+    run is_valid_percentage "abc"
+    assert_failure
+}
+
+# --- MinVer tag prefix / prerelease id validation -----------------------------------------------
+
+@test "is_valid_minverTagPrefix / is_safe_minverTagPrefix: accepts a plain tag prefix" {
+    run is_valid_minverTagPrefix "v"
+    assert_success
+    run is_safe_minverTagPrefix "v"
     assert_success
 }
 
-@test "is_tool_present: false for a standard tool (in /usr/bin) when it is not on PATH" {
-    # Regression: 'command -v -p' searched the system default PATH, so it reported a tool the script could not run
-    mkdir -p "$BATS_TEST_TMPDIR/empty"
-
-    run _is_tool_present_with_path "$BATS_TEST_TMPDIR/empty" ls
-    assert_failure "$failure"
-}
-
-@test "is_tool_present: true for a shell function (the way some test doubles fake a tool)" {
-    fake-function-tool() { :; }
-
-    run is_tool_present fake-function-tool
+@test "is_valid_minverPrereleaseId / is_safe_minverPrereleaseId: accepts a prerelease identifier" {
+    run is_valid_minverPrereleaseId "preview.0"
+    assert_success
+    run is_safe_minverPrereleaseId "preview.0"
     assert_success
 }
 
-# --- is_valid_json / is_valid_json_file -----------------------------------------------------------
 
-@test "is_valid_json: accepts a well-formed JSON string, rejects garbage" {
-    run is_valid_json '{"a":1}'
-    assert_success
-    run is_valid_json 'not json'
-    assert_failure "$failure"
-}
-
-@test "is_valid_json: bug-exits with the wrong argument count" {
-    run is_valid_json
-    assert_failure "$err_invalid_arguments"
-}
-
-@test "is_valid_json_file: accepts a file with well-formed JSON, rejects one with malformed JSON" {
-    echo '{"a":1}' > "$BATS_TEST_TMPDIR/valid.json"
-    echo 'not json' > "$BATS_TEST_TMPDIR/invalid.json"
-    run is_valid_json_file "$BATS_TEST_TMPDIR/valid.json"
-    assert_success
-    run is_valid_json_file "$BATS_TEST_TMPDIR/invalid.json"
-    assert_failure "$failure"
-}
-
-@test "is_valid_json_file: fails for a non-existent file" {
-    run is_valid_json_file "$BATS_TEST_TMPDIR/does-not-exist.json"
-    assert_failure "$failure"
-}
-
-@test "is_valid_json_file: bug-exits on the wrong argument count or an invalid path" {
-    run is_valid_json_file
-    assert_failure "$err_invalid_arguments"
-    run is_valid_json_file ""
-    assert_failure "$err_invalid_path"
-}

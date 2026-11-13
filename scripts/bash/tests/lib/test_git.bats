@@ -105,6 +105,67 @@ setup() {
     assert_failure "$err_invalid_arguments"
 }
 
+# --- is_valid_tag_name -----------------------------------------------------------------------
+
+@test "is_valid_tag_name: true for ordinary tag names, including hierarchical ones" {
+    local _tag
+    for _tag in v1.2.3 v1.2.3-preview.4 v1.2.3+build.5 release/1.0 a 'ü'; do
+        run is_valid_tag_name "$_tag"
+        assert_success
+    done
+}
+
+@test "is_valid_tag_name: false (not a bug) for an empty name" {
+    run is_valid_tag_name ""
+    assert_failure "$failure"
+}
+
+@test "is_valid_tag_name: false for the names git's ref-format rules reject" {
+    local _tag
+    for _tag in 'bad..tag' 'a b' $'a\tb' $'a\nb' 'a~b' 'a^b' 'a:b' 'a?b' 'a*b' 'a[b' 'a\b' \
+                'a@{b' '.v1' 'v1.' 'v1.lock' 'v1/' '/v1' 'a//b'; do
+        run is_valid_tag_name "$_tag"
+        assert_failure "$failure"
+    done
+}
+
+@test "is_valid_tag_name: false for '@{-1}' -- validated as a tag, it is not expanded to the previous branch" {
+    run is_valid_tag_name '@{-1}'
+    assert_failure "$failure"
+}
+
+@test "is_valid_tag_name: false for a name that starts with '-' -- 'git tag' refuses it, although 'git check-ref-format' accepts it" {
+    local _tag
+    for _tag in -v1 --delete -; do
+        run is_valid_tag_name "$_tag"
+        assert_failure "$failure"
+    done
+}
+
+@test "is_valid_tag_name: true for HEAD and @ -- 'git tag' creates them; callers must address them as 'refs/tags/<name>'" {
+    local _tag
+    for _tag in HEAD @; do
+        run is_valid_tag_name "$_tag"
+        assert_success
+    done
+}
+
+@test "is_valid_tag_name: works outside a git repository" {
+    run bash -c "cd '$BATS_TEST_TMPDIR' && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 is_valid_tag_name v1.2.3 && echo VALID
+                 is_valid_tag_name 'bad..tag' || echo INVALID"
+    assert_success
+    assert_output --partial "VALID"
+    assert_output --partial "INVALID"
+}
+
+@test "is_valid_tag_name: bug-exits with the wrong argument count" {
+    run is_valid_tag_name
+    assert_failure "$err_invalid_arguments"
+    run is_valid_tag_name v1 v2
+    assert_failure "$err_invalid_arguments"
+}
+
 # --- is_valid_commit_sha ---------------------------------------------------------------------
 
 @test "is_valid_commit_sha: true for the lengths git can accept: 4 to 64 hexadecimal digits, in either case" {

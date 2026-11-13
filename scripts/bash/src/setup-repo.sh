@@ -15,27 +15,33 @@ declare -xr lib_dir
 
 source "$lib_dir/core.sh"
 
+# vm2 core lib error codes
 declare -xri success
 declare -xri failure
-declare -xri err_tool_not_found
 declare -xri err_dir_with_ci
 declare -xri err_repo_with_no_ci
 declare -xri err_not_git_directory
 declare -xri err_logic_error
 declare -xri err_root_not_repo_name
 
-declare -x _ignore
+# vm2 core lib constants
+declare -xra vm2_repositories
 
-declare -xr vm2_devops_repo_name
-declare -xr default_vm2_repos_path
+# vm2 core lib defaults
 declare -xr default_default_branch
-
-# defaults
 declare -xr default_nuget_server
 
-# script parameters
+# vm2 core lib variables
+declare -x _ignore
+
+source "$script_dir/setup-repo.args.sh"
+source "$script_dir/setup-repo.usage.sh"
+
+# this script arguments
+get_arguments "$@"
 declare -x vm2_repos
-declare -x repo_name=''
+declare -x repo_name
+declare -x repo_path
 declare -x repo_owner
 declare -x branch
 declare -x visibility
@@ -43,27 +49,23 @@ declare -x main_protection_rs_name
 declare -x description
 declare -x use_ssh
 declare -x use_https
-declare -x current_branch
 declare -x audit
 declare -x interactive_vars
 declare -x interactive_secrets
 declare -x purge_vars
 declare -x purge_secrets
 declare -x configure_local
-declare -x branches
 
-declare -xra vm2_repositories
+source "$script_dir/setup-repo.defaults.sh"
+source "$script_dir/setup-repo.functions.sh"
+source "$script_dir/setup-repo.audit.sh"
 
-# script variables
-declare -xi rc="$success"
+trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
-declare -xi main_protection_rs_id=0
-declare -x nuget_server=$default_nuget_server
-declare -x repo=''
-declare -x repo_url=''
-declare -x repo_id=''
-
-# repo state keys
+# this script constants
+declare -xrA default_local_git_settings
+declare -xra default_local_git_settings_order
+#   repo state keys:
 declare -xr key_root
 declare -xr key_url
 declare -xr key_schema
@@ -74,60 +76,23 @@ declare -xr key_repo
 declare -xr key_repo_id
 declare -xr key_default_branch
 
-declare -x repo_path=''
+# this script variables
+declare -xi rc="$success"
 declare -x root_name=''
 
-#===============================================================================================
-# Gather the CLI arguments:
-#===============================================================================================
-source "$script_dir/setup-repo.args.sh"
-source "$script_dir/setup-repo.usage.sh"
+declare -xi main_protection_rs_id=0
+declare -x nuget_server=$default_nuget_server
+declare -x repo=''
+declare -x repo_url=''
+declare -x repo_id=''
 
-get_arguments "$@"
-
-#===============================================================================================
-# Find and validate vm2_repos, SOT, DevOps directories:
-#===============================================================================================
-declare -xi rc="$success"
-
-resolve_vm2_repos vm2_repos "$branches" "$branches" || true
-exit_if_has_errors
-readonly vm2_repos
-
-trace "All vm2 repositories are expected to be in '$vm2_repos'"
-
-source "$script_dir/setup-repo.defaults.sh"
-source "$script_dir/setup-repo.functions.sh"
-source "$script_dir/setup-repo.audit.sh"
-
-#===============================================================================================
 # Check the integrity of the default data
-#===============================================================================================
 validate_defaults
-
-declare -xrA default_local_git_settings
-declare -xra default_local_git_settings_order
-
-declare -x _ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
-[[ -s "$_ci_yaml" ]] ||
-    error "Could not find _ci.yaml GitHub Actions reusable workflow file in $vm2_repos." -ec "$err_logic_error"
-declare -xr _ci_yaml
-
 exit_if_has_errors
 
 #===============================================================================================
 # Resolve and validate repo_path:
 #===============================================================================================
-resolve_repo_root "$vm2_repos" "$repo_path" repo_path _                         || rc=$?
-is_in "$rc" "$success" "$err_dir_with_ci"                                       || usage "Failed to resolve the path of the target repository '$repo_path'." \
-                                                                                         -ec "$rc"
-
-(( rc == err_dir_with_ci ))                                                     && warning "'$repo_path' is not a Git repository, however there is '$repo_path/.github/workflows/CI.yaml'." \
-                                                                                           "A new Git repository will be initialized in '$repo_path'."
-rc="$success"
-reset_errors
-root_name=$(basename "$repo_path")
-readonly root_name
 
 trace "Repository path: '$repo_path'"
 

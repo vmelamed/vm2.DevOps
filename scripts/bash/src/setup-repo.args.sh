@@ -6,7 +6,7 @@
 declare -xr script_name
 declare -xr lib_dir
 
-# vm2 error codes
+# vm2 core lib error codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
@@ -14,23 +14,26 @@ declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_tool_not_found
 declare -xri err_tool_unauthenticated
+declare -xri err_dir_with_ci
 
+# vm2 core lib defaults
 declare -xr default_vm2_repos_path
 declare -xr default_default_branch
-
-# external defaults
 declare -xr default_repo_owner
 declare -xr default_nuget_server
 
-# external constants
+# vm2 core lib constants
 declare -xr ci
+declare -xr vm2_devops_repo_name
+
+# vm2 core lib variables
 declare -x _ignore
 
-# script defaults
-
-# script arguments
+# this script arguments
 declare -x vm2_repos=${VM2_REPOS:-$default_vm2_repos_path}
 declare -x repo_name=''
+declare -x root_name=''
+declare -x repo_path=''
 declare -x repo_owner=${ORGANIZATION:-$default_repo_owner}
 declare -x branch=$default_default_branch
 declare -x visibility="public"
@@ -38,22 +41,20 @@ declare -x main_protection_rs_name=''
 declare -x description=''
 declare -x use_ssh=true
 declare -x use_https=false
-declare -x current_branch=false
 declare -x audit=false
 declare -x interactive_vars=false
 declare -x interactive_secrets=false
 declare -x purge_vars=false
 declare -x purge_secrets=false
 declare -x configure_local=true
-declare -x repo_path
-declare -x branches
 
-declare -x repo
+# this script variables
+declare branches='main' # vm2.DevOps and vm2.Templates must be on main (the default) or (relaxed) to the current branches
 
 #-----------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments of `setup-repo.sh`, populating the script-level variables declared
 # at the top of this file (`vm2_repos`, `repo_path`, `repo_name`, `repo_owner`, `visibility`, `branch`,
-# `main_protection_rs_name`, `description`, `use_ssh`, `use_https`, `audit`, `current_branch`, `interactive_vars`,
+# `main_protection_rs_name`, `description`, `use_ssh`, `use_https`, `audit`, `branches`, `interactive_vars`,
 # `interactive_secrets`, `purge_vars`, `purge_secrets`, `configure_local`). Common switches (`-h`, `-v`, `-q`, `-x`,
 # `-y`, etc.) are delegated to `get_common_arg` first. The first (and only) positional argument is taken as
 # `repo_path`; a second positional argument triggers a usage error. On completion, calls `usage_if_requested` (exits
@@ -136,7 +137,7 @@ function parse_arguments()
                 ;;
 
             --current-branch|-cb )
-                current_branch=true
+                branches='' # relax the mandatory branches of vm2.DevOps and vm2.Templates from 'main' to the current branches
                 ;;
 
             --interactive-vars|-iv )
@@ -172,10 +173,10 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                 usage "Unknown argument: $_option" -ec "$err_unknown_argument"
                 ;;
 
             * ) ! $_option_set                                                  || usage "Too many positional arguments (project directory or repository name): $_option" -ec "$err_too_many_arguments"
@@ -200,10 +201,25 @@ function verify_environment
 
 function resolve_arguments()
 {
-    $current_branch && branches='' || branches='main'
+    local -i _rc=$success
+                                                                                # short circuit: there is nothing we can do without vm2_repos
+    resolve_vm2_repos vm2_repos "$branches" "$branches"                         || exit_with_error "Could not resolve the vm2 repos parent folder. Please specify with --vm2-repos or define environment variable \$VM2_REPOS." -ec $?
 
-    readonly current_branch
-    readonly branches
+    [[ -s "$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml" ]]      || with_error _rc "$err_logic_error" "Could not find _ci.yaml GitHub Actions reusable workflow file in $vm2_repos."
+    resolve_repo_root "$vm2_repos" "$repo_path" repo_path _
+    rc=$?
+    is_in "$rc" "$success" "$err_dir_with_ci"                                   || with_error _rc $? "Failed to resolve the path of the target repository '$repo_path'."
+
+    root_name=$(basename "$repo_path")
+    readonly root_name
+
+    (( rc != err_dir_with_ci ))                                                 || warning "'$repo_path' is not a Git repository, however there is '$repo_path/.github/workflows/CI.yaml'." \
+                                                                                            "A new Git repository will be initialized in '$repo_path'."
+    rc="$success"
+    reset_errors
+
+    readonly vm2_repos
+
     readonly interactive_vars
     readonly interactive_secrets
     readonly purge_vars
@@ -236,7 +252,6 @@ function dump_args()
         interactive_secrets
         purge_vars
         purge_secrets
-        current_branch
         audit
 
         --header "Core State:"

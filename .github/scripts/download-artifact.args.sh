@@ -5,7 +5,7 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
@@ -16,10 +16,10 @@ declare -xri err_not_found
 declare -xri err_tool_not_found
 declare -xri err_tool_unauthenticated
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this scripts arguments
@@ -101,28 +101,25 @@ function parse_arguments()
 
 function verify_environment()
 {
-    local -i _rc=$success
-
     is_jq_present                                                               || true
     is_gh_present                                                               || true
-    
+
     return "$success";
 }
 
 function resolve_arguments()
 {
-    local -i _rc=$success
-    [[ -n "$artifact_name" ]]                                                   || with_error "$err_missing_argument" _rc "The name of the artifact to download must be specified."
+    [[ -n "$artifact_name" ]]                                                   || error "The name of the artifact to download must be specified." -ec "$err_missing_argument"
     is_safe_input "$artifact_name"                                              || true
 
     [[ -z "$artifacts" ]] || is_safe_valid_path "$artifacts"                    || true
-    [[ -n "$artifacts" ]]                                                       || with_error "$err_missing_argument" _rc "The directory to download the artifact to must be specified."
+    [[ -n "$artifacts" ]]                                                       || error "The directory to download the artifact to must be specified." -ec "$err_missing_argument"
 
     is_safe_input "$repository"                                                 || true
     is_safe_input "$workflow_id"                                                || true
     is_safe_input "$workflow_name"                                              || true
     is_safe_path "$workflow_path"                                               || true
-    [[ -z "$workflow_id" ]] || is_natural "$workflow_id"                        || with_error "$err_argument_type" _rc "The specified workflow identifier '$workflow_id' is not valid."
+    [[ -z "$workflow_id" ]] || is_natural "$workflow_id"                        || error "The specified workflow identifier '$workflow_id' is not valid." -ec "$err_argument_type"
 
     readonly artifact_name
     readonly artifacts

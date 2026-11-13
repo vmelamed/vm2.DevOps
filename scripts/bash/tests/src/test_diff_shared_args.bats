@@ -249,6 +249,7 @@ _make_vm2_repos() {
     assert_output --partial "target_roots=([0]=\"$_vm2/vm2.Target\")"
 }
 
+# bats test_tags=time:1
 @test "resolve_arguments: reports an unresolvable target and still resolves the others" {
     _make_vm2_repos
     run _ds "vm2_repos='$_vm2'

@@ -151,7 +151,7 @@ function verify_environment()
 
     is_tool_present bc                                                          || error "'bc' is not installed. Please install it first." -ec "$err_tool_not_found"
     is_tool_present bencher                                                     || error "'bencher' is not installed. Please install it first." -ec "$err_tool_not_found"
-    
+
     return "$success"
 }
 
@@ -181,7 +181,6 @@ function resolve_arguments()
     # raw CLI/env path a caller is expected to type in relative form.
     [[ -n $results_dir ]]                                                       || error "The results directory is required." -ec "$err_missing_argument"
     [[ -z $results_dir || -d $results_dir ]]                                    || error "The results directory '$results_dir' is not a directory." -ec "$err_argument_value"
-    [[ -n $testbed ]]                                                           || error "--testbed is required." -ec "$err_missing_argument"
     [[ $repository == */* ]]                                                    || error "--repository must be in 'owner/repo' form (provided '${repository:-<empty>}')." -ec "$err_argument_value"
     [[ -n $event_name ]]                                                        || error "--event-name is required." -ec "$err_missing_argument"
     [[ -n $ref_name ]]                                                          || error "--ref-name is required." -ec "$err_missing_argument"
@@ -193,6 +192,7 @@ function resolve_arguments()
     if [[ $event_name == "pull_request" ]]; then
         [[ -n $head_ref ]]                                                      || error "--head-ref is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
         [[ -n $pr_number ]]                                                     || error "--pr-number is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
+        [[ -z $pr_number ]] || is_natural "$pr_number"                          || error "The PR number must be a natural number." -ec "$err_argument_value"
         [[ -n $pr_base_sha ]]                                                   || error "--pr-base-sha is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
         [[ -n ${GH_TOKEN:-} ]]                                                  || error "The GH_TOKEN environment variable is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
     fi

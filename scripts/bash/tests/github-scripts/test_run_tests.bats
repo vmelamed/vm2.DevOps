@@ -41,6 +41,9 @@ _install_fake_dotnet() {
     mkdir -p "$_dir"
     cat > "$_dir/dotnet" <<EOF
 #!/usr/bin/env bash
+# 'dotnet --version' (is_dotnet_present): answered before the log line, so it never shifts the logged call indices.
+# \$dotnet_min_version is inherited from the script under test (core.sh exports it).
+[[ \$1 != --version ]] || { echo "\${FAKE_DOTNET_VERSION:-\$dotnet_min_version}"; exit 0; }
 echo "\$*" >> "\$DOTNET_CALL_LOG"
 case "\$1" in
     nuget)   exit "\${FAKE_DOTNET_NUGET_EXIT:-0}" ;;

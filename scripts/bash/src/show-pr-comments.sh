@@ -14,7 +14,7 @@ declare -xr lib_dir
 
 source "$lib_dir/core.sh"
 
-# core constants
+# vm2 core lib constants
 declare -xri success
 declare -xri err_not_found
 declare -xri err_tool_error

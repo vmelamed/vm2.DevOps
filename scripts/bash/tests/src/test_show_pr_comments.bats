@@ -28,8 +28,16 @@ _install_fake_gh() {
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     cat > "$BATS_TEST_TMPDIR/bin/gh" <<'EOF'
 #!/usr/bin/env bash
+# 'gh version' / 'gh --version' (is_gh_present): answered first, in gh's real two-line format (Debian's first line), and
+# before the call log, so it never shifts the logged calls. $gh_min_version is inherited from the script under test (core.sh
+# exports it).
+[[ ${1:-} != version && ${1:-} != --version ]] ||
+    { printf 'gh version %s (2026-01-01 Debian %s-3)\nhttps://github.com/cli/cli/releases/tag/v%s\n' "$gh_min_version" "$gh_min_version" "$gh_min_version"; exit 0; }
 echo "$*" >> "$FAKE_GH_DIR/calls.log"
 case "$1 $2" in
+    "auth status" )                                           # is_gh_present (verify_environment): always authenticated
+        exit 0
+        ;;
     "repo view" )
         [[ -z ${FAKE_NO_REPO:-} ]] || exit 1
         echo "${FAKE_REPO:-acme/repo}"
@@ -215,6 +223,7 @@ EOF
     assert_line "Quote this variable."                                     # the inline comments still come
 }
 
+# bats test_tags=time:2
 @test "show-pr-comments: --watch does not count a pending review of the head commit" {
     # regression (Copilot, PR #58): a draft carries the head commit's id and ended the wait before the review was submitted
     _install_fake_gh
@@ -226,6 +235,7 @@ EOF
     assert_output --partial "within 2 seconds"
 }
 
+# bats test_tags=time:2
 @test "show-pr-comments: --watch never sleeps past the timeout, even with a longer interval" {
     # regression (Copilot, PR #58): '--timeout 2' with a 30-second interval slept the full 30 seconds
     _install_fake_gh
@@ -248,6 +258,7 @@ EOF
 
 # --- --watch ----------------------------------------------------------------------------------
 
+# bats test_tags=time:1
 @test "show-pr-comments: --watch waits until the head commit has a review, then prints it" {
     _install_fake_gh
     cat > "$BATS_TEST_TMPDIR/reviews.json" <<'EOF'
@@ -266,6 +277,7 @@ EOF
     assert_line "A review of the new commit."
 }
 
+# bats test_tags=time:2
 @test "show-pr-comments: --watch fails with err_not_found when no review of the head commit arrives in time" {
     _install_fake_gh
     cat > "$BATS_TEST_TMPDIR/reviews.json" <<'EOF'

@@ -6,7 +6,7 @@
 declare -xr script_name
 declare -xr lib_dir
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
@@ -15,14 +15,14 @@ declare -xri err_logic_error
 declare -xri err_tool_error
 declare -xri err_tool_not_found
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 
-# core lib defaults
+# vm2 core lib defaults
 declare -xr default_minver_tag_prefix
 declare -xr default_minver_prerelease_id
 
-# core lib variables
+# vm2 core lib variables
 
 # this script's arguments
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
@@ -73,7 +73,7 @@ function parse_arguments()
                 ;;
         esac
     done
-    
+
     return "$success"
 }
 

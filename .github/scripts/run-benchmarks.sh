@@ -13,18 +13,18 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# core lib
+# vm2 core lib
 source "$lib_dir/gh_core.sh"
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_tool_error
 declare -xri err_io_failure
 
-# core lib constants
+# vm2 core lib constants
 declare -xr check_em
 
-# core lib variables - dotnet
+# vm2 core lib variables - dotnet
 declare -x artifacts
 
 # this script's components

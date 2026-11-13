@@ -6,7 +6,7 @@
 declare -xr script_name
 declare -xr lib_dir
 
-# core constants
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
@@ -17,6 +17,7 @@ declare -xri err_tool_not_found
 declare -xri err_logic_error
 declare -xri err_tool_unauthenticated
 
+# vm2 core lib constants
 declare -xr ci
 declare -x _ignore
 
@@ -114,13 +115,12 @@ function verify_environment()
 #-----------------------------------------------------------------------------------------------
 function resolve_arguments()
 {
-    local -i _rc=$success
     [[ -z $pr_number ]] || is_natural "$pr_number"                              || error "The pull request number must be a positive integer (provided '$pr_number')." -ec "$err_argument_value"
     [[ -z $repo || $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]                || error "The repository must be given as 'owner/repo' (provided '$repo')." -ec "$err_argument_value"
     [[ -z $repo || -n $pr_number ]]                                             || error "With '--repo', the pull request number is required: the current branch belongs to the current directory's repository." -ec "$err_missing_argument"
     is_natural "$interval"                                                      || error "The interval must be a positive number of seconds (provided '$interval')." -ec "$err_argument_value"
     is_natural "$timeout"                                                       || error "The timeout must be a positive number of seconds (provided '$timeout')." -ec "$err_argument_value"
-    exit_if_has_errors
+    exit_if_has_errors # circuit breaker: resolving the values below needs valid arguments above
 
     # resolve what was omitted: the current directory's repository, the current branch's pull request
     [[ -n $repo ]] || repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") \

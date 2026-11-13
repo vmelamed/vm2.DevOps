@@ -24,7 +24,7 @@ declare -xr script_dir
 declare -xr lib_dir
 declare -x _ignore
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 
@@ -51,7 +51,7 @@ declare -xri err_unknown
 declare -xri err_unexpected_error
 declare -xri err_repo_not_in_vm2_repos
 
-# vm2 core constants
+# vm2 core lib constants
 declare -xr default_vm2_repos_path
 declare -xr default_sot
 declare -xr vm2_devops_repo_name
@@ -83,21 +83,20 @@ declare __devops_parent=''
 function get_devops_parent()
 {
     if [[ -z $__devops_parent ]]; then
-        local _r
+        local _root
         local -i _rc=$success
 
         # shellcheck disable=SC2015
-        root_working_tree "$lib_dir" _r &&
-        __devops_parent=$(dirname "$_r" 2> "$_ignore")                          || with_error _rc "$err_logic_error" \
-                                                                                                "Failed to resolve the parent directory of the vm2.DevOps repo from the script directory '$lib_dir'." \
-                                                                                                "Please ensure that the script is located in '$VM2_REPOS/vm2.DevOps/scripts/bash/lib' and" \
-                                                                                                "that the repository is not in a detached HEAD state."
+        root_working_tree "$lib_dir" _root &&
+        __devops_parent=$(dirname "$_root" 2> "$_ignore")                       || with_error _rc "$err_logic_error" "Failed to resolve the parent directory of the vm2.DevOps repo from the script directory '$lib_dir'." \
+                                                                                                                     "Please ensure that the script is located in '$VM2_REPOS/vm2.DevOps/scripts/bash/lib' and" \
+                                                                                                                     "that the repository is not in a detached HEAD state."
         (( _rc == success ))                                                    || return "$_rc"
 
         readonly __devops_parent
     fi
 
-    echo "$__devops_parent"
+    printf "%s\n" "$__devops_parent"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -151,16 +150,16 @@ function __validate_repo_root()
     [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the repository name or path, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
     [[ ! -v 2 || -d $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the vm2 repositories parent, to be a path to a directory resolved by 'resolve_vm2_repos()' (provided '${2-<missing>}')." -ec "$err_not_directory"
     [[ ! -v 3 || -z $3 ]] || is_valid_branch_name "$3"                          || bug "${FUNCNAME[0]}() requires optional argument 3 to be a valid Git branch name (provided '${3-<missing>}')." -ec "$err_invalid_branch"
-    [[ ! -v 4 ]]          || is_boolean "$4"                                    || bug "${FUNCNAME[0]}() requires optional argument 4 to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
-    exit_if_has_bugs
+    [[ ! -v 4 ]] || is_boolean "$4"                                             || bug "${FUNCNAME[0]}() requires optional argument 4 to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
+                                                                                exit_if_has_bugs
 
     # Since this is an internal function, it is expected to be called only from within this script and not directly by the user,
     # so all bad inputs should've been already validated by the caller (from this script), therefore are considered bugs
 
     local _repo=$1
     local _vm2_repos=$2
-    local _branch="${3:-}"
-    local _should_fetch="${4:-true}"
+    local _branch=${3:-}
+    local _should_fetch=${4:-true}
     local _path # the full repo path
     local -i _rc=$success
 
@@ -169,42 +168,28 @@ function __validate_repo_root()
     # 1) the specified directory exists
     #   try to resolve the repository path from the parameter alone
     #   i.e., the current working directory or the absolute path provided as the first argument
-    _path=$(realpath -e "$_repo" 2> "$_ignore") ||
     #   otherwise try to resolve the repository path relative to $_vm2_repos
-    _path=$(realpath -e "$_vm2_repos/${_repo#/}" 2> "$_ignore")                 || { with_error _rc "$err_not_found" "Could not find the path '$_repo' neither in the current working directory, nor in '$_vm2_repos'."
-                                                                                     return "$_rc"
-                                                                                }
+    _path=$(realpath -e "$_repo" 2> "$_ignore") || _path=$(realpath -e "$_vm2_repos/${_repo#/}" 2> "$_ignore") \
+                                                                                || with_error _rc "$err_not_found" "Could not find the path '$_repo' neither in the current working directory, nor in '$_vm2_repos'."
+    (( _rc != success )) || trace "Resolved the path of the repository '$_repo' as '$_path' from the _repo parameter directly, or from vm2_repos/_repo"
 
-    trace "Resolved the path of the repository '$_repo' as '$_path' from the _repo parameter directly, or from vm2_repos/_repo"
-
-    # 2) it is a root of the working directory of the git repository
+    # 2) it is a root of the Git repository's working directory
     local _r
 
-    root_working_tree "$_path" _r 2> "$_ignore"                                 || { with_error _rc "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' path is not a git repository." -ec $?
-                                                                                     return "$_rc"
-                                                                                }
-
-    [[ "$_path" == "$_r" ]]                                                     || { with_error _rc "$err_not_git_root" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree."
-                                                                                     return "$_rc"
-                                                                                }
+    (( _rc != success )) || root_working_tree "$_path" _r 2> "$_ignore"         || with_error _rc "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' path is not a git repository." \
+                                                                                                  -ec $?
+    (( _rc != success )) || [[ "$_path" == "$_r" ]]                             || with_error _rc "$err_not_git_root" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree."
 
     # 3) it has GitHub Actions workflows in the .github/workflows directory
-    [[ -d "$_path/.github/workflows" ]] || {
-        error "The '${_repo-<missing>}' repository does not have GitHub Actions workflows in '${_path-<missing>}/.github/workflows'." -ec "$err_repo_with_no_ci"
-        return "$err_repo_with_no_ci"
-    }
+    (( _rc != success )) || [[ -d "$_path/.github/workflows" ]]                 || with_error _rc "$err_repo_with_no_ci" "The '${_repo-<missing>}' repository does not have GitHub Actions workflows in '${_path-<missing>}/.github/workflows'."
 
     # 4) it is on the specified branch (or the currently checked out branch if not specified)
-    if [[ -z "$_branch" ]]; then
-        _branch=$(git -C "$_path" branch --show-current 2>"$_ignore")
-    else
-        [[ "$_branch" == $(git -C "$_path" branch --show-current 2>"$_ignore") ]] || {
-            error "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not on the branch '${_branch-<missing>}'." -ec "$err_invalid_branch"
-            return "$err_invalid_branch"
-        }
-    fi
+    (( _rc != success )) || [[ -z "${_branch:-}" || "$_branch" == $(git -C "$_path" branch --show-current 2>"$_ignore") ]] \
+                                                                                || with_error _rc "$err_invalid_branch" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not on the branch '${_branch-<missing>}'."
 
     # 5) it is at or ahead of the latest stable tag (forcing fetch) of the specified branch.
+    (( _rc == success )) || return "$_rc"
+
     is_on_or_after_latest_stable_tag "$_path" "$_should_fetch" &&
         return "$success" ||
         return "$err_behind_latest_stable_tag"
@@ -262,32 +247,22 @@ declare -a vm2_repos_instructions=(
 # shellcheck disable=SC2120
 function resolve_vm2_repos()
 {
-    (( $# >= 1 && $# <= 3 ))                   || bug "${FUNCNAME[0]}() takes 1 to 3arguments ($# provided):" \
-                                                      "  - name of a variable to store the vm2_repos directory" \
-                                                      "  - the branch name for the vm2.DevOps repository (optional, default: the current branch)." \
-                                                      "  - the branch name for the vm2.Templates repository (optional, default: the current branch)." \
-                                                      -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"           || bug "${FUNCNAME[0]}() requires argument 1 to be a variable name to store the vm2_repos directory (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+    (( $# >= 1 && $# <= 3 ))                                                    || bug "${FUNCNAME[0]}() takes 1 to 3arguments ($# provided):" \
+                                                                                       "  - name of a variable to store the vm2_repos directory" \
+                                                                                       "  - the branch name for the vm2.DevOps repository (optional, default: the current branch)." \
+                                                                                       "  - the branch name for the vm2.Templates repository (optional, default: the current branch)." \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be a variable name to store the vm2_repos directory (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+                                                                                exit_if_has_bugs
 
-    local -n _vm2_repos="$1"
-    local _repos=$_vm2_repos
-
+    local -n __vm2_repos="$1"
+    local _repos=$__vm2_repos
     local -i _rc="$success"
 
-    [[ -z "$_repos" || -d "$_repos" ]]         || {
-        _rc=$err_not_directory
-        error "${FUNCNAME[0]}() requires argument 1, if not empty, to hold an existing directory (provided '${_repos-<missing>}')." -ec "$_rc"
-    }
-    [[ -z ${2:-} ]] || validate_branch_name "$2" || {
-        _rc=$err_invalid_branch
-        error "${FUNCNAME[0]}() requires argument 2, if provided, to be a valid branch name (provided '${2-<missing>}')." -ec "$_rc"
-    }
-    [[ -z ${3:-} ]] || validate_branch_name "$3" || {
-        _rc=$err_invalid_branch
-        error "${FUNCNAME[0]}() requires argument 3, if provided, to be a valid branch name (provided '${3-<missing>}')." -ec "$_rc"
-    }
-    (( _rc == success ))    || return "$_rc"
+    [[ -z "$_repos" || -d "$_repos" ]]                                          || with_error _rc "$err_not_directory"  "${FUNCNAME[0]}() requires argument 1, if not empty, to hold an existing directory (provided '${_repos-<missing>}')."
+    [[ -z ${2:-} ]] || validate_branch_name "$2"                                || with_error _rc "$err_invalid_branch" "${FUNCNAME[0]}() requires argument 2, if provided, to be a valid branch name (provided '${2-<missing>}')."
+    [[ -z ${3:-} ]] || validate_branch_name "$3"                                || with_error _rc "$err_invalid_branch" "${FUNCNAME[0]}() requires argument 3, if provided, to be a valid branch name (provided '${3-<missing>}')."
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _devops_branch=${2:-}
     local _sot_branch=${3:-}
@@ -297,59 +272,47 @@ function resolve_vm2_repos()
     #   2) environment variable $VM2_REPOS
     #   3) the lib/ directory
     #   4) the hardcoded default location ${HOME}/repos/vm2_repos
-    local _devops_parent
 
-    _devops_parent="$(get_devops_parent)" || _rc=$?
-    (( _rc == success )) || return "$_rc"
-
-    # #1:
-    if [[ -n "$_repos" && -d "$_repos" ]]; then
+    # #1: argument $1 (usually coming from a script command line option --vm2-repos)
+    if [[ -n "${_repos:-}" && -d "$_repos" ]]; then
         trace "vm2_repos='$_repos' from argument '$1'"
-    # #2:
-    elif [[ -n "$VM2_REPOS" && -d "$VM2_REPOS" ]]; then
+    # #2: environment variable $VM2_REPOS
+    elif [[ -n "${VM2_REPOS:-}" && -d "$VM2_REPOS" ]]; then
         _repos="$VM2_REPOS"
         trace "vm2_repos='$_repos' from environment variable '\$VM2_REPOS=$VM2_REPOS'"
-    # #3:
-    elif [[ -d "$_devops_parent" ]]; then
-            _repos="$_devops_parent"
-            trace "vm2_repos='$_repos' from the location of $vm2_devops_repo_name."
-    # #4:
-    elif [[ -d $default_vm2_repos_path ]]; then
-        _repos=$default_vm2_repos_path
-        trace "vm2_repos='$_repos' from the default location '$default_vm2_repos_path'"
+    # #3: the lib/ directory
+    elif _repos="$(get_devops_parent)"; then
+        trace "vm2_repos='$_repos' from the location of $vm2_devops_repo_name."
+    # #4: the hardcoded default location ${HOME}/repos/vm2_repos
     else
-        error "Cannot resolve the parent directory of the vm2 repositories." "${vm2_repos_instructions[@]}" -ec "$err_not_directory"
-        return "$err_not_directory"
+        [[ -d $default_vm2_repos_path ]]                                        || with_error _rc "$err_not_directory" "Cannot resolve the parent directory of the vm2 repositories." \
+                                                                                                                       "${vm2_repos_instructions[@]}"
+        (( _rc != success )) || _repos=$default_vm2_repos_path
+        (( _rc != success )) || trace "vm2_repos='$_repos' from the default location '$default_vm2_repos_path'"
     fi
 
+    (( _rc == success ))                                                        || with_error _rc "$err_not_directory" "Cannot resolve the parent directory of the vm2 repositories." \
+                                                                                                                       "${vm2_repos_instructions[@]}"
+
     # ensure $vm2_repos is an existing, absolute path:
-    _repos=$(realpath -e "$_repos" 2> "$_ignore") || {
-        error "The resolved parent directory for the vm2 repositories '$_repos' does not exist or is not a directory." "${vm2_repos_instructions[@]}" -ec "$err_not_directory"
-        return "$err_not_directory"
-    }
+    (( _rc != success )) || _repos=$(realpath -e "$_repos" 2> "$_ignore")       || with_error _rc "$err_not_directory" "The resolved parent directory for the vm2 repositories '$_repos' does not exist or is not a directory." \
+                                                                                                                       "${vm2_repos_instructions[@]}"
 
     # 1) validate that $vm2_repos is the parent directory of the git repository vm2.DevOps;
     # 2) it is on the specified branch;
     # 3) it is at or ahead of the latest stable tag:
-    local -i _rc="$success"
-    __validate_repo_root "$vm2_devops_repo_name" "$_repos" "$_devops_branch" || {
-        _rc=$?
-        error "The branch '$_devops_branch' of the repository '$vm2_devops_repo_name' does not appear in a clean state:" \
-              "$(error_message "$_rc")" \
-              -ec "$err_logic_error"
-    }
+    (( _rc != success )) || __validate_repo_root "$vm2_devops_repo_name" "$_repos" "$_devops_branch" \
+                                                                                || with_error _rc "$err_logic_error" "The branch '$_devops_branch' of the repository '$vm2_devops_repo_name' does not appear in a clean state:" \
+                                                                                                                     "$(error_message $?)"
 
     # validate that $vm2_repos is the parent directory of the git repository vm2.Templates;
     # it is on the main branch;
     # and it is at or ahead of the latest stable tag:
-    __validate_repo_root "$vm2_sot_repo_name" "$_repos" "$_sot_branch" || {
-        _rc=$?
-        error "The branch '$_sot_branch' of the repository '$vm2_sot_repo_name' does not appear in a clean state:" \
-              "$(error_message "$_rc")" \
-              -ec "$err_logic_error"
-    }
+    (( _rc != success )) || __validate_repo_root "$vm2_sot_repo_name" "$_repos" "$_sot_branch" \
+                                                                                || with_error _rc "$err_logic_error" "The branch '$_sot_branch' of the repository '$vm2_sot_repo_name' does not appear in a clean state:" \
+                                                                                                                     "$(error_message $?)"
 
-    _vm2_repos="$_repos"
+    (( _rc != success )) || __vm2_repos="$_repos"
     return "$_rc"
 }
 
@@ -375,22 +338,22 @@ function resolve_vm2_repos()
 #-----------------------------------------------------------------------------------------------
 function __search_repo_dir()
 {
-    (( $# == 3 ))                      || bug "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
-                                              "  - the search root" \
-                                              "  - the directory name or relative path to find" \
-                                              "  - the name of a variable to receive the resolved directory path" \
-                                              -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]              || bug "${FUNCNAME[0]}() requires argument 1, the search root, to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_valid_path "$2" || bug "${FUNCNAME[0]}() requires argument 2, the directory name or relative path to find, to be valid path (provided '${2-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 3 ]] || is_variable "$3"   || bug "${FUNCNAME[0]}() requires argument 3, the name of a variable to receive the resolved directory path, to be defined (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
+                                                                                       "  - the search root" \
+                                                                                       "  - the directory name or relative path to find" \
+                                                                                       "  - the name of a variable to receive the resolved directory path" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the search root, to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
+    [[ ! -v 2 ]] || is_valid_path "$2"                                          || bug "${FUNCNAME[0]}() requires argument 2, the directory name or relative path to find, to be valid path (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3, the name of a variable to receive the resolved directory path, to be defined (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
+                                                                                exit_if_has_bugs
 
     # Since this is an internal function, it is expected to be called only from within this script and not directly by the user,
     # so all bad inputs should've been already validated by the caller (from this script), therefore are considered bugs
 
     local _start_from=$1
     local _look_for=$2
-    local -n _result_dir="$3"
+    local -n __result_dir="$3"
 
     local _found_repo_dirs=0
     local _found_dirs=0
@@ -434,9 +397,9 @@ function __search_repo_dir()
                   \) -prune \
                   -o -type d -path "*/$_dir_rel_path" -print 2>"$_ignore")
 
-    (( _found_repo_dirs + _found_dirs == 0 ))                                      && return "$err_not_found"
-    (( _found_repo_dirs == 1 ))                     && _result_dir="$_in_repo_dir" && return "$success"
-    (( _found_repo_dirs == 0 && _found_dirs == 1 )) && _result_dir="$_dir"         && return "$err_not_git_directory"
+    (( _found_repo_dirs + _found_dirs == 0 ))                                       && return "$err_not_found"
+    (( _found_repo_dirs == 1 ))                     && __result_dir="$_in_repo_dir" && return "$success"
+    (( _found_repo_dirs == 0 && _found_dirs == 1 )) && __result_dir="$_dir"         && return "$err_not_git_directory"
 
     return "$err_found_too_many"
 }
@@ -483,28 +446,30 @@ function __search_repo_dir()
 #-----------------------------------------------------------------------------------------------
 function resolve_repo_root()
 {
-    (( $# == 4 ))                               || bug "${FUNCNAME[0]}() requires 4 arguments ($# provided): " \
-                                                       "  - the parent directory under which to search for the vm2 repository (resolved vm2_repos)" \
-                                                       "  - path to a directory inside the vm2 repository working tree (if empty, the default is the current directory)" \
-                                                       "  - the name of the variable to store the absolute path of the root of the Git repository containing the found directory" \
-                                                       "  - the name of the variable to store the absolute path of the found directory" \
-                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]]          || is_valid_path "$1" || bug "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
-    [[ ! -v 2 || -z $2 ]] || is_valid_path "$2" || bug "${FUNCNAME[0]}() requires argument 2, the path to a directory inside the vm2 repository working tree, to be a valid path (provided '${2-<missing>}')." -ec "$err_invalid_path"
-    [[ ! -v 3 ]]          || is_variable "$3"   || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable to store the absolute path of the root of the Git repository containing the found directory (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 4 ]]          || is_variable "$4"   || bug "${FUNCNAME[0]}() requires argument 4 to be the name of a variable to store the absolute path of the sought directory (provided '${4-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+    (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() requires 4 arguments ($# provided): " \
+                                                                                       "  - the parent directory under which to search for the vm2 repository (resolved vm2_repos)" \
+                                                                                       "  - path to a directory inside the vm2 repository working tree (if empty, the default is the current directory)" \
+                                                                                       "  - the name of the variable to store the absolute path of the root of the Git repository containing the found directory" \
+                                                                                       "  - the name of the variable to store the absolute path of the found directory" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_valid_path "$1"                                          || bug "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
+    [[ ! -v 2 || -z $2 ]] || is_valid_path "$2"                                 || bug "${FUNCNAME[0]}() requires argument 2, the path to a directory inside the vm2 repository working tree, to be a valid path (provided '${2-<missing>}')." -ec "$err_invalid_path"
+    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable to store the absolute path of the root of the Git repository containing the found directory (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 4 ]] || is_variable "$4"                                            || bug "${FUNCNAME[0]}() requires argument 4 to be the name of a variable to store the absolute path of the sought directory (provided '${4-<missing>}')." -ec "$err_invalid_nameref"
+                                                                                exit_if_has_bugs
 
     local -i _rc="$success"
 
-    [[ ! -v 1 || -d $1 ]]                       || {
-        _rc=$err_not_directory
-        error "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a an existing directory path (provided '${1-<missing>}')." -ec "$_rc"
-    }
-    (( _rc == success )) || return "$_rc"
+    [[ ! -v 1 || -d $1 ]]                                                       || with_error _rc "$err_not_directory" "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a an existing directory path (provided '${1-<missing>}')."
+    (( _rc == success ))                                                        || return "$_rc"
 
     local _repos=$1
     local _dir_path="${2:-"$(pwd)"}"
+    local -n __repo_root_ref="$3"
+    local -n __in_repo_dir_ref="$4"
+
+    __repo_root_ref=''
+    __in_repo_dir_ref=''
 
     trace "Searching for '${_dir_path-<missing>}' under '\$vm2_repos=${_repos-<missing>}'..."
 
@@ -521,80 +486,73 @@ function resolve_repo_root()
         __search_repo_dir "$HOME" "$_dir_path" _found_dir || _rc=$?
     fi
 
-    # if _rc is one of the fatal errors from the above searches - return it
-    ! is_in "$_rc" "$err_not_found" "$err_found_too_many" || {
-        error "Could not find the repository directory '${_dir_path-<missing>}' neither under '${_repos-<missing>}' nor under '\$HOME'." -ec "$_rc"
-        return "$_rc"
-    }
+    case "$_rc" in
+        "$success" )
+            # we found repo directory, find the root of the repository and check if it has CI configuration
+            _in_repo_dir=$_found_dir
+            root_working_tree "$_in_repo_dir" _repo_root                        || with_error _rc "$err_invalid_repo" "Failed to get the root of the repository working tree for '$_in_repo_dir'."
 
-    if (( _rc == success )); then
-        # we found repo directory, find the root of the repository and check if it has CI configuration
-        _in_repo_dir=$_found_dir
-        root_working_tree "$_in_repo_dir" _repo_root || {
-            _rc=$err_invalid_repo
-            error "Failed to get the root of the repository working tree for '$_in_repo_dir'." -ec "$_rc"
-            return "$_rc"    # get the root of the repo working tree
-        }
+            # check if the root is under _repos (VM2_REPOS) as it should be
+            local _repo_root_parent
+            (( _rc != success )) || {
+                                        _repo_root_parent=$(realpath "$(dirname "$_repo_root")")
+                                        [[ $_repo_root_parent == "$_repos" ]]
+                                    }                                           || with_error _rc "$err_repo_not_in_vm2_repos" "The repository root '$_repo_root' is not under the expected VM2 repositories directory '$_repos'."
 
-        # check if the root is under _repos (VM2_REPOS) as it should be
-        local _repo_root_parent
-        _repo_root_parent=$(realpath "$(dirname "$_repo_root")")
+            (( _rc == success ))                                                || return "$_rc"
 
-        [[ $_repo_root_parent == "$_repos" ]] || {
-            _rc=$err_repo_not_in_vm2_repos
-            error "The repository root '$_repo_root' is not under the expected VM2 repositories directory '$_repos'."
+            # check if the repository has CI configuration (is it initialized with setup-repo.sh)?
+            [[ -d "$_repo_root/.github/workflows" ]] || _rc="$err_repo_with_no_ci"
+            ;;
+
+        "$err_not_git_directory" )
+            # the directory exists but is not a git repository
+            _dir=$_found_dir
+
+            # walk the path up until we find a CI configuration
+            _rc=$err_dir_with_ci
+            while [[ ! -d "$_found_dir/.github/workflows" ]]; do
+                _found_dir=$(dirname "$_found_dir")
+                [[ $_found_dir == "$HOME" ]] && _rc="$err_dir_with_no_ci" && break
+            done
+
+            case "$_rc" in
+                "$err_dir_with_ci" )
+                    # we found a CI configuration, return
+                    #   - the directory with the CI configuration as the repo root, but
+                    #   - the found directory as the resolved path and
+                    #   - with the error code indicating that it is not a git repository (yet?)
+                    # the root can be initialized as a repository
+                    _repo_root="$_found_dir"
+                    _in_repo_dir="$_dir"
+                    ;;
+
+                "$err_dir_with_no_ci" )
+                    # we didn't find CI configuration, return
+                    #   - the found directory as the repo root (it may not be a repository, but at least it is the closest we got to the provided path)
+                    #   - the found directory also as the resolved path and
+                    #   - with the error code indicating that it's a directory with no CI configuration
+                    _repo_root="$_dir"
+                    _in_repo_dir="$_dir"
+                    ;;
+
+                * ) exit_with_bug "Unexpected error code '$_rc' caught in ${FUNCNAME[0]}() function." -ec "$err_unexpected_error"
+            esac
+            ;;
+
+        * )
+            with_error _rc "$err_not_found" "Could not find the repository directory '${_dir_path-<missing>}' neither under '${_repos-<missing>}' nor under '\$HOME'."
             return "$_rc"
-        }
+            ;;
+    esac
 
-        # check if the repository has CI configuration (is it initialized with setup-repo.sh)?
-        [[ -d "$_repo_root/.github/workflows" ]] ||
-            _rc="$err_repo_with_no_ci"
-    elif (( _rc == err_not_git_directory )); then
-        # the directory exists but is not a git repository
-        _dir=$_found_dir
-        # walk the path up until we find a CI configuration
-        _rc=$err_dir_with_ci
-        while [[ ! -d "$_found_dir/.github/workflows" ]]; do
-            _found_dir=$(dirname "$_found_dir")
-            [[ $_found_dir == "$HOME" ]] && _rc="$err_dir_with_no_ci" && break
-        done
-
-        case "$_rc" in
-            "$err_dir_with_ci" )
-                # we found a CI configuration, return
-                #   - the directory with the CI configuration as the repo root, but
-                #   - the found directory as the resolved path and
-                #   - with the error code indicating that it is not a git repository (yet?)
-                # the root can be initialized as a repository
-                _repo_root="$_found_dir"
-                _in_repo_dir="$_dir"
-                ;;
-
-            "$err_dir_with_no_ci" )
-                # we didn't find CI configuration, return
-                #   - the found directory as the repo root (it may not be a repository, but at least it is the closest we got to the provided path)
-                #   - the found directory also as the resolved path and
-                #   - with the error code indicating that it's a directory with no CI configuration
-                _repo_root="$_dir"
-                _in_repo_dir="$_dir"
-                ;;
-
-            * ) error "Unexpected error code '$_rc' caught in ${FUNCNAME[0]}() function." -ec "$err_unexpected_error"
-                return "$_rc"
-        esac
-    else
-        error "Unexpected error code '$_rc' returned from __search_repo_dir() function." -ec "$err_unexpected_error"
-        return "$_rc"
-    fi
-
-    local -n _repo_root_ref="$3"
-    local -n _in_repo_dir_ref="$4"
-
-    _repo_root_ref="$_repo_root"
-    _in_repo_dir_ref="$_in_repo_dir"
+    __repo_root_ref="$_repo_root"
+    __in_repo_dir_ref="$_in_repo_dir"
 
     return "$_rc"
 }
+
+declare _get_vm2_sot_path_invalid_arg1="get_vm2_sot_path() requires argument 1, the vm2 repositories parent directory, to be a valid, existing path (provided '${1-<missing>}'). Use the function resolve_vm2_repos()."
 
 #-----------------------------------------------------------------------------------------------
 # @description Resolves the path to the SoT (Source of Truth) shared content directory inside
@@ -619,37 +577,28 @@ function resolve_repo_root()
 #-----------------------------------------------------------------------------------------------
 function get_vm2_sot_path()
 {
-    local _invalid_arg1="${FUNCNAME[0]}() requires argument 1, the vm2 repositories parent directory, to be a valid, existing path (provided '${1-<missing>}'). Use the function resolve_vm2_repos()."
-
-    (( $# == 2 || $# == 3 ))               || bug "${FUNCNAME[0]}() expects two or three arguments (provided $#):" \
-                                                  "  - the path to the parent directory of all vm2 repositories (use resolve_vm2_repos function, usually \$VM2_REPOS)" \
-                                                  "  - the name of a variable to store the absolute path of the path to the source of truth (SoT)" \
-                                                  "  - the SoT directory name (optional, defaults to '$default_sot')" \
-                                                  -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_valid_path "$1"     || bug "$_invalid_arg1" -ec "$err_invalid_path"
-    [[ ! -v 2 ]] || is_variable "$2"       || bug "${FUNCNAME[0]}() requires argument 2, to be the name of a declared variable that will store the absolute path of the path to the SoT shared content directory (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 3 ]] || is_valid_filename "$3" || bug "${FUNCNAME[0]}() requires argument 3, to be the name of the source of truth (SoT) directory (provided '${3-<missing>}'). Optional, defaults to '$default_sot'." -ec "$err_invalid_path"
-    exit_if_has_bugs
+    (( $# == 2 || $# == 3 ))                                                    || bug "${FUNCNAME[0]}() expects two or three arguments (provided $#):" \
+                                                                                       "  - the path to the parent directory of all vm2 repositories (use resolve_vm2_repos function, usually \$VM2_REPOS)" \
+                                                                                       "  - the name of a variable to store the absolute path of the path to the source of truth (SoT)" \
+                                                                                       "  - the SoT directory name (optional, defaults to '$default_sot')" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_valid_path "$1"                                          || bug "$_get_vm2_sot_path_invalid_arg1" -ec "$err_invalid_path"
+    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2, to be the name of a declared variable that will store the absolute path of the path to the SoT shared content directory (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 3 ]] || is_valid_filename "$3"                                      || bug "${FUNCNAME[0]}() requires argument 3, to be the name of the source of truth (SoT) directory (provided '${3-<missing>}'). Optional, defaults to '$default_sot'." -ec "$err_invalid_path"
+                                                                                exit_if_has_bugs
 
     local -i _rc="$success"
 
-    [[ -d $1 ]]                            || {
-        _rc="$err_not_directory"
-        error "$_invalid_arg1" -ec "$_rc"
-    }
-    ((  _rc == success )) || return "$_rc"
+    [[ -d $1 ]]                                                                 || with_error _rc "$err_not_directory" "$_get_vm2_sot_path_invalid_arg1"
+    ((  _rc == success ))                                                       || return "$_rc"
 
     local _vm2_repos="$1"
-    local -n _vm2_sot="$2"
+    local -n __vm2_sot="$2"
     local _source="${3:-$default_sot}"
+    local _sot_dir="$_vm2_repos/$vm2_sot_repo_name/templates/$_source/content"
 
-    _vm2_sot="$_vm2_repos/$vm2_sot_repo_name/templates/$_source/content"
-
-    [[ -d "$_vm2_sot" ]] || {
-        _rc="$err_not_directory"
-        error "The SoT shared content directory is not found at the expected conventional location '$_vm2_sot'. Please make sure it exists or correct the parameter/environment variable." -ec "$_rc"
-        _vm2_sot=''
-    }
+    [[ -d "$_sot_dir" ]]                                                        || with_error _rc "$err_not_directory" "The SoT shared content directory is not found at the expected conventional location '$_sot_dir'. Please make sure it exists or correct the parameter/environment variable."
+    (( _rc != success )) || __vm2_sot=$_sot_dir
 
     return "$_rc"
 }

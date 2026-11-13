@@ -15,14 +15,14 @@ declare -xr lib_dir
 
 source "$lib_dir/core.sh"
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri positive
 declare -xri negative
 declare -xri err_logic_error
 declare -xri err_unexpected_error
 
-# vm2 core constants
+# vm2 core lib constants
 declare -xr cross_ch
 declare -xr check_ch
 declare -xr equals_ch
@@ -31,7 +31,7 @@ declare -xr not_eq_ch
 declare -xr vm2_sot_repo_name
 declare -xra vm2_repositories
 
-# vm2 core variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this script's components

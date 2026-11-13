@@ -23,6 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - [Common Local Commands](#common-local-commands)
   - [Script Base Filenames Convention: `<action>-<target>`](#script-base-filenames-convention-action-target)
   - [Three-File Script Convention](#three-file-script-convention)
+    - [The `get_arguments` Pipeline](#the-get_arguments-pipeline)
   - [Bash Library](#bash-library)
     - [Input parameters](#input-parameters)
     - [Parameter Conventions](#parameter-conventions)
@@ -372,7 +373,8 @@ Bash functions have **only one** formal return channel: the exit status. They ca
   - the exit status can be captured in the calling script
 
   However, variable mutations made inside the command substitution, including changes to the global error counter, are lost and
-  only the exit code is captured: `output_value="$(my_function)" || _rc=$?`. This corrects the previous script example by capturing both the output and the exit status explicitly:
+  only the exit code is captured: `output_value="$(my_function)" || _rc=$?`. This corrects the previous script example by
+  capturing both the output and the exit status explicitly:
 
   ```bash
   output_value="$(my_function)" || {
@@ -696,7 +698,7 @@ what is already up to date); a dry run reports the intended changes of one parti
 
 ```bash
 # Preferred: side effects through execute (--quiet for noise); queries direct; is_dry_run only for a dependent step
-if ! git -C "$repo" show-ref --verify --quiet "refs/heads/$branch"; then      # a query: runs directly
+if ! git -C "$repo" show-ref --verify --quiet "$git_heads_ns$branch"; then      # a query: runs directly
     execute --quiet git -C "$repo" switch -c "$branch"                        # a side effect: dry run prints it
 fi
 is_dry_run || [[ -s $package ]] || error "Package '$package' not found or empty." -ec "$err_tool_error"

@@ -25,6 +25,7 @@ declare -gxi err_has_bugs
 declare -gxi err_has_errors
 declare -gxi err_argument_type
 declare -gxi err_invalid_arguments
+declare -gxi err_invalid_nameref
 declare -gxi err_argument_value
 declare -gxi err_logic_error
 declare -gxi err_tool_error
@@ -62,6 +63,68 @@ declare -gxi err_tool_error
 @test "reset_errors: sets the counter back to 0" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_errors 5; reset_errors; get_errors"
     assert_output "0"
+}
+
+# --- get_last_error ----------------------------------------------------------------------------
+
+@test "get_last_error: 0 (success) by default" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -i e=-1; get_last_error e; echo \"last=\$e\""
+    assert_success
+    assert_output "last=0"
+}
+
+@test "get_last_error: returns the -ec code of the most recent error, not the first" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 error 'first' -ec 7 2>/dev/null
+                 error 'second' -ec 9 2>/dev/null
+                 declare -i e=0; get_last_error e; echo \"last=\$e\""
+    assert_success
+    assert_output "last=9"
+}
+
+@test "get_last_error: returns failure after an error without -ec" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error 'boom' 2>/dev/null; declare -i e=0; get_last_error e; echo \"last=\$e\""
+    assert_success
+    assert_output "last=$failure"
+}
+
+@test "get_last_error: returns failure after set_errors raises the counter with no recorded code" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_errors 3; declare -i e=0; get_last_error e; echo \"last=\$e\""
+    assert_success
+    assert_output "last=$failure"
+}
+
+@test "get_last_error: 0 again after reset_errors" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 error 'boom' -ec 7 2>/dev/null
+                 reset_errors
+                 declare -i e=-1; get_last_error e; echo \"last=\$e\""
+    assert_success
+    assert_output "last=0"
+}
+
+# The way usage() calls it: the receiving variable is a local of the calling function.
+@test "get_last_error: writes into a local variable of the calling function" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 function caller() { local -i _code=0; get_last_error _code; echo \"last=\$_code\"; }
+                 error 'boom' -ec 7 2>/dev/null
+                 caller"
+    assert_success
+    assert_output "last=7"
+}
+
+@test "get_last_error: bug-exits with err_invalid_arguments when called with no argument or two arguments" {
+    run get_last_error
+    assert_failure "$err_invalid_arguments"
+    run get_last_error lib_dir failure  # two declared variables: only the count is wrong
+    assert_failure "$err_invalid_arguments"
+}
+
+@test "get_last_error: bug-exits with err_invalid_nameref when argument 1 is not a declared variable" {
+    run get_last_error no_such_variable
+    assert_failure "$err_invalid_nameref"
+    run get_last_error '1bad-name'
+    assert_failure "$err_invalid_nameref"
 }
 
 # --- exit_if_has_bugs -------------------------------------------------------------------------

@@ -17,6 +17,9 @@ declare -xr right_arrow_em
 declare -xr check_em
 declare -xr up_arrow_em
 
+declare -xr git_heads_ns
+declare -xr git_remotes_ns
+
 declare -x _ignore
 
 # timing variables for performance measurement. us stands for microseconds.
@@ -37,54 +40,54 @@ declare -xi search_count
 #-----------------------------------------------------------------------------------------------
 function classify_repo()
 {
-    (( $# == 3 ))                         || bug "${FUNCNAME[0]}() requires three arguments (provided $#): " \
-                                                 "  - the repository path" \
-                                                 "  - the mode" \
-                                                 "  - the reason" \
-                                                 -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]               || bug "${FUNCNAME[0]}() requires a valid repository path as the first argument." -ec "$err_invalid_arguments"
-    [[ ! -v 2 ]] || is_variable_name "$2" || bug "${FUNCNAME[0]}() requires a valid variable name as the second argument." -ec "$err_invalid_arguments"
-    [[ ! -v 3 ]] || is_variable_name "$3" || bug "${FUNCNAME[0]}() requires a valid variable name as the third argument." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires three arguments (provided $#): " \
+                                                                                       "  - the repository path" \
+                                                                                       "  - the mode" \
+                                                                                       "  - the reason" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires a valid repository path as the first argument." -ec "$err_invalid_arguments"
+    [[ ! -v 2 ]] || is_variable_name "$2"                                       || bug "${FUNCNAME[0]}() requires a valid variable name as the second argument." -ec "$err_invalid_arguments"
+    [[ ! -v 3 ]] || is_variable_name "$3"                                       || bug "${FUNCNAME[0]}() requires a valid variable name as the third argument." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
     local _repo=$1
-    local -n _mode_ref=$2
-    local -n _reason_ref=$3
+    local -n __mode_ref=$2
+    local -n __reason_ref=$3
     local _branch
 
     if [[ -n $(git -C "$_repo" status --porcelain) ]]; then
-        _mode_ref=skip
-        _reason_ref="uncommitted changes; left untouched"
+        __mode_ref=skip
+        __reason_ref="uncommitted changes; left untouched"
         return "$success"
     fi
 
     _branch=$(git -C "$_repo" branch --show-current)
     if [[ $_branch != main ]]; then
-        _mode_ref=inplace
-        _reason_ref="on branch '$_branch', not 'main'; edited in place, nothing committed"
+        __mode_ref=inplace
+        __reason_ref="on branch '$_branch', not 'main'; edited in place, nothing committed"
         return "$success"
     fi
 
     if ! git -C "$_repo" remote get-url origin > /dev/null 2>&1; then
-        _mode_ref=inplace
-        _reason_ref="no 'origin' remote; edited in place, nothing committed"
+        __mode_ref=inplace
+        __reason_ref="no 'origin' remote; edited in place, nothing committed"
         return "$success"
     fi
 
     if ! git -C "$_repo" fetch --quiet origin main > /dev/null 2>&1; then
-        _mode_ref=inplace
-        _reason_ref="could not fetch 'origin/main'; edited in place, nothing committed"
+        __mode_ref=inplace
+        __reason_ref="could not fetch 'origin/main'; edited in place, nothing committed"
         return "$success"
     fi
 
     if [[ $(git -C "$_repo" rev-list --count origin/main...main) != 0 ]]; then
-        _mode_ref=inplace
-        _reason_ref="not identical to 'origin/main'; edited in place, nothing committed"
+        __mode_ref=inplace
+        __reason_ref="not identical to 'origin/main'; edited in place, nothing committed"
         return "$success"
     fi
 
-    _mode_ref=publish
-    _reason_ref="on 'main', clean, identical to 'origin/main'"
+    __mode_ref=publish
+    __reason_ref="on 'main', clean, identical to 'origin/main'"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -100,22 +103,22 @@ function classify_repo()
 #-----------------------------------------------------------------------------------------------
 function start_publish_branch()
 {
-    (( $# == 2 ))                             || bug "${FUNCNAME[0]}() requires two arguments (provided $#):" \
-                                                     "  - the repository path" \
-                                                     "  - the branch name" \
-                                                     -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]                   || bug "${FUNCNAME[0]}() requires a valid repository path as the first argument." -ec "$err_invalid_arguments"
-    [[ ! -v 2 ]] || is_valid_branch_name "$2" || bug "${FUNCNAME[0]}() requires a valid branch name as the second argument." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#):" \
+                                                                                       "  - the repository path" \
+                                                                                       "  - the branch name" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires a valid repository path as the first argument." -ec "$err_invalid_arguments"
+    [[ ! -v 2 ]] || is_valid_branch_name "$2"                                   || bug "${FUNCNAME[0]}() requires a valid branch name as the second argument." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
-    if git -C "$1" show-ref --verify --quiet "refs/heads/$2"; then
+    if git -C "$1" show-ref --verify --quiet "$git_heads_ns$2"; then
         execute --quiet git -C "$1" switch "$2" ||
             return "$err_tool_error"
         trace "Switched to the existing local branch '$2' in '$1'."
         return "$success"
     fi
 
-    if git -C "$1" show-ref --verify --quiet "refs/remotes/origin/$2"; then
+    if git -C "$1" show-ref --verify --quiet "${git_remotes_ns}origin/$2"; then
         execute --quiet git -C "$1" switch -c "$2" --track "origin/$2" ||
             return "$err_tool_error"
         trace "Checked out the existing remote branch '$2' in '$1'."
@@ -142,8 +145,8 @@ function start_publish_branch()
 #-----------------------------------------------------------------------------------------------
 function commit_package_versions()
 {
-    (( $# >= 3 ))                 || bug "${FUNCNAME[0]}() requires the repository path, the message, and at least one path (provided $#)." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+    (( $# >= 3 ))                                                               || bug "${FUNCNAME[0]}() requires the repository path, the message, and at least one path (provided $#)." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
     local _repo=$1
     local _message=$2
@@ -173,22 +176,22 @@ function commit_package_versions()
 #-----------------------------------------------------------------------------------------------
 function update_section_versions()
 {
-    (( $# == 4 ))                              || bug "${FUNCNAME[0]}() requires four arguments (provided $#):" \
-                                                      "  - the path of the file to be updated" \
-                                                      "  - the flag designating which section of the file must be updated must be either 'shared' or 'repo'" \
-                                                      "  - the summary label" \
-                                                      "  - the name of the summary rows array." \
-                                                      -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -f $1 ]]                      || bug "${FUNCNAME[0]}() requires argument 1, the path of the file to be updated, to be a path to an existing file (provided ${1-<missing>})." -ec "$err_argument_value"
-    [[ ! -v 2 || $2 == shared || $2 == repo ]] || bug "${FUNCNAME[0]}() requires argument 2, the flag designating which section of the file must be updated must be either 'shared' or 'repo' (provided ${2-<missing>})." -ec "$err_argument_value"
-    [[ ! -v 3 || -n $3 ]]                      || bug "${FUNCNAME[0]}() requires argument 3, the label, to be non-empty." -ec "$err_argument_value"
-    [[ ! -v 4 ]] || is_indexed_array "$4"      || bug "${FUNCNAME[0]}() requires argument 4 to be the name of an indexed array variable (provided ${4-<missing>})." -ec "$err_argument_value"
-    exit_if_has_bugs
+    (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() requires four arguments (provided $#):" \
+                                                                                       "  - the path of the file to be updated" \
+                                                                                       "  - the flag designating which section of the file must be updated must be either 'shared' or 'repo'" \
+                                                                                       "  - the summary label" \
+                                                                                       "  - the name of the summary rows array." \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the path of the file to be updated, to be a path to an existing file (provided ${1-<missing>})." -ec "$err_argument_value"
+    [[ ! -v 2 || $2 == shared || $2 == repo ]]                                  || bug "${FUNCNAME[0]}() requires argument 2, the flag designating which section of the file must be updated must be either 'shared' or 'repo' (provided ${2-<missing>})." -ec "$err_argument_value"
+    [[ ! -v 3 || -n $3 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 3, the label, to be non-empty." -ec "$err_argument_value"
+    [[ ! -v 4 ]] || is_indexed_array "$4"                                       || bug "${FUNCNAME[0]}() requires argument 4 to be the name of an indexed array variable (provided ${4-<missing>})." -ec "$err_argument_value"
+                                                                                exit_if_has_bugs
 
     local _file=$1
     local _section=$2
     local _label=$3
-    local -n _rows_ref=$4   # The summary rows array that will receive the results of processing this section
+    local -n __rows_ref=$4   # The summary rows array that will receive the results of processing this section
 
     local -A _versions=()   # Associative array of package ID => current version
     local -a _ids=()        # array of package IDs
@@ -212,11 +215,11 @@ function update_section_versions()
         search_count=$(( search_count + 1 ))
 
         if (( _query_rc != success )); then
-            _rows_ref+=("$_label|$_id|$_current|-|$fail_em search failed")
+            __rows_ref+=("$_label|$_id|$_current|-|$fail_em search failed")
             continue
         fi
         if (( ${#_found[@]} == 0 )); then
-            _rows_ref+=("$_label|$_id|$_current|-|$question_em not found in any source")
+            __rows_ref+=("$_label|$_id|$_current|-|$question_em not found in any source")
             continue
         fi
 
@@ -233,7 +236,7 @@ function update_section_versions()
             else
                 _result="$check_em already latest"
             fi
-            _rows_ref+=("$_label|$_id|$_current|$_selected|$_result")
+            __rows_ref+=("$_label|$_id|$_current|$_selected|$_result")
             continue
         fi
 
@@ -242,7 +245,7 @@ function update_section_versions()
         else
             _result="$fail_em failed to write"
         fi
-        _rows_ref+=("$_label|$_id|$_current|$_selected|$_result")
+        __rows_ref+=("$_label|$_id|$_current|$_selected|$_result")
     done
 }
 
@@ -263,9 +266,9 @@ function update_section_versions()
 #-----------------------------------------------------------------------------------------------
 function refresh_lock_files()
 {
-    (( $# == 1 ))                 || bug "${FUNCNAME[0]}() requires one argument (provided $#): the repository path." -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]       || bug "${FUNCNAME[0]}() requires a valid repository path as the first argument." -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): the repository path." -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires a valid repository path as the first argument." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
     local _repo=$1
     local -i _rc=$success
@@ -305,27 +308,27 @@ function refresh_lock_files()
 #-----------------------------------------------------------------------------------------------
 function open_pull_request()
 {
-    (( $# == 3 ))                          || bug "${FUNCNAME[0]}() requires three arguments (provided $#):" \
-                                                  "  - the repository path" \
-                                                  "  - the branch" \
-                                                  "  - the URL output." \
-                                                  -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                  || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided ${1-<missing>})." -ec "$err_argument_value"
-    [[ ! -v 2 || -n $2 ]]                  || bug "${FUNCNAME[0]}() requires argument 2, the branch name, to be non-empty." -ec "$err_argument_value"
-    [[ ! -v 3 ]] || is_variable_name "$3"  || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided ${3-<missing>})." -ec "$err_argument_value"
-    exit_if_has_bugs
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires three arguments (provided $#):" \
+                                                                                       "  - the repository path" \
+                                                                                       "  - the branch" \
+                                                                                       "  - the URL output." \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided ${1-<missing>})." -ec "$err_argument_value"
+    [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the branch name, to be non-empty." -ec "$err_argument_value"
+    [[ ! -v 3 ]] || is_variable_name "$3"                                       || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided ${3-<missing>})." -ec "$err_argument_value"
+                                                                                exit_if_has_bugs
 
     local _repo=$1 _branch=$2
-    local -n _url_ref=$3
-    _url_ref=''
+    local -n __url_ref=$3
+    __url_ref=''
 
-    _url_ref=$(cd "$_repo" && gh pr list --head "$_branch" --state open --json url --jq '.[0].url // empty' 2>/dev/null) || true
-    [[ -n $_url_ref ]] && return "$success"
+    __url_ref=$(cd "$_repo" && gh pr list --head "$_branch" --state open --json url --jq '.[0].url // empty' 2>/dev/null) || true
+    [[ -n $__url_ref ]] && return "$success"
 
-    _url_ref=$(cd "$_repo" &&
+    __url_ref=$(cd "$_repo" &&
                execute gh pr create --head "$_branch" \
                                     --title "chore(deps): update NuGet package versions in Directory.Packages.props" \
                                     --body "Automated dependency upgrade (stable versions only, never a downgrade) by 'update-packages.sh'." 2>/dev/null) || true
-    [[ -n $_url_ref ]] && return "$success"
+    [[ -n $__url_ref ]] && return "$success"
     return "$err_tool_error"
 }

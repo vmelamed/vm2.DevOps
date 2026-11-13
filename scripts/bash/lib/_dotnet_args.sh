@@ -7,7 +7,7 @@
 (( ${__VM2_LIB_DOTNET_ARGS_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DOTNET_ARGS_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -18,7 +18,7 @@ declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 
-# vm2 core constants
+# vm2 core lib constants
 declare -xr ci
 
 #===============================================================================================
@@ -119,7 +119,7 @@ function get_common_dotnet_arg()
                                                                                        "  - the command-line option identifier" \
                                                                                        "  - the command-line option value" \
                                                                                        -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     # Accept $2 unconditionally, even empty -- this function only recognizes option NAMES and
     # records their values; it does not judge whether a value is acceptable. That is
@@ -176,7 +176,7 @@ function sanitize_common_dotnet_args()
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument ($# provided):" \
                                                                                        "  - a path to a project file (build, test, etc.)" \
                                                                                        -ec "$err_invalid_arguments"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -i _rc=$success
     local _project=$1

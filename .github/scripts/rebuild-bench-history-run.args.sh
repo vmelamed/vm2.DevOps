@@ -5,7 +5,7 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_argument_value
 declare -xri err_missing_argument
@@ -14,16 +14,16 @@ declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_tool_not_found
 
-# core lib constants
+# vm2 core lib constants
 
-# core lib defaults
+# vm2 core lib defaults
 declare -xr default_minver_tag_prefix
 
-# core lib variables
+# vm2 core lib variables
 declare -xr ci
 declare -xra dump_common_dotnet_args
 
-# core lib variables - dotnet
+# vm2 core lib variables - dotnet
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-}

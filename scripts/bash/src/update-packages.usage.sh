@@ -24,7 +24,7 @@ function usage_text()
 {
     (( $# == 1 ))                   || bug "${FUNCNAME[0]}() requires one boolean argument (provided $#)." -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be 'true' or 'false' (provided '${1-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _common_args=''
     $1 && _common_args=$common_args_usage

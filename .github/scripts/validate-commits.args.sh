@@ -6,7 +6,7 @@
 declare -xr script_name
 declare -xr lib_dir
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_argument_value
 declare -xri err_missing_argument
@@ -17,11 +17,12 @@ declare -xri err_not_directory
 declare -xri err_not_git_directory
 declare -xri err_tool_not_found
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
+declare -xr git_remotes_ns
 declare -xra vm2_repositories
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this scripts arguments
@@ -85,9 +86,9 @@ function resolve_arguments()
 {
     local -i _rc=$success
 
-    [[ -d $repo_path ]]                                                         || { _rc="$err_not_directory";     error "Invalid directory: '$repo_path'" -ec "$_rc"; }
-    (( _rc != success )) || is_inside_work_tree "$repo_path"                    || { _rc="$err_not_git_directory"; error "The directory '$repo_path' is not inside Git repository working tree" -ec "$_rc"; }
-    (( _rc == success )) || return "$success"
+    [[ -d $repo_path ]]                                                         || with_error _rc "$err_not_directory" "Invalid directory: '$repo_path'"
+    (( _rc != success )) || is_inside_work_tree "$repo_path"                    || with_error _rc "$err_not_git_directory" "The directory '$repo_path' is not inside Git repository working tree"
+    (( _rc == success ))                                                        || return "$success"
 
     # Determine the commit range. CI always passes an explicit base ref (the PR's base branch)
     if [[ -z "$base_ref" ]]; then
@@ -98,7 +99,7 @@ function resolve_arguments()
         local _default_ref=''
 
         # origin/HEAD, not @{upstream}, is the right signal
-        _default_ref=$(git -C "$repo_path" symbolic-ref --short refs/remotes/origin/HEAD 2>"$_ignore") ||
+        _default_ref=$(git -C "$repo_path" symbolic-ref --short "${git_remotes_ns}origin/HEAD" 2>"$_ignore") ||
             # here: @{upstream} means "the branch this one
             # pushes/pulls with," which for a normally-pushed feature branch (`git push -u origin <branch>`)
             # is a same-named remote branch, not the trunk it forked from -- its merge-base with HEAD is
@@ -106,10 +107,9 @@ function resolve_arguments()
             # last-resort fallback, for a repo with no discoverable default branch at all.
             _default_ref=$(git -C "$repo_path" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>"$_ignore") || true
 
-        [[ -n $_default_ref ]]                                                  || { _rc=$err_argument_value; error "No base ref provided, there is no origin/HEAD default branch, and this branch has no" \
-                                                                                                                    "upstream tracking branch either. Pass a base ref explicitly, or set \$BASE_REF." \
-                                                                                                                    -ec "$_rc"; }
-        (( _rc == success )) || return "$success"
+        [[ -n $_default_ref ]]                                                  || with_error _rc "$err_argument_value" "No base ref provided, there is no origin/HEAD default branch, and this branch has no" \
+                                                                                                                        "upstream tracking branch either. Pass a base ref explicitly, or set \$BASE_REF."
+        (( _rc == success ))                                                    || return "$success"
 
         base_ref=$(git -C "$repo_path" merge-base HEAD "$_default_ref")         || error "Failed to compute the merge-base with '$_default_ref'." -ec "$err_argument_value"
 

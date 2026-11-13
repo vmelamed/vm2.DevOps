@@ -13,7 +13,7 @@
 (( ${__VM2_LIB_XML_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_XML_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_not_found
 declare -xri err_invalid_arguments
@@ -21,7 +21,7 @@ declare -xri err_argument_value
 declare -xri err_invalid_nameref
 declare -xri err_tool_error
 
-# vm2 core variables
+# vm2 core lib variables
 declare -x _ignore
 
 #-----------------------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ function get_xml_value()
 
     local _xml_file=$1
     local _query=$2
-    local -n _value=$3
+    local -n __value=$3
     local -i _rc=$success
 
     [[ -s $_xml_file ]]                                                         || with_error _rc "$err_not_found" "File '$_xml_file' does not exist or is empty."
@@ -86,7 +86,7 @@ function get_xml_value()
     (( _rc != success )) || _result=${_result##*$'\n'}
 
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    (( _rc != success )) || { [[ $_result != "null" ]] && _value="$_result" || _value=""; }
+    (( _rc != success )) || { [[ $_result != "null" ]] && __value="$_result" || __value=""; }
 
     return "$_rc"
 }

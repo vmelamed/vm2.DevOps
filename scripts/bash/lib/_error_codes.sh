@@ -14,7 +14,7 @@
 declare -ri __VM2_LIB_ERROR_CODES_SH_LOADED=1
 
 #===============================================================================================
-# vm2 core Error Codes: returned exit codes by the functions and scripts in the vm2 ecosystem.
+# vm2 core lib exit codes: returned exit codes by the functions and scripts in the vm2 ecosystem.
 #===============================================================================================
 
 # RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
@@ -82,7 +82,7 @@ declare -xri err_has_bugs=254           # There are bugs recorded in the global 
 
 declare -xri err_unknown=255            # An unknown error occurred
 
-# vm2 core constants
+# vm2 core lib constants
 declare -x bug_prefix
 
 declare -rA __error_messages=(
@@ -166,6 +166,7 @@ declare -rA __error_names=(
     [$err_not_overridden]="\$err_not_overridden"
     [$err_tool_not_found]="\$err_tool_not_found"
     [$err_tool_error]="\$err_tool_error"
+    [$err_tool_unauthenticated]="\$err_tool_unauthenticated"
     [$err_logic_error]="\$err_logic_error"
     [$err_tool_version]="\$err_tool_version"
 
@@ -224,7 +225,7 @@ function error_message()
         show_stack 2 4
     }
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    [[ ! -v 1 ]] || is_non_negative "$1" || {
+    [[ ! -v 1 ]] || is_exit_code "$1" || {
         _rc="$err_argument_type"
         # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
         printf "%s ${FUNCNAME[0]}() requires argument 1 to be an error code (0..255) (provided '${1-<missing>}')." "$bug_prefix"

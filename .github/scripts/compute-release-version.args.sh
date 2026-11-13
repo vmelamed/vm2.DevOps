@@ -5,17 +5,17 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_tool_not_found
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 
-# core lib defaults
+# vm2 core lib defaults
 declare -xr default_minver_tag_prefix
 
 # this scripts arguments

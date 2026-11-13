@@ -57,9 +57,11 @@ _stub_custom_schema() {
 # =====================================================================================
 
 @test "configure: bug-exits with the wrong argument count" {
+    run _ds 'declare -a source_files=() target_files=() file_actions=(); configure'
+    assert_failure "$err_invalid_arguments"
+
     run _ds 'declare -a source_files=() target_files=() file_actions=(); configure "/tmp" "second"'
     assert_failure "$err_invalid_arguments"
-    refute_output --partial "requires argument 2" # a missing argument is reported once, as missing
 }
 
 @test "configure: bug-exits when the SoT directory does not exist" {

@@ -13,20 +13,18 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# core lib
+# vm2 core lib
 source "$lib_dir/gh_core.sh"
 
-# core lib exit codes
+# vm2 core lib exit codes
 
-# core lib constants
-
-# core lib defaults
-
-# core lib variables
-declare -x _ignore
-
-# core lib constants
+# vm2 core lib constants
 declare -xr key_artifacts_path
+
+# vm2 core lib defaults
+
+# vm2 core lib variables
+declare -x _ignore
 
 # this script's components
 source "$script_dir/build.args.sh"

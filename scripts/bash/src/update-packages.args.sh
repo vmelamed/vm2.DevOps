@@ -117,12 +117,12 @@ function resolve_arguments()
 
     [[ -n $summary_file ]] || {
         summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md") \
-                                                                                || with_error "$err_io_failure" _rc "Failed to create a temporary file"
+                                                                                || with_error _rc "$err_io_failure" "Failed to create a temporary file"
         (( _rc != success )) || add_trap "rm -f ${summary_file@Q}" EXIT
     }
-    is_valid_path "$summary_file"                                               || with_error "$err_invalid_path" _rc "Invalid summary file path: '$summary_file'."
+    is_valid_path "$summary_file"                                               || with_error _rc "$err_invalid_path" "Invalid summary file path: '$summary_file'."
     resolve_vm2_repos vm2_repos                                                 || vm2_repos=''
-    is_in "$sot" "${sources_of_truth[@]}"                                       || with_error "$err_argument_value" _rc "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
+    is_in "$sot" "${sources_of_truth[@]}"                                       || with_error _rc "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
 
     has_errors || [[ -z $vm2_repos ]] || get_vm2_sot_path "$vm2_repos" sot_path "$sot" \
                                                                                 || return "$success"

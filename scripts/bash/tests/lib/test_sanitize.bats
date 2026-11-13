@@ -14,6 +14,7 @@ load '../helpers/setup'
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
+
 declare -gxi success
 declare -gxi failure
 declare -gxi positive
@@ -26,6 +27,9 @@ declare -gxi err_not_file
 declare -gxi err_invalid_json
 declare -gxi err_unsafe_argument
 declare -gxi err_argument_value
+declare -gxi err_logic_error
+
+declare BATS_TEST_TMPDIR
 
 # --- ltrim / rtrim / trim ------------------------------------------------------------------
 
@@ -222,22 +226,11 @@ declare -gxi err_argument_value
 
 # --- NuGet server validation ---------------------------------------------------------------------
 
-@test "is_valid_nuget_server: accepts nuget, github, and https URLs; rejects garbage" {
-    run is_valid_nuget_server "nuget"
-    assert_success
-    run is_valid_nuget_server "github"
-    assert_success
-    run is_valid_nuget_server "https://example.com/index.json"
-    assert_success
-    run is_valid_nuget_server "ftp://example.com"
-    assert_failure
-}
-
 @test "validate_nuget_server: resolves 'nuget' to NuGet.org's name and URL" {
     # NOTE: switched from an exact assert_output to --partial -- see the summary's top bug:
     # validate_nuget_server()'s own '&&'/'||' typo (_sanitize.sh:667) always prints a spurious
     # "requires the fourth argument..." line first, even when argument 4 was never given.
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s=nuget; name=''; url=''; validate_nuget_server s name url; echo \"\$name|\$url\""
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s=nuget; repo_owner='mr.owner'; name=''; url=''; validate_nuget_server s name url; echo \"\$name|\$url\""
     assert_success
     assert_output --partial "NuGet.org|https://api.nuget.org/v3/index.json"
 }
@@ -250,40 +243,16 @@ declare -gxi err_argument_value
 }
 
 @test "validate_nuget_server: fails on an invalid server moniker" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s='not-a-server'; name=''; url=''; validate_nuget_server s name url"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; repo_owner='mr.owner'; s='not-a-server'; name=''; url=''; validate_nuget_server s name url"
     assert_failure "$err_argument_value"
+}
+
+@test "validate_nuget_server: fails on if the repo owner is not set yet" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; s='not-a-server'; name=''; url=''; validate_nuget_server s name url"
+    assert_failure "$err_logic_error"
 }
 
 # --- configuration / framework / runtime validation -----------------------------------------------
-
-@test "is_valid_configuration / is_safe_configuration: accepts identifiers, warns on unknown ones" {
-    run is_valid_configuration "Release"
-    assert_success
-    run is_safe_configuration "Release"
-    assert_success
-    run is_safe_configuration "Custom"
-    assert_success
-    run is_safe_configuration "not valid!"
-    assert_failure "$negative"
-}
-
-@test "is_valid_framework / is_safe_framework: accepts a TFM, rejects garbage" {
-    run is_valid_framework "net10.0"
-    assert_success
-    run is_safe_framework "net10.0"
-    assert_success
-    run is_safe_framework "not-a-tfm"
-    assert_failure "$err_argument_value"
-}
-
-@test "is_valid_runtime / is_safe_runtime: accepts empty and known RIDs, rejects injection-shaped input" {
-    run is_valid_runtime ""
-    assert_success
-    run is_safe_runtime "linux-x64"
-    assert_success
-    run is_safe_runtime "linux-x64; rm -rf /"
-    assert_failure "$err_argument_value"
-}
 
 @test "validate_runtime: lower-cases and trims the referenced variable" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; r='  LINUX-X64  '; validate_runtime r; echo \"[\$r]\""
@@ -321,17 +290,6 @@ declare -gxi err_argument_value
 
 # --- percentage validation ---------------------------------------------------------------------
 
-@test "is_valid_percentage: accepts 0-100, rejects out of range and non-integers" {
-    run is_valid_percentage 0
-    assert_success
-    run is_valid_percentage 100
-    assert_success
-    run is_valid_percentage 101
-    assert_failure
-    run is_valid_percentage "abc"
-    assert_failure
-}
-
 @test "is_safe_min_coverage_pct / is_safe_max_regression_pct: accept valid percentages" {
     run is_safe_min_coverage_pct 80
     assert_success
@@ -339,22 +297,6 @@ declare -gxi err_argument_value
     assert_success
     run is_safe_min_coverage_pct 150
     assert_failure "$negative"
-}
-
-# --- MinVer tag prefix / prerelease id validation -----------------------------------------------
-
-@test "is_valid_minverTagPrefix / is_safe_minverTagPrefix: accepts a plain tag prefix" {
-    run is_valid_minverTagPrefix "v"
-    assert_success
-    run is_safe_minverTagPrefix "v"
-    assert_success
-}
-
-@test "is_valid_minverPrereleaseId / is_safe_minverPrereleaseId: accepts a prerelease identifier" {
-    run is_valid_minverPrereleaseId "preview.0"
-    assert_success
-    run is_safe_minverPrereleaseId "preview.0"
-    assert_success
 }
 
 # --- escape_ere ----------------------------------------------------------------------------------
@@ -429,7 +371,7 @@ EOF
     _path_without_check_jsonschema=$(echo "$PATH" | tr ':' '\n' | grep -v -F "$(dirname "$(command -v check-jsonschema)")" | paste -sd:)
     run bash -c "PATH='$_path_without_check_jsonschema'; source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; validate_json_schema '$BATS_TEST_TMPDIR/schema-violating.json' '$BATS_TEST_TMPDIR/schema.json'"
     assert_success
-    assert_output --partial "'check-jsonschema' was not found on PATH"
+    assert_output --partial "'check-jsonschema' is not installed"
 }
 
 @test "validate_json_schema: bug-exits with the wrong argument count" {

@@ -20,6 +20,8 @@ load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
 
+declare -gx git_remotes_ns
+
 _gh_scripts_dir="$(cd "$lib_dir/../../../.github/scripts" && pwd)"
 _validate_commits="$_gh_scripts_dir/validate-commits.sh"
 
@@ -173,16 +175,16 @@ _run_validate_commits() {
     # HEAD itself, which would silently validate almost nothing. origin/HEAD (the actual default
     # branch) MUST take priority over @{upstream} for this default, or bad commits go undetected.
     _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "feat: on main"
-    # a dummy remote registration -- never fetched from; refs/remotes/origin/* are populated by
+    # a dummy remote registration -- never fetched from; ${git_remotes_ns}origin/* are populated by
     # hand below so --set-upstream-to accepts them as real remote-tracking branches.
     git -C "$BATS_TEST_TMPDIR/repo" remote add origin "$BATS_TEST_TMPDIR/repo"
-    git -C "$BATS_TEST_TMPDIR/repo" update-ref refs/remotes/origin/main main
-    git -C "$BATS_TEST_TMPDIR/repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+    git -C "$BATS_TEST_TMPDIR/repo" update-ref "${git_remotes_ns}origin/main" main
+    git -C "$BATS_TEST_TMPDIR/repo" symbolic-ref "${git_remotes_ns}origin/HEAD" "${git_remotes_ns}origin/main"
     git -C "$BATS_TEST_TMPDIR/repo" checkout -q -b feature
     echo more >> "$BATS_TEST_TMPDIR/repo/f.txt"
     git -C "$BATS_TEST_TMPDIR/repo" commit --quiet -am "not conventional"
     # self-tracking upstream: origin/feature points at feature's own tip, same as a real 'git push -u'
-    git -C "$BATS_TEST_TMPDIR/repo" update-ref refs/remotes/origin/feature feature
+    git -C "$BATS_TEST_TMPDIR/repo" update-ref "${git_remotes_ns}origin/feature" feature
     git -C "$BATS_TEST_TMPDIR/repo" branch --quiet --set-upstream-to=origin/feature feature
     run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --quiet
     assert_failure

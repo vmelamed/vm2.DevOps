@@ -6,7 +6,7 @@
 declare -xr script_name
 declare -xr script_dir
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_argument_value
@@ -16,13 +16,13 @@ declare -xri err_too_many_arguments
 declare -xri err_tool_not_found
 declare -xri err_tool_unauthenticated
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 declare -xr key_owner
 
-# core lib defaults
+# vm2 core lib defaults
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this script's constants
@@ -93,14 +93,12 @@ function verify_environment()
     [[ -n "${GH_TOKEN:-}" ]]                                                    || warning "Neither \$GH_TOKEN nor \$BENCH_DISPATCH_PAT is set; relying on the ambient 'gh auth' credentials."
 
     is_gh_present                                                               || true
-    
+
     return "$success"
 }
 
 function resolve_arguments()
 {
-    local -i _rc=$success
-
     # Resolve the GitHub owner: --owner, else $GITHUB_REPOSITORY_OWNER (set by Actions), else derive from this repo's remote.
     [[ -n "$owner" ]] || owner="${GITHUB_REPOSITORY_OWNER:-}"
     if [[ -z "$owner" ]]; then
@@ -114,8 +112,8 @@ function resolve_arguments()
         fi
     fi
 
-    is_positive "$repeat"                                                       || with_error "$err_argument_value" _rc "repeat must be a positive integer (got '$repeat')."
-    [[ -n "$owner" ]]                                                           || with_error "$err_argument_value" _rc "Could not determine the GitHub owner. Pass --owner or set \$GITHUB_REPOSITORY_OWNER."
+    is_positive "$repeat"                                                       || error "repeat must be a positive integer (got '$repeat')." -ec "$err_argument_value"
+    [[ -n "$owner" ]]                                                           || error "Could not determine the GitHub owner. Pass --owner or set \$GITHUB_REPOSITORY_OWNER." -ec "$err_argument_value"
 
     readonly owner
     readonly repeat

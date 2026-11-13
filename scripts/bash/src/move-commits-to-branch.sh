@@ -46,10 +46,10 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# core lib
+# vm2 core lib
 source "$lib_dir/core.sh"
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -63,9 +63,9 @@ declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_tool_error
 
-# core lib constants
+# vm2 core lib constants
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this script's components

@@ -6,6 +6,7 @@
 declare -xr script_name
 
 declare -xri success
+declare -xri err_argument_value
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
@@ -63,7 +64,7 @@ function verify_environment
 function resolve_arguments()
 {
     is_safe_existing_path "$benchmark_project"                                  || true
-    [[ $benchmark_project == *.csproj ]]                                        || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+    [[ $benchmark_project == *.csproj ]]                                        || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
     sanitize_common_dotnet_args "$benchmark_project"
 
     readonly benchmark_project

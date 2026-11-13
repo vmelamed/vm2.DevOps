@@ -14,7 +14,7 @@
 (( ${__VM2_LIB_SEMVER_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_SEMVER_SH_LOADED=1
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri failure
 declare -xri positive
@@ -23,7 +23,14 @@ declare -xri err_invalid_arguments
 declare -xri err_argument_type
 declare -xri err_argument_value
 
-# vm2 core variables
+# vm2 core lib constants
+declare -xr prereleaseLabelRex
+declare -xr minverTagPrefixRex
+declare -xr minverPrereleaseIdRex
+declare -xr minverTagPrefixRegex
+declare -xr minverPrereleaseIdRegex
+
+# vm2 core lib variables
 declare -x _ignore
 
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
@@ -38,7 +45,6 @@ fi
 declare -xr majorLabelRex='(0|[1-9][0-9]*)'
 declare -xr minorLabelRex='(0|[1-9][0-9]*)'
 declare -xr patchLabelRex='(0|[1-9][0-9]*)'
-declare -xr prereleaseLabelRex='[-0-9A-Za-z.]+'
 declare -xr buildLabelRex='[-0-9A-Za-z.]+'
 
 declare -xr semverReleaseRex="$majorLabelRex\\.$minorLabelRex\\.$patchLabelRex(\\+$buildLabelRex)?"
@@ -49,14 +55,6 @@ declare -xr semverRex="$majorLabelRex\\.$minorLabelRex\\.$patchLabelRex(-$prerel
 declare -xr semverRegex="^$semverRex$"
 declare -xr semverReleaseRegex="^$semverReleaseRex$"
 declare -xr semverPrereleaseRegex="^$semverPrereleaseRex$"
-
-# Regular expressions that test if a string contains a MinVer tag prefix and MinVerDefaultPrereleaseIds (MinverPrereleaseId)
-declare -xr minverTagPrefixRex='[0-9A-Za-z_]([-0-9A-Za-z._/]*[-A-Za-z_])?'
-declare -xr minverPrereleaseIdRex=$prereleaseLabelRex
-
-# Regular expressions that test if a string is a MinVer tag prefix and MinVerDefaultPrereleaseIds (MinverPrereleaseId)
-declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
-declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
 
 # Regular expressions that test if a string contains a git tag with semantic version and MinVer prefix (e.g. v1.2.3-alpha.3)
 declare -xr semverTagRex="$minverTagPrefixRex$semverRex"

@@ -37,13 +37,13 @@ fi
 
 source "$lib_dir/gh_core.sh"
 
-# vm2 core error codes (declared here, after sourcing: a readonly declaration without a value
+# vm2 core lib exit codes (declared here, after sourcing: a readonly declaration without a value
 # before the library defines them would make their definitions fail)
 declare -xri err_not_file
 declare -xri err_tool_error
 declare -xri err_logic_error
 
-# vm2 core variables
+# vm2 core lib variables
 declare -x _ignore
 
 # 2) Every _*.sh is sourced by core.sh: an active `source "$lib_dir/<file>"` line, optionally followed by a

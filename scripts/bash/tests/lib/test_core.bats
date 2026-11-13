@@ -393,6 +393,7 @@ declare -gxi err_not_found
     assert_failure "$err_invalid_arguments"
 }
 
+# bats test_tags=time:1
 @test "execute_with_retry: retries on failure and returns success once the command succeeds" {
     local _counter="$BATS_TEST_TMPDIR/counter"
     local _script="$BATS_TEST_TMPDIR/attempt.sh"
@@ -412,6 +413,7 @@ SCRIPT
     [[ "$(cat "$_counter")" == 2 ]]
 }
 
+# bats test_tags=time:1
 @test "execute_with_retry: returns the command's own exit code after exhausting all attempts" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; execute_with_retry 2 1 bash -c 'exit 7'"
     assert_failure 7

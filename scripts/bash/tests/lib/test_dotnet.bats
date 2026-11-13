@@ -377,6 +377,7 @@ EOF
     assert_output --regexp "^/.*/artpath-repo/artifacts$"
 }
 
+# bats test_tags=time:1
 @test "get_artifacts_path: resolves a solution (*.slnx) via list_solution_projects(), preferring a project under src/" {
     # MSBuild has no notion of a solution's own properties, only a project's -- get_artifacts_path()
     # must resolve the solution to one representative project first. ArtifactsPath is uniform

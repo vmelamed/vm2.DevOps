@@ -37,6 +37,7 @@ _run_copy()
     run env -i HOME="$HOME" PATH="$PATH" bash "$_copy/src/lint-vm2.sh"
 }
 
+# bats test_tags=time:6
 @test "lint-vm2: passes on the real library" {
     run env -i HOME="$HOME" PATH="$PATH" bash "$_script"
     assert_success

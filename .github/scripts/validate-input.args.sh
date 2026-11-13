@@ -5,7 +5,7 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_argument_value
@@ -15,11 +15,11 @@ declare -xri err_logic_error
 declare -xri err_tool_not_found
 declare -xri err_tool_unauthenticated
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 declare -xra dump_common_dotnet_args
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this scripts argument defaults
@@ -186,8 +186,6 @@ function parse_arguments()
 
 function verify_environment()
 {
-    local -i _rc=$success
-
     is_jq_present                                                               || true
     is_gh_present                                                               || true
 
@@ -210,28 +208,15 @@ function resolve_arguments()
     validate_json_array benchmark_projects "$defaultBenchmarkProjects" is_safe_existing_file                         || true
     validate_json_array package_projects "$defaultPackageProjects" is_safe_existing_file                             || true
     validate_json_array runners_os "$defaultRunnersOs" is_safe_runner_os                                             || true
-
-    is_safe_min_coverage_pct "$min_coverage_pct"                                                                     || true
-    (( min_coverage_pct >= 50 && min_coverage_pct <= 100 )) ||
-        warning_var min_coverage_pct "min-coverage-pct must be between 50-100." "$defaultMinCoveragePct"
-
-    is_safe_max_regression_pct "$max_regression_pct"                                                                 || true
-    (( max_regression_pct >= 0 && max_regression_pct <= 50 )) ||
-        warning_var max_regression_pct "max-regression-pct must be between 0-50." "$defaultMaxRegressionPct"
-
-    is_safe_integer "$max_gen1_collects"                                                                             || true
-    (( max_gen1_collects >= 0 )) ||
-        error "max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')." -ec "$err_argument_value"
-
-    is_safe_integer "$max_gen2_collects"                                                                             || true
-    (( max_gen2_collects >= 0 )) ||
-        error "max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')." -ec "$err_argument_value"
-
     is_safe_boolean "$reset_benchmark_thresholds"                                                                    || true
     is_safe_boolean "$skip_build"                                                                                    || true
     is_safe_boolean "$skip_tests"                                                                                    || true
     is_safe_boolean "$skip_benchmarks"                                                                               || true
     is_safe_boolean "$skip_packages"                                                                                 || true
+    ! is_safe_min_coverage_pct "$min_coverage_pct"     || (( min_coverage_pct >= 50 && min_coverage_pct <= 100 ))    || warning_var min_coverage_pct "min-coverage-pct must be between 50-100." "$defaultMinCoveragePct"
+    ! is_safe_max_regression_pct "$max_regression_pct" || (( max_regression_pct >= 0 && max_regression_pct <= 50 ))  || warning_var max_regression_pct "max-regression-pct must be between 0-50." "$defaultMaxRegressionPct"
+    ! is_safe_integer "$max_gen1_collects"             || (( max_gen1_collects >= 0 ))                               || error "max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')." -ec "$err_argument_value"
+    ! is_safe_integer "$max_gen2_collects"             || (( max_gen2_collects >= 0 ))                               || error "max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')." -ec "$err_argument_value"
 
     # Find first valid project file (if any)
     declare -a all_projects
@@ -249,6 +234,21 @@ function resolve_arguments()
     done
 
     [[ -z $candidate ]] || sanitize_common_dotnet_args "$candidate"
+
+    readonly build_projects
+    readonly test_projects
+    readonly benchmark_projects
+    readonly package_projects
+    readonly runners_os
+    readonly reset_benchmark_thresholds
+    readonly skip_tests
+    readonly skip_build
+    readonly skip_benchmarks
+    readonly skip_packages
+    readonly min_coverage_pct
+    readonly max_regression_pct
+    readonly max_gen1_collects
+    readonly max_gen2_collects
 
     return "$success"
 }

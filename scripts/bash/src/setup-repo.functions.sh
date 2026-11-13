@@ -17,6 +17,7 @@ declare -xri err_logic_error
 declare -xri err_io_failure
 
 declare -xr question_em
+declare -xr git_heads_ns
 
 declare -xri admin_role_id=5
 
@@ -185,7 +186,7 @@ function initialize_gh_paths()
 {
     [[ -n $repo ]]                                                              || bug "${FUNCNAME[0]}() The 'repo' variable is not set. Cannot initialize GitHub paths." -ec "$err_logic_error"
     [[ -n $main_protection_rs_name ]]                                           || bug "${FUNCNAME[0]}() The 'main_protection_rs_name' variable is not set. Cannot initialize GitHub paths." -ec "$err_logic_error"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     path_repo="repos/$repo"
 
@@ -232,7 +233,7 @@ function initialize_jq_queries()
     [[ -n $main_protection_rs_name ]]                                           || bug "${FUNCNAME[0]}() The 'main_protection_rs_name' variable is not set. Cannot initialize jq queries." -ec "$err_logic_error"
     (( actions_app_id > 0 ))                                                    || bug "${FUNCNAME[0]}() The 'actions_app_id' variable is not set or is invalid. Cannot initialize jq queries." -ec "$err_logic_error"
     (( admin_role_id > 0 ))                                                     || bug "${FUNCNAME[0]}() The 'admin_role_id' variable is not set or is invalid. Cannot initialize jq queries." -ec "$err_logic_error"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     jq_entries='to_entries[] | "\(.key)=\(.value)"'
     jq_secrets='.secrets[] | "\(.name)='"$secret_placeholder"'"'
@@ -304,7 +305,7 @@ function initialize_main_protection_rs_id()
 {
     [[ -n $main_protection_rs_name ]]                                           || bug "${FUNCNAME[0]}() The 'main_protection_rs_name' variable is not set. Cannot initialize main protection ruleset ID." -ec "$err_logic_error"
     [[ -n $path_rulesets ]]                                                     || bug "${FUNCNAME[0]}() The 'path_rulesets' variable is not set. Run initialize_gh_paths() first. Cannot initialize main protection ruleset ID." -ec "$err_logic_error"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     # main_protection_rs_id is not 0 - already initialized
     (( main_protection_rs_id <= 0 ))                                            || return "$success"
@@ -490,7 +491,7 @@ function configure_variables()
                                                                 "  - the name of the GitHub application being configured, e.g. actions" \
                                                                 -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}" || bug "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_vars[*]} (provided '${1-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _app=${1,,}
 
@@ -652,7 +653,7 @@ function set_var()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
     [[ -v 2 ]]                                                                  || bug "${FUNCNAME[0]}() requires argument 2, the variable value, to be provided." -ec "$err_missing_argument"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _name="$1"
     local _value="$2"
@@ -681,7 +682,7 @@ function delete_var()
                                                                                        "  - the variable name" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _name="$1"
 
@@ -733,7 +734,7 @@ function configure_secrets()
                                                                                        "  - the application name" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}"                     || bug "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${1-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _app=${1,,}
 
@@ -888,7 +889,7 @@ function set_secret()
                                                                    -ec "$err_invalid_arguments"
     [[ ! -v 1 || -n $1 ]]                                   || bug "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
     [[ ! -v 3 ]] || is_in "$3" "${gh_apps_with_secrets[@]}" || bug "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${3-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _name="$1"
     local _value="$2"
@@ -940,7 +941,7 @@ function delete_secret()
                                                                    -ec "$err_invalid_arguments"
     [[ ! -v 1 || -n $1 ]]                                   || bug "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
     [[ ! -v 2 ]] || is_in "$2" "${gh_apps_with_secrets[@]}" || bug "${FUNCNAME[0]}() requires argument 2, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${2-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _name="$1"
     local _app="$2"
@@ -1012,7 +1013,7 @@ function configure_branch_protection()
     "enforcement": "active",
     "conditions": {
         "ref_name": {
-            "include": ["refs/heads/$branch"],
+            "include": ["$git_heads_ns$branch"],
             "exclude": []
         }
     },

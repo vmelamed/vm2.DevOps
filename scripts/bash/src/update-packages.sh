@@ -20,7 +20,7 @@ declare -xr negative
 declare -xr err_tool_error
 declare -xr err_invalid_file
 
-# core constants
+# vm2 core lib constants
 declare -xr edit_em
 declare -xr check_em
 declare -xr no_entry_em

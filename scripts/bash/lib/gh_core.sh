@@ -154,9 +154,8 @@ function to_output()
 #-----------------------------------------------------------------------------------------------
 function gh_escape()
 {
-    (( $# == 1 )) || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to escape." -ec "$err_invalid_arguments"
-
-    exit_if_has_bugs
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to escape." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
     local _value=$1
 
@@ -189,17 +188,16 @@ function gh_escape()
 #-----------------------------------------------------------------------------------------------
 function args_to_github_output()
 {
-    (( $# > 0 ))                 || bug "${FUNCNAME[0]}() requires one or more arguments (provided $#) - the names of the variables to output." -ec "$err_invalid_arguments"
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires one or more arguments (provided $#) - the names of the variables to output." -ec "$err_invalid_arguments"
 
     # validate the variable names before doing any output
     local _var
     local -i _argument_number=1
     for _var in "$@"; do
-        is_variable_name "$_var" || bug "${FUNCNAME[0]}() requires argument $_argument_number to be a valid variable name (provided '${_var-<missing>}')." -ec "$err_invalid_nameref"
+        is_variable_name "$_var"                                                || bug "${FUNCNAME[0]}() requires argument $_argument_number to be a valid variable name (provided '${_var-<missing>}')." -ec "$err_invalid_nameref"
         (( ++_argument_number ))
     done
-
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _k _v
     for _var in "$@"; do

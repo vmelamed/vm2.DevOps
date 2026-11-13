@@ -218,7 +218,7 @@ function validate_app_default_vars()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}"                        || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_vars[*]}) - provided ${1-<missing>}." \
                                                                                        -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _app=$1
     local _vars_defaults_name="${_app,,}_vars_defaults"
@@ -228,39 +228,39 @@ function validate_app_default_vars()
     is_associative_array "$_vars_defaults_name"                                 || bug "${FUNCNAME[0]}() the required associative array '$_vars_defaults_name' is not defined." -ec "$err_invalid_nameref"
     is_indexed_array "$_vars_order_name"                                        || bug "${FUNCNAME[0]}() the required indexed array '$_vars_order_name' is not defined." -ec "$err_invalid_nameref"
     is_associative_array "$_vars_validators_name"                               || bug "${FUNCNAME[0]}() the required associative array '$_vars_validators_name' is not defined." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
-    local -n _app_vars_defaults=$_vars_defaults_name
-    local -n _app_vars_order=$_vars_order_name
-    local -n _app_vars_validators=$_vars_validators_name
+    local -n __app_vars_defaults=$_vars_defaults_name
+    local -n __app_vars_order=$_vars_order_name
+    local -n __app_vars_validators=$_vars_validators_name
 
     is_empty_array "$_vars_defaults_name" && return
 
     # make sure that default values, and display order are consistent: there is an entry for each default variable in the display order.
-    if [[ "${#_app_vars_order}" < ${#_app_vars_defaults[@]} ]]; then
-        warning "The number of elements in '$_vars_order_name' (${#_app_vars_order}) is less than the number of elements in '$_vars_defaults_name' (${#_app_vars_defaults}), assuming sorted order."
-        readarray -t "$_vars_order_name" < <(printf "%s\n" "${!_app_vars_defaults[@]}" | sort)
+    if [[ "${#__app_vars_order}" < ${#__app_vars_defaults[@]} ]]; then
+        warning "The number of elements in '$_vars_order_name' (${#__app_vars_order}) is less than the number of elements in '$_vars_defaults_name' (${#__app_vars_defaults}), assuming sorted order."
+        readarray -t "$_vars_order_name" < <(printf "%s\n" "${!__app_vars_defaults[@]}" | sort)
     else
-        for _var in "${!_app_vars_defaults[@]}"; do
-            is_in "$_var" "${_app_vars_order[@]}" || {
+        for _var in "${!__app_vars_defaults[@]}"; do
+            is_in "$_var" "${__app_vars_order[@]}" || {
                 warning "The variable '$_var' is not listed in the display order. Appending it at the end of the array."
-                _app_vars_order+=("$_var")
+                __app_vars_order+=("$_var")
             }
         done
     fi
 
     # make sure that each default variable has a corresponding validator
     local _validator _default_value
-    for _var in "${!_app_vars_defaults[@]}"; do
+    for _var in "${!__app_vars_defaults[@]}"; do
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         [[ -v _app_vars_validators[$_var] ]] && {
-            _validator=${_app_vars_validators[$_var]}
-            _default_value=${_app_vars_defaults[$_var]}
+            _validator=${__app_vars_validators[$_var]}
+            _default_value=${__app_vars_defaults[$_var]}
             is_function "$_validator" || [[ $_validator == "true" ]]            || { bug "${FUNCNAME[0]}() '$_validator' is not a name of a defined function." -ec "$err_invalid_item"; continue; }
             $_validator "$_default_value"                                       || bug "${FUNCNAME[0]}() the default value '$_default_value' of the variable '$_var' is not pass the validator '$_validator'." -ec "$err_invalid_item"
         }                                                                       || bug "There is no validator set for the variable '$_var'." -ec "$err_invalid_item"
     done
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     readonly -A "$_vars_defaults_name"
     readonly -a "$_vars_order_name"
@@ -301,7 +301,7 @@ function get_vars_defaults()
     [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the variables names and their default values - provided: '$2'." -ec "$err_invalid_nameref"
     [[ ! -v 3 ]] || is_indexed_array "$3"                                       || bug "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the variables display order - provided: '$3'." -ec "$err_invalid_nameref"
     [[ ! -v 4 ]] || is_associative_array "$4"                                   || bug "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the variables' validation functions - provided: '$4'." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -r _app=$1
     local -n __vars=$2
@@ -346,20 +346,20 @@ function get_vars_defaults()
 
     # copy the default vars display order
     local _vars_order_name="${_app,,}_vars_order"
-    local -n _app_vars_order=$_vars_order_name
+    local -n __app_vars_order=$_vars_order_name
 
-    __vars_order=("${_app_vars_order[@]}")
+    __vars_order=("${__app_vars_order[@]}")
 
     if [[ -v 4 ]]; then
         # copy the _vars_validators
         local _vars_validators_name="${_app,,}_vars_validators"
-        local -n _app_vars_validators=$_vars_validators_name
+        local -n __app_vars_validators=$_vars_validators_name
 
         local -n __vars_validators=$4
 
         __vars_validators=()
-        for _var in "${!_app_vars_validators[@]}"; do
-            __vars_validators[$_var]=${_app_vars_validators[$_var]}
+        for _var in "${!__app_vars_validators[@]}"; do
+            __vars_validators[$_var]=${__app_vars_validators[$_var]}
         done
     fi
 }
@@ -437,7 +437,7 @@ function validate_app_default_secrets()
 
     is_indexed_array "$_app_secrets_order_name"                                 || bug "${FUNCNAME[0]}() the required indexed array '$_app_secrets_order_name' is not defined." \
                                                                                        -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -473,7 +473,7 @@ function get_secrets_defaults()
     [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the secrets names and their default values - provided: '$2'." -ec "$err_invalid_nameref"
     [[ ! -v 3 ]] || is_indexed_array "$3"                                       || bug "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the secrets display order - provided: '$3'." -ec "$err_invalid_nameref"
     [[ ! -v 4 ]] || is_associative_array "$4"                                   || bug "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the secrets' validation functions - provided: '$4'." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -r _app=$1
     local -n __secrets=$2
@@ -486,10 +486,10 @@ function get_secrets_defaults()
 
     ! is_empty_array "$_app_secrets_order_name"                                 || return "$success"
 
-    local -n _app_secrets_order=$_app_secrets_order_name
+    local -n __app_secrets_order=$_app_secrets_order_name
 
     local _secret
-    for _secret in "${_app_secrets_order[@]}"; do
+    for _secret in "${__app_secrets_order[@]}"; do
         [[ $_app == "actions" && $_secret == "NUGET_API_KEY" ]] &&
         [[ $nuget_server == nuget || $nuget_server == github ]] && continue     || true
         # BENCH_DISPATCH_PAT dispatches RebuildBenchHistory-AllRepos.yaml, which exists only in vm2.DevOps -- no
@@ -501,12 +501,12 @@ function get_secrets_defaults()
         __secrets[$_secret]=$secret_placeholder
     done
 
-    __secrets_order=("${_app_secrets_order[@]}")
+    __secrets_order=("${__app_secrets_order[@]}")
 
     if [[ -v 4 ]]; then
         local -n __secrets_validators=$4
 
-        for _secret in "${_app_secrets_order[@]}"; do
+        for _secret in "${__app_secrets_order[@]}"; do
             __secrets_validators[$_secret]=is_valid_secret
         done
     fi

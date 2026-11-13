@@ -125,11 +125,11 @@ function compare_settings()
     [[ ! -v 5 ]] || is_associative_array "$5"                                   || bug "${FUNCNAME[0]}() requires argument 5 to name an associative array containing expected key-value pairs (provided '${5-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 6 ]] || is_associative_array "$6"                                   || bug "${FUNCNAME[0]}() requires argument 6 to name an indexed array for summary results: [matches], [diffs], [errors], and [unknowns] (provided '${6-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7"                        || bug "${FUNCNAME[0]}() requires argument 7 (if present) to name an indexed array containing the display order (provided '${7-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
-    local -n _expected_key_values="$5"
+    local -n __expected_key_values="$5"
 
-    (( ${#_expected_key_values[@]} > 0 ))                                       || return "$success"
+    (( ${#__expected_key_values[@]} > 0 ))                                       || return "$success"
 
     local _gh_endpoint="$1"
     local _jq_transform=$2
@@ -140,17 +140,17 @@ function compare_settings()
 
     if [[ -n "${7:-}" ]]; then
         # use the keys in the provided display order
-        local -n _keys_in_order="$7"
-        _keys=("${_keys_in_order[@]}")
+        local -n __keys_in_order="$7"
+        _keys=("${__keys_in_order[@]}")
         # make sure that all expected keys are included in the display order
-        for _var in "${!_expected_key_values[@]}"; do
+        for _var in "${!__expected_key_values[@]}"; do
             is_in "$_var" "${_keys[@]}"                                         || { warning "The variable '$_var' is not listed in the display order. Appending it at the end of the array."
                                                                                      _keys+=("$_var")
                                                                                 }
         done
     else
         # otherwise put the keys in the array in sorted order
-        readarray -t _keys < <(printf '%s\n' "${!_expected_key_values[@]}" | sort)
+        readarray -t _keys < <(printf '%s\n' "${!__expected_key_values[@]}" | sort)
     fi
 
     # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
@@ -166,7 +166,7 @@ function compare_settings()
 
     local _key='' _value=''
     while IFS='=' read -r _key _value; do
-        [[ -v _expected_key_values["$_key"] ]] && _known_key_values["$_key"]="$_value" || _unknown_key_values["$_key"]="$_value"
+        [[ -v __expected_key_values["$_key"] ]] && _known_key_values["$_key"]="$_value" || _unknown_key_values["$_key"]="$_value"
     done < <(jq -r "$_jq_transform" <<< "$_json")
 
     local _expected_value='' _actual_value=''
@@ -176,12 +176,12 @@ function compare_settings()
             printf "    ➡️  %-38s %s\n" "${_key#--}" "────────────────────────────────────────────────────────────────────────"
             continue
         fi
-        if [[ ! -v _expected_key_values["$_key"] ]]; then
+        if [[ ! -v __expected_key_values["$_key"] ]]; then
             trace "Skipping unknown key '$_key'."
             continue
         fi
 
-        _expected_value="${_expected_key_values[$_key]}"
+        _expected_value="${__expected_key_values[$_key]}"
         if [[ $_expected_value == "$secret_placeholder" ]]; then
             _expected_value=$undefined_default # mask as undefined expected value (which it is)
             [[ -v _known_key_values[$_key] ]] &&
