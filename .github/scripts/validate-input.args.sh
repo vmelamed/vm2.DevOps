@@ -187,7 +187,6 @@ function parse_arguments()
 function verify_environment()
 {
     is_jq_present                                                               || true
-    is_gh_present                                                               || true
 
     return "$success"
 }
