@@ -99,6 +99,7 @@ _run_validate_input() {
 
 # --- happy path ---------------------------------------------------------------------------
 
+# bats test_tags=time:1
 @test "validate-input: succeeds with valid build/test projects and reports success" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     run _run_validate_input "$BATS_TEST_TMPDIR/repo" \
@@ -107,6 +108,7 @@ _run_validate_input() {
     assert_output --partial "All parameters validated successfully"
 }
 
+# bats test_tags=time:1
 @test "validate-input: an empty (default) build-projects array succeeds -- does not crash" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     run _run_validate_input "$BATS_TEST_TMPDIR/repo" 'TEST_PROJECTS="[\"src/App.csproj\"]"' --quiet
@@ -115,6 +117,7 @@ _run_validate_input() {
     assert_output --partial "build-projects=[]"
 }
 
+# bats test_tags=time:1
 @test "validate-input: writes every validated value as a key=value pair (kebab-case) to stdout" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     run _run_validate_input "$BATS_TEST_TMPDIR/repo" \
@@ -127,6 +130,7 @@ _run_validate_input() {
     assert_output --partial 'skip-tests=false'
 }
 
+# bats test_tags=time:1
 @test "validate-input: --build-projects on the command line overrides \$BUILD_PROJECTS" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     run _run_validate_input "$BATS_TEST_TMPDIR/repo" \
@@ -188,7 +192,7 @@ _run_validate_input() {
 
 # --- tool prerequisites ---------------------------------------------------------------------
 
-# bats test_tags=tool-check
+# bats test_tags=slow
 @test "validate-input: fails with a clear error when jq cannot be found or installed" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     mkdir -p "$BATS_TEST_TMPDIR/bin"
@@ -213,10 +217,10 @@ _run_validate_input() {
         cd '$BATS_TEST_TMPDIR/repo' && TEST_PROJECTS='[\"src/App.csproj\"]' bash '$_validate_input' --quiet
     "
     assert_failure
-    assert_output --partial "'jq' was not found and could not install it"
+    assert_output --partial "'jq' is not installed."
 }
 
-# bats test_tags=tool-check
+# bats test_tags=slow
 @test "validate-input: fails with a clear error when gh cannot be found or installed" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     mkdir -p "$BATS_TEST_TMPDIR/bin"
@@ -241,7 +245,7 @@ _run_validate_input() {
         cd '$BATS_TEST_TMPDIR/repo' && TEST_PROJECTS='[\"src/App.csproj\"]' bash '$_validate_input' --quiet
     "
     assert_failure
-    assert_output --partial "'gh' was not found and could not install it"
+    assert_output --partial "'gh' is not installed."
 }
 
 # --- argument handling ---------------------------------------------------------------------
@@ -271,6 +275,7 @@ _run_validate_input() {
 
 # --- CI parity ------------------------------------------------------------------------------
 
+# bats test_tags=time:1
 @test "validate-input: in CI mode, the same success message and outputs also land in the step summary and GITHUB_OUTPUT files" {
     _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
     run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" \

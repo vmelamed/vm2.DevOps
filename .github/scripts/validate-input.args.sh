@@ -5,7 +5,7 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_argument_value
@@ -13,12 +13,13 @@ declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_tool_not_found
+declare -xri err_tool_unauthenticated
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 declare -xra dump_common_dotnet_args
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this scripts argument defaults
@@ -54,6 +55,16 @@ declare -x skip_benchmarks=${SKIP_BENCHMARKS:-$defaultSkipBenchmarks}
 declare -x skip_packages=${SKIP_PACKAGES:-$defaultSkipPackages}
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
 
@@ -170,43 +181,18 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_environment
-    validate_arguments
-    exit_if_has_errors
-    dump_args
-}
-
-function validate_environment()
-{
-    # Check for required dependencies (jq and gh) and attempt to install them if not found
-    if ! is_tool_present jq; then
-        if execute sudo apt-get update && sudo apt-get install -y jq; then
-            info "GitHub CLI 'jq' successfully installed."
-        else
-            error "GitHub CLI 'jq' was not found and could not install it. Please have 'jq' installed." -ec "$err_tool_not_found"
-        fi
-    else
-        jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
-            warning "GitHub CLI 'jq' version 1.8.x is required. Upgrading 'jq' to version 1.8.2..."
-            curl -sLo /tmp/jq https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-linux-amd64
-            sudo install /tmp/jq /usr/local/bin/jq
-            jq -V | to_stdout | grep -Eo 'jq-1\.8\.[0-9]+' &> "$_ignore" || {
-                error "GitHub CLI 'jq' version 1.8.x is required. Please update 'jq' to version 1.8.x." -ec "$err_tool_not_found"
-            }
-        }
-    fi
-    if ! is_tool_present gh; then
-        if execute sudo apt-get update && sudo apt-get install -y gh; then
-            info "GitHub CLI 'gh' successfully installed."
-        else
-            error "GitHub CLI 'gh' was not found and could not install it. Please have 'gh' installed." -ec "$err_tool_not_found"
-        fi
-    fi
     return "$success"
 }
 
-function validate_arguments()
+function verify_environment()
+{
+    is_jq_present                                                               || true
+    is_gh_present                                                               || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     #   Build-projects may freely mix individual project paths and solution files: the build matrix
     #   (_ci.yaml/_build.yaml) fans out over whatever's in this array as-is, one leg per entry,
@@ -222,28 +208,15 @@ function validate_arguments()
     validate_json_array benchmark_projects "$defaultBenchmarkProjects" is_safe_existing_file                         || true
     validate_json_array package_projects "$defaultPackageProjects" is_safe_existing_file                             || true
     validate_json_array runners_os "$defaultRunnersOs" is_safe_runner_os                                             || true
-
-    is_safe_min_coverage_pct "$min_coverage_pct"                                                                     || true
-    (( min_coverage_pct >= 50 && min_coverage_pct <= 100 )) ||
-        warning_var min_coverage_pct "min-coverage-pct must be between 50-100." "$defaultMinCoveragePct"
-
-    is_safe_max_regression_pct "$max_regression_pct"                                                                 || true
-    (( max_regression_pct >= 0 && max_regression_pct <= 50 )) ||
-        warning_var max_regression_pct "max-regression-pct must be between 0-50." "$defaultMaxRegressionPct"
-
-    is_safe_integer "$max_gen1_collects"                                                                             || true
-    (( max_gen1_collects >= 0 )) ||
-        error "max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')." -ec "$err_argument_value"
-
-    is_safe_integer "$max_gen2_collects"                                                                             || true
-    (( max_gen2_collects >= 0 )) ||
-        error "max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')." -ec "$err_argument_value"
-
     is_safe_boolean "$reset_benchmark_thresholds"                                                                    || true
     is_safe_boolean "$skip_build"                                                                                    || true
     is_safe_boolean "$skip_tests"                                                                                    || true
     is_safe_boolean "$skip_benchmarks"                                                                               || true
     is_safe_boolean "$skip_packages"                                                                                 || true
+    ! is_safe_min_coverage_pct "$min_coverage_pct"     || (( min_coverage_pct >= 50 && min_coverage_pct <= 100 ))    || warning_var min_coverage_pct "min-coverage-pct must be between 50-100." "$defaultMinCoveragePct"
+    ! is_safe_max_regression_pct "$max_regression_pct" || (( max_regression_pct >= 0 && max_regression_pct <= 50 ))  || warning_var max_regression_pct "max-regression-pct must be between 0-50." "$defaultMaxRegressionPct"
+    ! is_safe_integer "$max_gen1_collects"             || (( max_gen1_collects >= 0 ))                               || error "max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')." -ec "$err_argument_value"
+    ! is_safe_integer "$max_gen2_collects"             || (( max_gen2_collects >= 0 ))                               || error "max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')." -ec "$err_argument_value"
 
     # Find first valid project file (if any)
     declare -a all_projects
@@ -261,7 +234,22 @@ function validate_arguments()
     done
 
     [[ -z $candidate ]] || sanitize_common_dotnet_args "$candidate"
-    #  TODO: add validation here
+
+    readonly build_projects
+    readonly test_projects
+    readonly benchmark_projects
+    readonly package_projects
+    readonly runners_os
+    readonly reset_benchmark_thresholds
+    readonly skip_tests
+    readonly skip_build
+    readonly skip_benchmarks
+    readonly skip_packages
+    readonly min_coverage_pct
+    readonly max_regression_pct
+    readonly max_gen1_collects
+    readonly max_gen2_collects
+
     return "$success"
 }
 

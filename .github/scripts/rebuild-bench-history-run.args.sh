@@ -5,7 +5,7 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_argument_value
 declare -xri err_missing_argument
@@ -14,16 +14,16 @@ declare -xri err_unknown_argument
 declare -xri err_logic_error
 declare -xri err_tool_not_found
 
-# core lib constants
+# vm2 core lib constants
 
-# core lib defaults
+# vm2 core lib defaults
 declare -xr default_minver_tag_prefix
 
-# core lib variables
+# vm2 core lib variables
 declare -xr ci
 declare -xra dump_common_dotnet_args
 
-# core lib variables - dotnet
+# vm2 core lib variables - dotnet
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
 declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-}
@@ -45,6 +45,16 @@ declare -xa benchmark_projects=()
 declare benchmark_project=${BENCHMARK_PROJECT:-}
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local _positional_arg_set=false
@@ -110,20 +120,18 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    verify_environment
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
 function verify_environment()
 {
     is_tool_present bencher                                                     || error "'bencher' is not installed. Please install it first." -ec "$err_tool_not_found"
     [[ -n "${BENCHER_API_TOKEN:-}" ]]                                           || error "The BENCHER_API_TOKEN environment variable is required." -ec "$err_missing_argument"
+
+    return "$success"
 }
 
-function validate_arguments()
+function resolve_arguments()
 {
     is_positive "$repeat"                                                       || error "repeat must be a positive integer (got '$repeat')." -ec "$err_argument_value"
     validate_preprocessor_symbols preprocessor_symbols                          || true
@@ -143,7 +151,6 @@ function validate_arguments()
     if [[ -n "$benchmark_project" ]]; then
         is_safe_existing_path "$benchmark_project"                              || true
         benchmark_projects+=("$benchmark_project")
-
     elif [[ -d 'benchmarks' ]]; then
         readarray -t benchmark_projects < <(
             find benchmarks \
@@ -151,6 +158,7 @@ function validate_arguments()
                 -o -name '*.csproj' -print | sort)
         trace "Auto-detected benchmark projects: ${benchmark_projects[*]}"
     fi
+
     if (( ${#benchmark_projects[@]} == 0 )); then                                  error "No benchmark projects found under 'benchmarks/' and none specified." -ec "$err_argument_value"
     else
         get_artifacts_path "${benchmark_projects[0]}" artifacts                 || true

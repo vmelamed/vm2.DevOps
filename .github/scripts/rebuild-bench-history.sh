@@ -12,22 +12,22 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# core lib
+# vm2 core lib
 source "$lib_dir/gh_core.sh"
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_argument_value
 
-# core lib constants
+# vm2 core lib constants
 declare -xra vm2_repositories
 
-# core lib defaults
+# vm2 core lib defaults
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
-# core lib constants
+# vm2 core lib constants
 declare -xr key_artifacts_path
 
 # this script's components

@@ -12,17 +12,17 @@ declare -xr script_name
 declare -xr script_dir
 declare -xr lib_dir
 
-# core lib
+# vm2 core lib
 source "$lib_dir/gh_core.sh"
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri err_logic_error
 
-# core lib constants
+# vm2 core lib constants
 
-# core lib defaults
+# vm2 core lib defaults
 
-# core lib variables
+# vm2 core lib variables
 declare -x preprocessor_symbols
 declare -x minver_tag_prefix
 declare -x minver_prerelease_id

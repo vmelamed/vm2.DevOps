@@ -38,6 +38,9 @@ _pack="$_gh_scripts_dir/pack.sh"
 _write_fake_dotnet_head() {
     cat > "$1" <<'EOF'
 #!/usr/bin/env bash
+# 'dotnet --version' (is_dotnet_present): answered before the log line, so it never shifts the logged call indices.
+# $dotnet_min_version is inherited from the script under test (core.sh exports it).
+[[ $1 != --version ]] || { echo "${FAKE_DOTNET_VERSION:-$dotnet_min_version}"; exit 0; }
 echo "$*" >> "$DOTNET_CALL_LOG"
 case "$1" in
     pack|build|clean|restore)

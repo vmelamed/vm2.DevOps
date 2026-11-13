@@ -5,24 +5,35 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_not_found
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
+declare -xri err_tool_not_found
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 declare -xra dump_common_dotnet_args
 
-# core lib defaults
+# vm2 core lib defaults
 
-# core lib variables
+# vm2 core lib variables
 
 # this scripts arguments
 build_project=${BUILD_PROJECT:-}
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local _positional_arg_set=false
@@ -44,13 +55,17 @@ function get_arguments()
         _positional_arg_set=true
     done
 
-    usage_if_requested
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
+{
+    is_dotnet_present                                                           || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     # sanitize inputs
     if [[ -z $build_project ]]; then
@@ -72,7 +87,7 @@ function validate_arguments()
         trace "Auto-detected build project: $build_project"
     fi
 
-    is_safe_valid_path "$build_project"
+    is_safe_valid_path "$build_project"                                         || true
     sanitize_common_dotnet_args "$build_project"
 
     readonly build_project

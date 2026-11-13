@@ -94,6 +94,7 @@ _run_rebuild() {
 # --- happy path ---------------------------------------------------------------------------
 
 # bats test_tags=TODO
+# bats test_tags=time:1
 @test "rebuild-bench-history-run: records the given project once and reports success (does not hang)" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"
@@ -122,6 +123,7 @@ _run_rebuild() {
 
 # --- partial failure handling ------------------------------------------------------------
 
+# bats test_tags=time:1
 @test "rebuild-bench-history-run: a failed benchmark run is skipped with a warning, not fatal by itself" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"
@@ -132,6 +134,7 @@ _run_rebuild() {
 }
 
 # bats test_tags=TODO
+# bats test_tags=time:1
 @test "rebuild-bench-history-run: fails overall only when NO data points were recorded across all runs" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"
@@ -188,6 +191,7 @@ EOF
     assert_output --partial "The Bencher project 'bad!slug' is not a valid project name (slug)"
 }
 
+# bats test_tags=time:1
 @test "rebuild-bench-history-run: rejects a --bencher-testbed that is not a valid slug" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"
@@ -204,6 +208,7 @@ EOF
     assert_output --partial "requires argument 1 to be a valid Git branch name"
 }
 
+# bats test_tags=time:1
 @test "rebuild-bench-history-run: accepts the default --bencher-branch (main)" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"
@@ -219,6 +224,7 @@ EOF
     assert_output --partial "The Bencher adapter 'not-an-adapter!' is not a valid adapter name"
 }
 
+# bats test_tags=time:1
 @test "rebuild-bench-history-run: accepts the default --bencher-adapter (c_sharp_dot_net)" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"
@@ -226,6 +232,7 @@ EOF
     assert_success
 }
 
+# bats test_tags=time:1
 @test "rebuild-bench-history-run: fails cleanly when the bencher CLI is not on PATH" {
     _make_benchmark_project "$BATS_TEST_TMPDIR"
     git -C "$BATS_TEST_TMPDIR" init -q
@@ -263,6 +270,7 @@ EOF
 # --- CI parity ------------------------------------------------------------------------------
 
 # bats test_tags=TODO
+# bats test_tags=time:1
 @test "rebuild-bench-history-run: in CI mode, the summary also lands in the step summary file" {
     _install_fakes "$BATS_TEST_TMPDIR"
     _make_benchmark_project "$BATS_TEST_TMPDIR"

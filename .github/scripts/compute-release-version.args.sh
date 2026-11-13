@@ -5,16 +5,17 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_tool_not_found
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 
-# core lib defaults
+# vm2 core lib defaults
 declare -xr default_minver_tag_prefix
 
 # this scripts arguments
@@ -22,6 +23,16 @@ declare -x minver_tag_prefix=${MINVERTAGPREFIX:-"$default_minver_tag_prefix"}
 declare -x reason=${REASON:-"release build"}
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
 
@@ -51,13 +62,17 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
+{
+    is_git_present                                                              || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     # Sanitize inputs to prevent injection attacks
     validate_minver_tag_components "$minver_tag_prefix"                         || true

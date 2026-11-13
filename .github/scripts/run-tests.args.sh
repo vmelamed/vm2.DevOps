@@ -5,14 +5,16 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
+declare -xri err_argument_value
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_tool_not_found
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 declare -xra dump_common_dotnet_args
 
@@ -28,6 +30,16 @@ declare -x  min_branch_coverage_pct=''
 declare -x  min_method_coverage_pct=''
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local _positional_arg_set=false
@@ -71,18 +83,22 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
+{
+    is_dotnet_present                                                           || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     # validate the values of the variables common for many vm2.DevOps scripts,
     # usually set from CLI arguments, environment variables, or defaults
     is_safe_existing_file "$test_project"                                       || true
-    [[ $test_project == *.csproj ]]                                             || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+    [[ $test_project == *.csproj ]]                                             || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
     sanitize_common_dotnet_args "$test_project"
 
     # Unless MIN_BRANCH_COVERAGE_PCT or MIN_METHOD_COVERAGE_PCT is set, derive it from the line coverage. Derive only from a
