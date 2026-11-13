@@ -314,20 +314,6 @@ exit 99"
     refute_output --partial "requires 'dotnet' version"
 }
 
-# --- is_valid_dotnet_version ---------------------------------------------------------------------
-
-@test "is_valid_dotnet_version: accepts a well-formed SDK version, rejects garbage" {
-    run is_valid_dotnet_version "10.0.100"
-    assert_success
-    run is_valid_dotnet_version "garbage"
-    assert_failure "$failure"
-}
-
-@test "is_valid_dotnet_version: bug-exits with the wrong argument count" {
-    run is_valid_dotnet_version
-    assert_failure "$err_invalid_arguments"
-}
-
 # --- is_valid_json / is_valid_json_file ----------------------------------------------------------
 
 @test "is_valid_json: accepts a well-formed JSON string, rejects garbage" {

@@ -25,7 +25,6 @@ declare -x semverReleaseRex
 declare -x _ignore
 
 declare -xr dotnet_min_version='10.0.404'
-declare dotnet_version_regex=''
 declare -xr jq_min_version='1.8.0'
 declare -x git_min_version
 declare -x gh_min_version
@@ -58,8 +57,9 @@ function is_tool_present()
 declare git_present=''
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks if 'git' is available on the `$PATH`. The result is cached and the errors
-#   are reported only on the first run.
+# @description Checks if 'git' is available on the `$PATH` and if its version is greater than or
+#   equal to `$git_min_version`. The result is cached and the errors are reported only on the
+#   first run.
 #
 # @exitcode positive=0: 'git' is present.
 # @exitcode negative=1: 'git' is not present.
@@ -86,8 +86,9 @@ function is_git_present()
 declare gh_present=''
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks if GitHub CLI 'gh' is available on the `$PATH`. The result is cached and the errors
-#   are reported only on the first run.
+# @description Checks if GitHub CLI 'gh' is available on the `$PATH`, its version is greater
+#   than or equal to `$gh_min_version`, and if it is authenticated. The result is cached and
+#   the errors are reported only on the first run.
 #
 # @exitcode positive=0: 'gh' is present.
 # @exitcode negative=1: 'gh' is not present.
@@ -115,8 +116,9 @@ function is_gh_present()
 declare jq_present=''
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks if 'jq' ver.1.8.0 or higher is available on the `$PATH`. The result is cached and the errors
-#   are reported only on the first run.
+# @description Checks if 'jq' is available on the `$PATH` and its version is greater than or
+#   equal to `$jq_min_version`. The result is cached and the errors are reported only on the
+#   first run.
 #
 # @exitcode positive=0: 'jq' is present.
 # @exitcode negative=1: 'jq' is not present.
@@ -143,8 +145,8 @@ function is_jq_present()
 declare check_jsonschema_present=''
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks if 'check_jsonschema' is available on the `$PATH`. The result is cached and the errors
-#   are reported only on the first run.
+# @description Checks if 'check_jsonschema' is available on the `$PATH`. The result is cached
+#   and the errors are reported only on the first run.
 #
 # @exitcode positive=0: 'check-jsonschema' is present.
 # @exitcode negative=1: 'check-jsonschema' is not present.
@@ -173,8 +175,8 @@ function is_check_jsonschema_present()
 declare yq_present=''
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks if 'yq' by Mike Farah is available on the `$PATH`. The result is cached and the errors
-#   are reported only on the first run.
+# @description Checks if 'yq' is available on the `$PATH` and if it is a version by Mike Farah.
+#   The result is cached and the errors are reported only on the first run.
 #
 # @exitcode positive=0: 'yq' is present.
 # @exitcode negative=1: 'yq' is not present.
@@ -200,8 +202,9 @@ function is_yq_present()
 declare dotnet_present=''
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks if 'dotnet' ver. $dotnet_min_version or higher is available on the `$PATH`.
-#   The result is cached and the errors are reported only on the first run.
+# @description Checks if 'dotnet' is available on the `$PATH` and its version is greater than or
+#   equal to '$dotnet_min_version'. The result is cached and the errors are reported only on the
+#   first run.
 #
 # @exitcode positive=0: 'dotnet' is present.
 # @exitcode negative=1: 'dotnet' is not present.
@@ -225,26 +228,6 @@ function is_dotnet_present()
     fi
 
     $dotnet_present
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if the parameter represents a valid .NET SDK version specifier, e.g. a
-#   full version (`10.0.100`), a major.minor with optional feature-band wildcard (`10.0`,
-#   `10.0.1xx`), a bare major (`10`), or the literal `latest`.
-#
-# @arg $1 string version - string to test
-#
-# @exitcode positive=0: the string is a valid .NET SDK version specifier
-# @exitcode negative=1: otherwise
-#
-# @example
-#   if is_valid_dotnet_version "$dotnet_version"; then echo "Valid"; fi
-#-----------------------------------------------------------------------------------------------
-function is_valid_dotnet_version()
-{
-    [[ -n $dotnet_version_regex ]] || { dotnet_version_regex="^$semverReleaseRex|latest\$";
-                                        readonly dotnet_version_regex; }
-    __test_with_regex "$@" "^$dotnet_version_regex"
 }
 
 #-----------------------------------------------------------------------------------------------
