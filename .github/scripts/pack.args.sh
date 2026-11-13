@@ -7,10 +7,12 @@ declare -xr script_name
 
 # reference error codes defined in the core library
 declare -xri success
+declare -xri err_argument_value
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
 declare -xri err_unknown_argument
 declare -xri err_logic_error
+declare -xri err_tool_not_found
 
 declare -xr ci
 
@@ -27,6 +29,16 @@ declare -x reason=${REASON:-}
 declare -x build=${BUILD:-false}
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local _positional_arg_set=false
@@ -78,19 +90,23 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
+{
+    is_dotnet_present                                                           || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     package_project=${package_project:-}
     # validate the values of the variables common for many vm2.DevOps scripts,
     # usually set from CLI arguments, environment variables, or defaults
     is_safe_existing_file "$package_project"                                    || true
-    [[ $package_project == *.csproj ]]                                          || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
+    [[ $package_project == *.csproj ]]                                          || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
     is_safe_boolean "$build"                                                    || true
     is_safe_reason "$reason"                                                    || true
     sanitize_common_dotnet_args "$package_project"

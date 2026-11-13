@@ -5,7 +5,7 @@
 
 declare -xr script_name
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_too_many_arguments
@@ -16,10 +16,10 @@ declare -xri err_not_found
 declare -xri err_tool_not_found
 declare -xri err_tool_unauthenticated
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this scripts arguments
@@ -31,6 +31,16 @@ declare -x workflow_name=${WORKFLOW_NAME:-}
 declare -x workflow_path=${WORKFLOW_PATH:-}
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
 
@@ -86,29 +96,25 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    verify_environment
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
 function verify_environment()
 {
-    is_tool_present jq                                                          || error "'jq' is not installed. Please install it first." -ec "$err_tool_not_found"
-    is_tool_present gh                                                          || { error "'gh' is not installed. Please install it first." -ec "$err_tool_not_found"; return "$success"; }
-    gh auth status &> "$_ignore"                                                || error "'gh' is not authenticated. Run 'gh auth login' first." -ec "$err_tool_unauthenticated"
+    is_jq_present                                                               || true
+    is_gh_present                                                               || true
 
     return "$success";
 }
 
-function validate_arguments()
+function resolve_arguments()
 {
     [[ -n "$artifact_name" ]]                                                   || error "The name of the artifact to download must be specified." -ec "$err_missing_argument"
     is_safe_input "$artifact_name"                                              || true
 
     [[ -z "$artifacts" ]] || is_safe_valid_path "$artifacts"                    || true
     [[ -n "$artifacts" ]]                                                       || error "The directory to download the artifact to must be specified." -ec "$err_missing_argument"
+
     is_safe_input "$repository"                                                 || true
     is_safe_input "$workflow_id"                                                || true
     is_safe_input "$workflow_name"                                              || true

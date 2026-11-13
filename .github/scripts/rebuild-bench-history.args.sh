@@ -6,7 +6,7 @@
 declare -xr script_name
 declare -xr script_dir
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -xri success
 declare -xri err_missing_argument
 declare -xri err_argument_value
@@ -16,13 +16,13 @@ declare -xri err_too_many_arguments
 declare -xri err_tool_not_found
 declare -xri err_tool_unauthenticated
 
-# core lib constants
+# vm2 core lib constants
 declare -xr ci
 declare -xr key_owner
 
-# core lib defaults
+# vm2 core lib defaults
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this script's constants
@@ -35,6 +35,16 @@ declare -x repeat=${REPEAT:-$default_repeat}
 declare -x workflow=$default_workflow
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
 
@@ -69,26 +79,25 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_environment
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
-function validate_environment()
+function verify_environment()
 {
+    local -i _rc=$success
+
     # Authentication:
     #   - in a workflow the caller exports the BENCH_DISPATCH_PAT secret as GH_TOKEN;
     #   - locally, export BENCH_DISPATCH_PAT yourself (it is an env var, NOT a repo secret) or rely on the ambient 'gh auth' credentials.
     [[ -z "${BENCH_DISPATCH_PAT:-}" ]] || export GH_TOKEN="${GH_TOKEN:-$BENCH_DISPATCH_PAT}"
     [[ -n "${GH_TOKEN:-}" ]]                                                    || warning "Neither \$GH_TOKEN nor \$BENCH_DISPATCH_PAT is set; relying on the ambient 'gh auth' credentials."
 
-    is_tool_present gh                                                          || { error "The GitHub CLI 'gh' was not found on PATH." -ec "$err_tool_not_found"; return "$success"; }
-    gh auth status &> "$_ignore"                                                || error "'gh' is not authenticated. Run 'gh auth login' first." -ec "$err_tool_unauthenticated"
+    is_gh_present                                                               || true
+
+    return "$success"
 }
 
-function validate_arguments()
+function resolve_arguments()
 {
     # Resolve the GitHub owner: --owner, else $GITHUB_REPOSITORY_OWNER (set by Actions), else derive from this repo's remote.
     [[ -n "$owner" ]] || owner="${GITHUB_REPOSITORY_OWNER:-}"
