@@ -157,9 +157,6 @@ function is_check_jsonschema_present()
                                                                                 exit_if_has_bugs
 
     if [[ -z $check_jsonschema_present ]]; then
-        local -i _rc=$success
-        local _ver=''
-
         if is_tool_present check-jsonschema; then
             check_jsonschema_present=true
         else
