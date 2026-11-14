@@ -7,12 +7,12 @@ declare -x script_name
 declare -x script_dir
 declare -x lib_dir
 
-# vm2 core error codes
+# vm2 core lib exit codes
 declare -x err_invalid_arguments
 declare -x err_argument_value
 declare -x err_not_directory
 
-# vm2 core constants
+# vm2 core lib constants
 declare -x clr_reset
 declare -x clr_red
 declare -x clr_green

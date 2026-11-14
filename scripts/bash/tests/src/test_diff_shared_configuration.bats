@@ -63,7 +63,7 @@ _stub_custom_schema() {
 }
 
 @test "configure: bug-exits when the SoT directory does not exist" {
-    run _ds 'declare -a source_files=() target_files=() file_actions=(); configure "/definitely/not/a/real/path" "$BATS_TEST_TMPDIR"'
+    run _ds 'declare -a source_files=() target_files=() file_actions=(); configure "/definitely/not/a/real/path"'
     assert_failure "$err_argument_value"
 }
 
