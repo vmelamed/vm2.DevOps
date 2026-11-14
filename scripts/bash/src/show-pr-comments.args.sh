@@ -120,7 +120,7 @@ function resolve_arguments()
     [[ -z $repo || -n $pr_number ]]                                             || error "With '--repo', the pull request number is required: the current branch belongs to the current directory's repository." -ec "$err_missing_argument"
     is_natural "$interval"                                                      || error "The interval must be a positive number of seconds (provided '$interval')." -ec "$err_argument_value"
     is_natural "$timeout"                                                       || error "The timeout must be a positive number of seconds (provided '$timeout')." -ec "$err_argument_value"
-    ! has_errors                                                                || return "$success" # circuit breaker: resolving the values below needs valid environment and arguments above
+                                                                                exit_if_has_errors # circuit breaker: resolving the values below needs valid environment and arguments above
 
     # resolve what was omitted: the current directory's repository, the current branch's pull request
     [[ -n $repo ]] || repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") \
