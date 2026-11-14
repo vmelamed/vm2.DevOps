@@ -3,26 +3,26 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
-declare -xr lib_dir
+declare -x script_name
+declare -x lib_dir
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri err_invalid_arguments
-declare -xri err_missing_argument
-declare -xri err_unknown_argument
-declare -xri err_argument_value
-declare -xri err_logic_error
-declare -xri err_io_failure
-declare -xri err_tool_not_found
+declare -x success
+declare -x err_invalid_arguments
+declare -x err_missing_argument
+declare -x err_unknown_argument
+declare -x err_argument_value
+declare -x err_logic_error
+declare -x err_io_failure
+declare -x err_tool_not_found
 
 # vm2 core lib constants
-declare -xr ci
-declare -xra vm2_repositories
-declare -xra sources_of_truth
-declare -xr default_sot
-declare -xr vm2_sot_repo_name
-declare -xr default_vm2_repos_path
+declare -x ci
+declare -x vm2_repositories
+declare -x sources_of_truth
+declare -x default_sot
+declare -x vm2_sot_repo_name
+declare -x default_vm2_repos_path
 
 # vm2 core lib variable
 declare -x usage_requested
@@ -56,8 +56,8 @@ declare -a target_paths=()
 # this scripts variables
 declare -x vm2_branch='main'
 declare -x sot_branch='main'
-declare -xar valid_actions
-declare -xr all_actions_str
+declare -x valid_actions
+declare -x all_actions_str
 
 function get_arguments()
 {
@@ -226,14 +226,14 @@ function dump_args()
     dump_vars "${_args[@]}" "$@"
 }
 
-declare -xr action_ignore
-declare -xr action_merge_or_copy
-declare -xr action_ask_to_merge
-declare -xr action_merge
-declare -xr action_ask_to_copy
-declare -xr action_copy
-declare -xr action_copy_shared
-declare -xr action_ask_to_copy_shared
+declare -x action_ignore
+declare -x action_merge_or_copy
+declare -x action_ask_to_merge
+declare -x action_merge
+declare -x action_ask_to_copy
+declare -x action_copy
+declare -x action_copy_shared
+declare -x action_ask_to_copy_shared
 
 function get_selector_action()
 {

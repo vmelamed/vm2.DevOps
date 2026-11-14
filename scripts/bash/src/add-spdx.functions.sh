@@ -3,14 +3,14 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
+declare -x script_name
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri err_invalid_arguments
-declare -xri err_not_file
-declare -xri err_logic_error
-declare -xri err_io_failure
+declare -x success
+declare -x err_invalid_arguments
+declare -x err_not_file
+declare -x err_logic_error
+declare -x err_io_failure
 
 # this scripts constants
 declare -x root
@@ -20,10 +20,10 @@ declare -x cs_header
 declare -x bash_header
 declare -x yaml_header
 
-declare -xi processed
-declare -xi modified
-declare -xi skipped
-declare -xi failed
+declare -x processed
+declare -x modified
+declare -x skipped
+declare -x failed
 
 #-----------------------------------------------------------------------------------------------
 # @description Prepends the SPDX header to a C# file, stripping a leading UTF-8 BOM (if any):

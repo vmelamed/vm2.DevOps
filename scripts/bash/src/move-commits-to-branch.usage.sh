@@ -3,8 +3,8 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_args_usage
-declare -xr script_name
+declare -x common_args_usage
+declare -x script_name
 
 #-----------------------------------------------------------------------------------------------
 # @description Builds and prints the usage/help text for 'move-commits-to-branch.sh'. When '$1' is true, appends the common

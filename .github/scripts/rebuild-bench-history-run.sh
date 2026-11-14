@@ -8,15 +8,15 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
 
 # vm2 core lib exit codes
-declare -xri err_logic_error
+declare -x err_logic_error
 
 # vm2 core lib constants
 
@@ -35,13 +35,13 @@ source "$script_dir/rebuild-bench-history-run.args.sh"
 
 # this script arguments
 get_arguments "$@"
-declare -xra benchmark_projects
+declare -x benchmark_projects
 
-declare -xr bencher_project
-declare -xr bencher_testbed
-declare -xr bencher_branch
-declare -xr bencher_adapter
-declare -xri repeat
+declare -x bencher_project
+declare -x bencher_testbed
+declare -x bencher_branch
+declare -x bencher_adapter
+declare -x repeat
 
 # this script variables
 declare -x artifacts_benchmarks_dir

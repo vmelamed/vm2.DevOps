@@ -21,15 +21,15 @@ load '../helpers/setup'
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
-declare -gxi err_invalid_arguments
-declare -gxi err_argument_value
-declare -gxi err_invalid_nameref
-declare -gxi err_invalid_path
-declare -gxi err_not_directory
-declare -gxi err_invalid_branch
-declare -gxi err_not_found
-declare -gxi err_repo_with_no_ci
-declare -gxi err_repo_not_in_vm2_repos
+declare -gx err_invalid_arguments
+declare -gx err_argument_value
+declare -gx err_invalid_nameref
+declare -gx err_invalid_path
+declare -gx err_not_directory
+declare -gx err_invalid_branch
+declare -gx err_not_found
+declare -gx err_repo_with_no_ci
+declare -gx err_repo_not_in_vm2_repos
 
 setup() {
     _repo_root="$(cd "$lib_dir/../../.." && pwd)"

@@ -9,9 +9,9 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
@@ -19,7 +19,7 @@ source "$lib_dir/gh_core.sh"
 # vm2 core lib exit codes
 
 # vm2 core lib constants
-declare -xr key_artifacts_path
+declare -x key_artifacts_path
 
 # vm2 core lib defaults
 
@@ -32,7 +32,7 @@ source "$script_dir/build.usage.sh"
 
 # this script's arguments
 get_arguments "$@"
-declare -xr build_project
+declare -x build_project
 
 # this script's variables
 declare -A build_info=()

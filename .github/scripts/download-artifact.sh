@@ -8,27 +8,27 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri err_missing_argument
-declare -xri err_argument_type
-declare -xri err_tool_not_found
-declare -xri err_argument_value
-declare -xri err_not_found
-declare -xri err_tool_error
-declare -xri err_logic_error
-declare -xri err_io_failure
+declare -x success
+declare -x failure
+declare -x err_missing_argument
+declare -x err_argument_type
+declare -x err_tool_not_found
+declare -x err_argument_value
+declare -x err_not_found
+declare -x err_tool_error
+declare -x err_logic_error
+declare -x err_io_failure
 
 # vm2 core lib constants
-declare -xr check_em
+declare -x check_em
 
 # vm2 core lib variables
 declare -x _ignore
@@ -39,12 +39,12 @@ source "$script_dir/download-artifact.usage.sh"
 
 # this script's arguments
 get_arguments "$@"
-declare -xr artifact_name
-declare -xr artifacts
+declare -x artifact_name
+declare -x artifacts
 declare -x repository
 declare -x workflow_id
-declare -xr workflow_name
-declare -xr workflow_path
+declare -x workflow_name
+declare -x workflow_path
 
 [[ -n $repository ]] ||
     repository=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") || exit_with_error "The current directory is not in a GitHub repository; use '--repository <owner/repo>'." -ec "$err_not_found"

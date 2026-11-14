@@ -14,11 +14,11 @@ load '../helpers/setup'
 
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
-declare -gxi err_invalid_arguments
-declare -gxi err_argument_value
-declare -gxi err_invalid_nameref
-declare -gxi err_tool_error
-declare -gxi err_not_found
+declare -gx err_invalid_arguments
+declare -gx err_argument_value
+declare -gx err_invalid_nameref
+declare -gx err_tool_error
+declare -gx err_not_found
 
 _write_fixture() {
     local _file="$1"

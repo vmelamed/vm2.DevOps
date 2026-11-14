@@ -10,23 +10,23 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(realpath -e "$(dirname "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri err_tool_error
-declare -xri err_logic_error
-declare -xri err_unknown_argument
-declare -xri err_io_failure
+declare -x success
+declare -x failure
+declare -x err_tool_error
+declare -x err_logic_error
+declare -x err_unknown_argument
+declare -x err_io_failure
 
 # vm2 core lib constants
-declare -xr ci
+declare -x ci
 
 # vm2 core lib defaults
 
@@ -50,10 +50,10 @@ source "$script_dir/run-tests.args.sh"
 
 # this script's variables
 get_arguments "$@"
-declare -xr test_project
-declare -xri min_coverage_pct
-declare -xri min_branch_coverage_pct
-declare -xri min_method_coverage_pct
+declare -x test_project
+declare -x min_coverage_pct
+declare -x min_branch_coverage_pct
+declare -x min_method_coverage_pct
 
 # other script specific variables
 declare test_exec_path

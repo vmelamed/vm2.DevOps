@@ -6,26 +6,26 @@
 declare -x script_name
 declare -x lib_dir
 
-declare -xr error_em
-declare -xr ok_em
-declare -xr check_em
-declare -xr question_em
-declare -xr info_em
-declare -xr warn_em
-declare -xr not_eq_em
+declare -x error_em
+declare -x ok_em
+declare -x check_em
+declare -x question_em
+declare -x info_em
+declare -x warn_em
+declare -x not_eq_em
 
-declare -xri success
-declare -xri failure
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
-declare -xri err_argument_type
-declare -xri err_invalid_nameref
-declare -xri err_tool_error
+declare -x success
+declare -x failure
+declare -x err_invalid_arguments
+declare -x err_argument_value
+declare -x err_argument_type
+declare -x err_invalid_nameref
+declare -x err_tool_error
 
-declare -xra vm2_repositories
+declare -x vm2_repositories
 declare -x _ignore
-declare -xr secret_str
-declare -xr secret_placeholder
+declare -x secret_str
+declare -x secret_placeholder
 
 declare -x repo_path
 declare -x repo_owner
@@ -34,19 +34,16 @@ declare -x repo
 declare -x branch
 declare -x required_checks
 
-declare -xrA default_repo_settings
-declare -xra default_repo_settings_order
-declare -xrA default_repo_permissions
-declare -xrA default_ruleset
-declare -xra default_ruleset_order
+declare -x default_repo_settings
+declare -x default_repo_settings_order
+declare -x default_repo_permissions
+declare -x default_ruleset
+declare -x default_ruleset_order
 
-declare -xr missing_state='<none>'
-declare -xr present_state=$secret_str
-declare -xr undefined_default='<undefined>'
-declare -xa gh_apps_with_vars
-declare -xa gh_apps_with_secrets
-declare -xA default_local_git_settings
-declare -xa default_local_git_settings_order
+declare -x gh_apps_with_vars
+declare -x gh_apps_with_secrets
+declare -x default_local_git_settings
+declare -x default_local_git_settings_order
 
 declare -x main_protection_rs_name
 
@@ -61,6 +58,10 @@ declare -x jq_vars
 declare -x jq_ruleset_id
 declare -x jq_ruleset_rules
 declare -x jq_status_checks
+
+declare -xr missing_state='<none>'
+declare -xr present_state=$secret_str
+declare -xr undefined_default='<undefined>'
 
 declare -r key_matches="matches"
 declare -r key_diffs="diffs"

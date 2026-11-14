@@ -9,29 +9,29 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
-declare -xri success
-declare -xri failure
-declare -xri err_tool_not_found
-declare -xri err_dir_with_ci
-declare -xri err_repo_with_no_ci
-declare -xri err_not_git_directory
-declare -xri err_logic_error
-declare -xri err_root_not_repo_name
+declare -x success
+declare -x failure
+declare -x err_tool_not_found
+declare -x err_dir_with_ci
+declare -x err_repo_with_no_ci
+declare -x err_not_git_directory
+declare -x err_logic_error
+declare -x err_root_not_repo_name
 
 declare -x _ignore
 
-declare -xr vm2_devops_repo_name
-declare -xr default_vm2_repos_path
-declare -xr default_default_branch
+declare -x vm2_devops_repo_name
+declare -x default_vm2_repos_path
+declare -x default_default_branch
 
 # defaults
-declare -xr default_nuget_server
+declare -x default_nuget_server
 
 # script parameters
 declare -x vm2_repos
@@ -52,7 +52,7 @@ declare -x purge_secrets
 declare -x configure_local
 declare -x branches
 
-declare -xra vm2_repositories
+declare -x vm2_repositories
 
 # script variables
 declare -xi rc="$success"
@@ -64,15 +64,15 @@ declare -x repo_url=''
 declare -x repo_id=''
 
 # repo state keys
-declare -xr key_root
-declare -xr key_url
-declare -xr key_schema
-declare -xr key_authority
-declare -xr key_owner
-declare -xr key_name
-declare -xr key_repo
-declare -xr key_repo_id
-declare -xr key_default_branch
+declare -x key_root
+declare -x key_url
+declare -x key_schema
+declare -x key_authority
+declare -x key_owner
+declare -x key_name
+declare -x key_repo
+declare -x key_repo_id
+declare -x key_default_branch
 
 declare -x repo_path=''
 declare -x root_name=''
@@ -121,13 +121,13 @@ source "$script_dir/setup-repo.audit.sh"
 #===============================================================================================
 validate_defaults
 
-declare -xrA default_local_git_settings
-declare -xra default_local_git_settings_order
+declare -x default_local_git_settings
+declare -x default_local_git_settings_order
 
 declare -x _ci_yaml="$vm2_repos/$vm2_devops_repo_name/.github/workflows/_ci.yaml"
 [[ -s "$_ci_yaml" ]] ||
     error "Could not find _ci.yaml GitHub Actions reusable workflow file in $vm2_repos." -ec "$err_logic_error"
-declare -xr _ci_yaml
+declare -x _ci_yaml
 
 exit_if_has_errors
 

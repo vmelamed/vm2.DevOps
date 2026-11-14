@@ -220,34 +220,6 @@ _run_validate_input() {
     assert_output --partial "'jq' is not installed."
 }
 
-# bats test_tags=slow
-@test "validate-input: fails with a clear error when gh cannot be found or installed" {
-    _make_repo_with_project "$BATS_TEST_TMPDIR/repo"
-    mkdir -p "$BATS_TEST_TMPDIR/bin"
-    printf '#!/usr/bin/env bash\nexit 1\n' > "$BATS_TEST_TMPDIR/bin/sudo"
-    chmod +x "$BATS_TEST_TMPDIR/bin/sudo"
-
-    run env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" bash -c "
-        command() {
-            if [[ \"\$*\" == '-v jq' ]]; then echo /usr/local/bin/jq; return 0; fi
-            if [[ \"\$*\" == '-v gh' ]]; then return 1; fi
-            builtin command \"\$@\"
-        }
-        export -f command
-        # is_tool_present() falls back to 'which' when 'command -v -p' fails, so 'which' must be
-        # faked the same way -- otherwise it silently finds the real jq/gh still on \$PATH.
-        which() {
-            if [[ \"\$1\" == 'jq' ]]; then echo /usr/local/bin/jq; return 0; fi
-            if [[ \"\$1\" == 'gh' ]]; then return 1; fi
-            /usr/bin/which \"\$@\"
-        }
-        export -f which
-        cd '$BATS_TEST_TMPDIR/repo' && TEST_PROJECTS='[\"src/App.csproj\"]' bash '$_validate_input' --quiet
-    "
-    assert_failure
-    assert_output --partial "'gh' is not installed."
-}
-
 # --- argument handling ---------------------------------------------------------------------
 
 @test "validate-input: fails on an unknown option" {

@@ -16,20 +16,20 @@
 (( ${__VM2_LIB_CORE_STATE_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_CORE_STATE_SH_LOADED=1
 
-declare -x  script_name
+declare -x script_name
 
 # vm2 core lib exit codes
-declare -xi success                     # The command completed successfully.
-declare -xi failure                     # A general, unspecified error occurred.
+declare -x success                     # The command completed successfully.
+declare -x failure                     # A general, unspecified error occurred.
 
-declare -xi positive                    # Boolean return codes (truthy), you cannot use `return true` in bash but you can `return $positive`;
-declare -xi negative                    # Boolean return codes (falsy), you cannot use `return false` in bash but you can `return $negative`;
+declare -x positive                    # Boolean return codes (truthy), you cannot use `return true` in bash but you can `return $positive`;
+declare -x negative                    # Boolean return codes (falsy), you cannot use `return false` in bash but you can `return $negative`;
 
-declare -xi err_invalid_arguments       # The number of the arguments is invalid or more than one type of parameter error code is present
-declare -xi err_argument_type
-declare -xi err_argument_value          # An argument has an invalid value (out of range, not in allowed set, e.g., expected non-negative integer but got negative value)
-declare -xi err_invalid_nameref         # An argument has an invalid nameref (e.g., expected a valid variable name reference but got an invalid one)
-declare -xi err_logic_error             # An error occurred in the logic of the script (e.g., bug, invalid state, unexpected condition, etc.)
+declare -x err_invalid_arguments       # The number of the arguments is invalid or more than one type of parameter error code is present
+declare -x err_argument_type
+declare -x err_argument_value          # An argument has an invalid value (out of range, not in allowed set, e.g., expected non-negative integer but got negative value)
+declare -x err_invalid_nameref         # An argument has an invalid nameref (e.g., expected a valid variable name reference but got an invalid one)
+declare -x err_logic_error             # An error occurred in the logic of the script (e.g., bug, invalid state, unexpected condition, etc.)
 
 # vm2 core lib constants:
 

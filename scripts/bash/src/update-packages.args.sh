@@ -3,28 +3,28 @@
 
 # shellcheck disable=SC2148 # This file is intended to be sourced, not executed directly.
 
-declare -xr script_name
-declare -xr lib_dir
+declare -x script_name
+declare -x lib_dir
 
 # constants from core:
-declare -xri success
-declare -xri err_argument_value
-declare -xri err_missing_argument
-declare -xri err_unknown_argument
-declare -xri err_logic_error
-declare -xri err_invalid_path
-declare -xri err_invalid_file
-declare -xri err_repo_with_no_ci
-declare -xri err_repo_not_in_vm2_repos
-declare -xri err_io_failure
+declare -x success
+declare -x err_argument_value
+declare -x err_missing_argument
+declare -x err_unknown_argument
+declare -x err_logic_error
+declare -x err_invalid_path
+declare -x err_invalid_file
+declare -x err_repo_with_no_ci
+declare -x err_repo_not_in_vm2_repos
+declare -x err_io_failure
 
-declare -xr ci
-declare -xr default_vm2_repos_path
-declare -xr vm2_sot_repo_name
-declare -xr default_sot
-declare -xr dpp_file_name
-declare -xra vm2_repositories
-declare -xra sources_of_truth
+declare -x ci
+declare -x default_vm2_repos_path
+declare -x vm2_sot_repo_name
+declare -x default_sot
+declare -x dpp_file_name
+declare -x vm2_repositories
+declare -x sources_of_truth
 
 # this script's arguments
 declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos_path}"    # the path to the folder containing all vm2 repositories, usually '$VM2_REPOS'

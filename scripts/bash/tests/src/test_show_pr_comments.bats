@@ -17,9 +17,9 @@ load '../libs/bats-assert/load'
 load '../helpers/setup'
 
 declare -gx lib_dir
-declare -gxi err_argument_value
-declare -gxi err_missing_argument
-declare -gxi err_not_found
+declare -gx err_argument_value
+declare -gx err_missing_argument
+declare -gx err_not_found
 
 _src_dir="$(cd "$(dirname "${BATS_TEST_FILENAME}")/../../src" && pwd)"
 _pr_comments="$_src_dir/show-pr-comments.sh"

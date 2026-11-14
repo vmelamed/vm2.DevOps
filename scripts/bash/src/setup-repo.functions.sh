@@ -7,21 +7,21 @@ declare -x _ignore
 declare -x script_name
 declare -x lib_dir
 
-declare -xri success
-declare -xri failure
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
-declare -xri err_missing_argument
-declare -xri err_tool_error
-declare -xri err_logic_error
-declare -xri err_io_failure
+declare -x success
+declare -x failure
+declare -x err_invalid_arguments
+declare -x err_argument_value
+declare -x err_missing_argument
+declare -x err_tool_error
+declare -x err_logic_error
+declare -x err_io_failure
 
-declare -xr question_em
+declare -x question_em
 
 declare -xri admin_role_id=5
 
-declare -xr secret_str
-declare -xr secret_placeholder
+declare -x secret_str
+declare -x secret_placeholder
 
 declare -x repo_name
 declare -x repo
@@ -33,12 +33,12 @@ declare -x purge_vars
 declare -x purge_secrets
 declare -x nuget_server
 
-declare -xrA default_repo_settings
-declare -xrA default_repo_permissions
+declare -x default_repo_settings
+declare -x default_repo_permissions
 
-declare -xra gh_apps_with_vars
-declare -xra gh_apps_with_secrets
-declare -xr default_nuget_server
+declare -x gh_apps_with_vars
+declare -x gh_apps_with_secrets
+declare -x default_nuget_server
 
 declare -x ci_yaml
 

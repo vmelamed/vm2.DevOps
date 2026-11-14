@@ -9,20 +9,20 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri err_tool_error
-declare -xri err_io_failure
+declare -x success
+declare -x err_tool_error
+declare -x err_io_failure
 
 # vm2 core lib constants
-declare -xr check_em
+declare -x check_em
 
 # vm2 core lib variables - dotnet
 declare -x artifacts
@@ -33,7 +33,7 @@ source "$script_dir/run-benchmarks.args.sh"
 
 # this script's arguments
 get_arguments "$@"
-declare -xr benchmark_project
+declare -x benchmark_project
 
 declare -r artifacts_benchmarks="$artifacts/benchmarks"
 declare -r results_dir="$artifacts_benchmarks/results"
@@ -49,9 +49,9 @@ exit_if_has_errors
 renamed_artifacts_dir="$artifacts_benchmarks-$(date -u +"%Y%m%dT%H%M%S")"
 
 # Freeze variables
-declare -xr benchmark_project
-declare -xr results_dir
-declare -r renamed_artifacts_dir
+declare -x benchmark_project
+declare -x results_dir
+declare -x renamed_artifacts_dir
 
 declare rc=$success
 
@@ -92,7 +92,7 @@ execute mkdir -p "$results_dir"                                                 
 
 declare -x benchmark_exec_path
 get_target_path "$benchmark_project" benchmark_exec_path
-declare -xr benchmark_exec_path
+declare -x benchmark_exec_path
 trace "Expecting test executable: $benchmark_exec_path"
 
 exit_if_has_errors

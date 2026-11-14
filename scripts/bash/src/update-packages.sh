@@ -9,25 +9,25 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
-declare -xr success
-declare -xr negative
-declare -xr err_tool_error
-declare -xr err_invalid_file
+declare -x success
+declare -x negative
+declare -x err_tool_error
+declare -x err_invalid_file
 
 # core constants
-declare -xr edit_em
-declare -xr check_em
-declare -xr no_entry_em
-declare -xr error_em
-declare -xr warn_em
+declare -x edit_em
+declare -x check_em
+declare -x no_entry_em
+declare -x error_em
+declare -x warn_em
 
-declare -xr vm2_sot_repo_name   # vm2.Templates
+declare -x vm2_sot_repo_name   # vm2.Templates
 
 # script constants
 declare -xr dpp_file_name="Directory.Packages.props"

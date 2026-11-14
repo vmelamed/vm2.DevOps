@@ -3,24 +3,24 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
-declare -xr lib_dir
+declare -x script_name
+declare -x lib_dir
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri err_argument_value
-declare -xri err_missing_argument
-declare -xri err_too_many_arguments
-declare -xri err_unknown_argument
-declare -xri err_logic_error
-declare -xri err_not_directory
-declare -xri err_not_git_directory
-declare -xri err_tool_not_found
+declare -x success
+declare -x err_argument_value
+declare -x err_missing_argument
+declare -x err_too_many_arguments
+declare -x err_unknown_argument
+declare -x err_logic_error
+declare -x err_not_directory
+declare -x err_not_git_directory
+declare -x err_tool_not_found
 
 # vm2 core lib constants
-declare -xr ci
-declare -xr git_remotes_ns
-declare -xra vm2_repositories
+declare -x ci
+declare -x git_remotes_ns
+declare -x vm2_repositories
 
 # vm2 core lib variables
 declare -x _ignore

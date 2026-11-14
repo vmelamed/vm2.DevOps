@@ -3,14 +3,14 @@
 
 # shellcheck disable=SC2148 # This file is intended to be sourced, not executed directly.
 
-declare -xr common_args_usage
-declare -xr script_name
+declare -x common_args_usage
+declare -x script_name
 
 # constants from lib:
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
+declare -x err_invalid_arguments
+declare -x err_argument_value
 
-declare -xr default_vm2_repos_path
+declare -x default_vm2_repos_path
 
 #-----------------------------------------------------------------------------------------------
 # @description Prints the usage text of 'update-packages.sh'.

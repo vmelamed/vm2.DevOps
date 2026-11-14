@@ -15,20 +15,20 @@
 declare -ri __VM2_LIB_SEMVER_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
-declare -xri err_argument_value
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_argument_type
+declare -x err_argument_value
 
 # vm2 core lib constants
-declare -xr prereleaseLabelRex
-declare -xr minverTagPrefixRex
-declare -xr minverPrereleaseIdRex
-declare -xr minverTagPrefixRegex
-declare -xr minverPrereleaseIdRegex
+declare -x prereleaseLabelRex
+declare -x minverTagPrefixRex
+declare -x minverPrereleaseIdRex
+declare -x minverTagPrefixRegex
+declare -x minverPrereleaseIdRegex
 
 # vm2 core lib variables
 declare -x _ignore
@@ -146,18 +146,18 @@ declare -xri semver_patch=3
 declare -xri semver_prerelease=4
 declare -xri semver_build=5
 
-declare -xri success
-declare -xri failure
+declare -x success
+declare -x failure
 
 # RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
-declare -xri err_argument_value
+declare -x err_invalid_arguments
+declare -x err_argument_type
+declare -x err_argument_value
 
 # comparison result constants
-declare -xri rc_equal
-declare -xri rc_greater_than
-declare -xri rc_less_than
+declare -x rc_equal
+declare -x rc_greater_than
+declare -x rc_less_than
 
 #-----------------------------------------------------------------------------------------------
 # @description Gets the Major version component from a semver 2.0.0 string.

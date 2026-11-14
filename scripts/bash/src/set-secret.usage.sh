@@ -3,10 +3,10 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_args_usage
-declare -xr script_name
+declare -x common_args_usage
+declare -x script_name
 
-declare -xra gh_apps_with_secrets
+declare -x gh_apps_with_secrets
 
 #-----------------------------------------------------------------------------------------------
 # @description Builds and prints the full `--help` text for `set-secret.sh` to stdout: usage

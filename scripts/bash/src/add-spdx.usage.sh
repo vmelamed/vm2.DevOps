@@ -3,9 +3,9 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
+declare -x script_name
 
-declare -xr common_args_usage
+declare -x common_args_usage
 
 #-----------------------------------------------------------------------------------------------
 # @description Prints the usage message for 'add-spdx.sh' to stdout. Does not exit; the caller

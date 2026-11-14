@@ -7,25 +7,25 @@
 # Functions for performing diff and merge operations, including shared blocks, in the VM2 DevOps scripts.
 #===============================================================================================
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_argument_value
-declare -xri err_invalid_nameref
-declare -xri err_not_directory
-declare -xri err_invalid_arguments
-declare -xri err_logic_error
-declare -xri err_tool_error
-declare -xri err_dir_with_ci
-declare -xri err_argument_type
-declare -xri err_not_file
-declare -xri err_io_failure
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_argument_value
+declare -x err_invalid_nameref
+declare -x err_not_directory
+declare -x err_invalid_arguments
+declare -x err_logic_error
+declare -x err_tool_error
+declare -x err_dir_with_ci
+declare -x err_argument_type
+declare -x err_not_file
+declare -x err_io_failure
 
 # vm2 core lib constants
 declare -x _ignore
@@ -59,10 +59,10 @@ declare -xra valid_actions=(
 )
 
 all_actions_str=$(print_sequence -s=', ' -q='"' "${valid_actions[@]}")
-declare -xr all_actions_str
+declare -x all_actions_str
 
-declare -xr shared_begin_marker
-declare -xr shared_end_marker
+declare -x shared_begin_marker
+declare -x shared_end_marker
 
 # Additional 'are_different()' outcomes, alongside the existing '$positive'/'$negative':
 declare -xri shared_equal=2

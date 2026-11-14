@@ -4,8 +4,8 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_args_usage
-declare -xr script_name
+declare -x common_args_usage
+declare -x script_name
 
 #-----------------------------------------------------------------------------------------------
 # @description Outputs the usage text for this script to stdout.

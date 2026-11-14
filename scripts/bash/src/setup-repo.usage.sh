@@ -3,15 +3,15 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_args_usage
-declare -xr script_name
+declare -x common_args_usage
+declare -x script_name
 
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
+declare -x err_invalid_arguments
+declare -x err_argument_type
 
-declare -xr vm2_devops_repo_name
-declare -xr vm2_sot_repo_name
-declare -xr default_sot
+declare -x vm2_devops_repo_name
+declare -x vm2_sot_repo_name
+declare -x default_sot
 
 #-----------------------------------------------------------------------------------------------
 # @description Builds and prints the full `--help` text for `setup-repo.sh` to stdout: usage line, description of

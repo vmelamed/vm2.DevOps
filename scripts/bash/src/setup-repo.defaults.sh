@@ -3,17 +3,17 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xri success                    # Operation completed successfully
-declare -xri err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present
-declare -xri err_argument_value
-declare -xri err_invalid_nameref
-declare -xri err_invalid_item
+declare -x success                    # Operation completed successfully
+declare -x err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present
+declare -x err_argument_value
+declare -x err_invalid_nameref
+declare -x err_invalid_item
 
 declare -x vm2_devops_repo_name
 
-declare -xr secret_str
-declare -xr secret_placeholder
-declare -xr default_nuget_server
+declare -x secret_str
+declare -x secret_placeholder
+declare -x default_nuget_server
 
 declare -x nuget_server
 declare -x repo_name
@@ -107,7 +107,7 @@ declare -xra default_ruleset_order=(            # UI: Order in which rules appea
 # GitHub repository variables
 #===============================================================================
 
-declare -xra gh_apps_with_vars
+declare -x gh_apps_with_vars
 
 # The vars defaults for each application not only gives the default values for the variables
 # but also serves as a definition of the expected variables for the application. Some variables
@@ -368,7 +368,7 @@ function get_vars_defaults()
 # GitHub repository "main protection" ruleset
 #===============================================================================
 
-declare -xra gh_apps_with_secrets
+declare -x gh_apps_with_secrets
 
 # There is no application secrets defaults - only secrets order. The defaults MUST be
 # retrieved dynamically from the `get_secrets_defaults()` function. The defaults' values are
@@ -545,9 +545,9 @@ function validate_defaults()
 # Local Git repository configuration defaults
 #===============================================================================
 
-declare -xr vm2_repos
-declare -xr vm2_sot_repo_name
-declare -xr default_sot
+declare -x vm2_repos
+declare -x vm2_sot_repo_name
+declare -x default_sot
 
 declare -xrA default_local_git_settings=(
     # Set the default branch name for new repositories. This ensures that all new repositories initialized locally will have a

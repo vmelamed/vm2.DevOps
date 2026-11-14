@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-declare -xr script_name
+declare -x script_name
 
-declare -xr common_args_usage
+declare -x common_args_usage
 
 #-----------------------------------------------------------------------------------------------
 # @description Outputs the usage text for this script to stdout.

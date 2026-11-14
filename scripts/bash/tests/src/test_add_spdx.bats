@@ -13,12 +13,12 @@ load '../libs/bats-assert/load'
 load '../helpers/setup'
 
 declare -gx lib_dir
-declare -gxi err_not_file
-declare -gxi err_not_directory
-declare -gxi err_argument_value
-declare -gxi err_missing_argument
-declare -gxi err_unknown_argument
-declare -gxi err_too_many_arguments
+declare -gx err_not_file
+declare -gx err_not_directory
+declare -gx err_argument_value
+declare -gx err_missing_argument
+declare -gx err_unknown_argument
+declare -gx err_too_many_arguments
 
 _script="$(cd "$lib_dir/../src" && pwd)/add-spdx.sh"
 

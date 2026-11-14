@@ -20,12 +20,12 @@ load '../helpers/setup'
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
-declare -gxi failure
-declare -gxi err_argument_value
-declare -gxi err_invalid_nameref
-declare -gxi err_logic_error
-declare -gxi err_missing_argument
-declare -gxi err_tool_error
+declare -gx failure
+declare -gx err_argument_value
+declare -gx err_invalid_nameref
+declare -gx err_logic_error
+declare -gx err_missing_argument
+declare -gx err_tool_error
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 

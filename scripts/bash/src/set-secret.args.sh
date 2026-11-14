@@ -3,20 +3,20 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
-declare -xr lib_dir
+declare -x script_name
+declare -x lib_dir
 
 # constants from lib:
-declare -xri success
-declare -xri err_argument_value
-declare -xri err_too_many_arguments
-declare -xri err_missing_argument
-declare -xri err_unknown_argument
-declare -xri err_logic_error
+declare -x success
+declare -x err_argument_value
+declare -x err_too_many_arguments
+declare -x err_missing_argument
+declare -x err_unknown_argument
+declare -x err_logic_error
 
-declare -xra gh_apps_with_secrets
+declare -x gh_apps_with_secrets
 
-declare -xr default_repo_owner
+declare -x default_repo_owner
 
 # this script constants
 declare -xr default_app='actions'

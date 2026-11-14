@@ -11,19 +11,19 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
 
 # vm2 core lib exit codes
-declare -xri err_argument_value
+declare -x err_argument_value
 
 # vm2 core lib constants
-declare -xr check_em
-declare -xra allowed_commit_types
+declare -x check_em
+declare -x allowed_commit_types
 
 # vm2 core lib variables
 declare -x _ignore
@@ -36,8 +36,8 @@ declare -x base_ref
 
 # this script's arguments
 get_arguments "$@"
-declare -xr repo_path
-declare -xr base_ref
+declare -x repo_path
+declare -x base_ref
 
 # Build the type alternation: feat|fix|perf|...
 ifs=$IFS

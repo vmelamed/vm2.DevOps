@@ -9,28 +9,28 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
-declare -xri success
-declare -xri failure
-declare -xri err_argument_value
-declare -xri err_tool_error
-declare -xri err_io_failure
+declare -x success
+declare -x failure
+declare -x err_argument_value
+declare -x err_tool_error
+declare -x err_io_failure
 
 declare -x secret_str
 declare -x secret_placeholder
-declare -xr default_repo_owner
+declare -x default_repo_owner
 
-declare -xra vm2_repositories
+declare -x vm2_repositories
 
 declare -x repo_owner
 declare -x app
 declare -x secret_name
-declare -xra gh_apps_with_secrets
+declare -x gh_apps_with_secrets
 
 declare -a repo_secrets=()
 declare secret_exists=false

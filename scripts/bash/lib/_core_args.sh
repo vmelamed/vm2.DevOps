@@ -14,20 +14,20 @@
 (( ${__VM2_LIB_CORE_ARGS_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_CORE_ARGS_SH_LOADED=1
 
-declare -xr script_name
+declare -x script_name
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
-declare -xri err_argument_value
-declare -xri err_missing_argument
-declare -xri err_not_overridden
-declare -xri err_logic_error
-declare -xri err_invalid_nameref
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_argument_type
+declare -x err_argument_value
+declare -x err_missing_argument
+declare -x err_not_overridden
+declare -x err_logic_error
+declare -x err_invalid_nameref
 
 #===============================================================================================
 # processing common command-line arguments

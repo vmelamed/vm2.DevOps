@@ -13,31 +13,31 @@
 (( ${__VM2_LIB_GIT_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_GIT_SH_LOADED=1
 
-declare -xr warn_em
+declare -x warn_em
 
 # Declare error codes defined in the core library.
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_invalid_nameref
-declare -xri err_argument_type
-declare -xri err_argument_value
-declare -xri err_logic_error
-declare -xri err_not_found
-declare -xri err_not_file
-declare -xri err_not_directory
-declare -xri err_not_git_directory
-declare -xri err_not_git_root
-declare -xri err_invalid_branch
-declare -xri err_root_not_repo_name
-declare -xri err_io_failure
-declare -xri err_tool_error
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_invalid_nameref
+declare -x err_argument_type
+declare -x err_argument_value
+declare -x err_logic_error
+declare -x err_not_found
+declare -x err_not_file
+declare -x err_not_directory
+declare -x err_not_git_directory
+declare -x err_not_git_root
+declare -x err_invalid_branch
+declare -x err_root_not_repo_name
+declare -x err_io_failure
+declare -x err_tool_error
 
 # Declare variables defined in the core library.
 declare -x _ignore
-declare -xr semverTagReleaseRegex
+declare -x semverTagReleaseRegex
 
 declare -xr default_default_branch="main"
 

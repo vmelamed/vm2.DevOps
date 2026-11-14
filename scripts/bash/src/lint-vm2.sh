@@ -9,9 +9,9 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 #===============================================================================================
 # Sanity checks of the library in vm2.DevOps/scripts/bash/lib/*.sh, for the silly errors that the
@@ -39,9 +39,9 @@ source "$lib_dir/gh_core.sh"
 
 # vm2 core error codes (declared here, after sourcing: a readonly declaration without a value
 # before the library defines them would make their definitions fail)
-declare -xri err_not_file
-declare -xri err_tool_error
-declare -xri err_logic_error
+declare -x err_not_file
+declare -x err_tool_error
+declare -x err_logic_error
 
 # vm2 core variables
 declare -x _ignore

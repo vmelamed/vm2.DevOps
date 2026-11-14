@@ -23,20 +23,20 @@ declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
-declare -xri success
-declare -xri failure
-declare -xri err_invalid_arguments
-declare -xri err_invalid_nameref
+declare -x success
+declare -x failure
+declare -x err_invalid_arguments
+declare -x err_invalid_nameref
 
-declare -xr ci
+declare -x ci
 declare -x _ignore
 
 declare -xr GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
 declare -xr GITHUB_STEP_SUMMARY=${GITHUB_STEP_SUMMARY:-"$_ignore"}
 declare -xr GITHUB_OUTPUT=${GITHUB_OUTPUT:-"$_ignore"}
 
-declare -xra gh_apps_with_vars
-declare -xra gh_apps_with_secrets
+declare -x gh_apps_with_vars
+declare -x gh_apps_with_secrets
 
 #-----------------------------------------------------------------------------------------------
 # @description Reads lines from stdin, sending each to stdout (which may be the GitHub Actions

@@ -42,26 +42,26 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # core lib
 source "$lib_dir/core.sh"
 
 # core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
-declare -xri err_argument_value
-declare -xri err_invalid_nameref
-declare -xri err_missing_argument
-declare -xri err_too_many_arguments
-declare -xri err_unknown_argument
-declare -xri err_tool_error
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_argument_type
+declare -x err_argument_value
+declare -x err_invalid_nameref
+declare -x err_missing_argument
+declare -x err_too_many_arguments
+declare -x err_unknown_argument
+declare -x err_tool_error
 
 # core lib constants
 
@@ -74,12 +74,12 @@ source "$script_dir/move-commits-to-branch.usage.sh"
 
 # this script's arguments
 get_arguments "$@"
-declare -xr commit_sha
-declare -xr new_branch
-declare -xr check_out_new_branch
+declare -x commit_sha
+declare -x new_branch
+declare -x check_out_new_branch
 
 # this script's variables
-declare -xr current_branch
+declare -x current_branch
 
 # Show the commits that will be moved
 echo "Commits from $commit_sha onwards that would be moved to '$new_branch':"

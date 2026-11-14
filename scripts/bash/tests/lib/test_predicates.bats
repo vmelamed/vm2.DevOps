@@ -21,11 +21,11 @@ load '../helpers/setup'
 # root-cause writeup.
 declare -gx lib_dir
 
-declare -gxi failure
-declare -gxi negative
-declare -gxi err_invalid_arguments
-declare -gxi err_invalid_nameref
-declare -gxi err_argument_value
+declare -gx failure
+declare -gx negative
+declare -gx err_invalid_arguments
+declare -gx err_invalid_nameref
+declare -gx err_argument_value
 
 # --- is_variable_name ---------------------------------------------------------------------------
 

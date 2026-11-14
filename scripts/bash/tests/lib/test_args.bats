@@ -15,9 +15,9 @@ load '../helpers/setup'
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
 
-declare -gxi failure
-declare -gxi err_invalid_arguments
-declare -gxi err_unknown_argument
+declare -gx failure
+declare -gx err_invalid_arguments
+declare -gx err_unknown_argument
 
 # --- get_common_arg -----------------------------------------------------------------------------
 
