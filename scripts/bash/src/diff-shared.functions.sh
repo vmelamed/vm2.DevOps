@@ -155,8 +155,8 @@ function __find_shared_markers()
     [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
-    local -n _begin_line_out="$2"
-    local -n _end_line_out="$3"
+    local -n __begin_line_out="$2"
+    local -n __end_line_out="$3"
 
     local -i _begin_count _end_count
 
@@ -165,10 +165,10 @@ function __find_shared_markers()
 
     (( _begin_count == 1 && _end_count == 1 )) || return "$negative"
 
-    _begin_line_out=$(grep -Fn -- "$shared_begin_marker" "$1" | cut -d: -f1)
-    _end_line_out=$(grep -Fn -- "$shared_end_marker" "$1" | cut -d: -f1)
+    __begin_line_out=$(grep -Fn -- "$shared_begin_marker" "$1" | cut -d: -f1)
+    __end_line_out=$(grep -Fn -- "$shared_end_marker" "$1" | cut -d: -f1)
 
-    (( _begin_line_out < _end_line_out )) || return "$negative"
+    (( __begin_line_out < __end_line_out )) || return "$negative"
     return "$positive"
 }
 
@@ -199,12 +199,12 @@ function get_shared_block()
     [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a defined variable (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
-    local -n _shared_content_out="$2"
+    local -n __shared_content_out="$2"
     local -i _begin_line
     local -i _end_line
 
     __find_shared_markers "$1" _begin_line _end_line || return "$negative"
-    _shared_content_out=$(sed -n "$((_begin_line + 1)),$((_end_line - 1))p" "$1")
+    __shared_content_out=$(sed -n "$((_begin_line + 1)),$((_end_line - 1))p" "$1")
 
     return "$success"
 }
