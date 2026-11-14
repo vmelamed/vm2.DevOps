@@ -15,12 +15,12 @@
 declare -ri __VM2_LIB_PREDICATES_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xi success
-declare -xi failure
-declare -xi positive
-declare -xi negative
-declare -xi err_invalid_arguments
-declare -xi err_invalid_nameref
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_invalid_nameref
 
 # vm2 core lib constants
 declare -x nugetServersRegex
