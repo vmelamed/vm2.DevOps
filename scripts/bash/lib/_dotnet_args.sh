@@ -8,18 +8,18 @@
 declare -ri __VM2_LIB_DOTNET_ARGS_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
-declare -xri err_missing_argument
-declare -xri err_too_many_arguments
-declare -xri err_unknown_argument
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_argument_value
+declare -x err_missing_argument
+declare -x err_too_many_arguments
+declare -x err_unknown_argument
 
 # vm2 core lib constants
-declare -xr ci
+declare -x ci
 
 #===============================================================================================
 # Define default, constant values whose names and roles are shared across vm2.DevOps scripts.

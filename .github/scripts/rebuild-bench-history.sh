@@ -8,19 +8,19 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri err_argument_value
+declare -x success
+declare -x err_argument_value
 
 # vm2 core lib constants
-declare -xra vm2_repositories
+declare -x vm2_repositories
 
 # vm2 core lib defaults
 
@@ -28,7 +28,7 @@ declare -xra vm2_repositories
 declare -x _ignore
 
 # vm2 core lib constants
-declare -xr key_artifacts_path
+declare -x key_artifacts_path
 
 # this script's components
 source "$script_dir/rebuild-bench-history.usage.sh"
@@ -36,9 +36,9 @@ source "$script_dir/rebuild-bench-history.args.sh"
 
 # this script's arguments
 get_arguments "$@"
-declare -xr owner
-declare -xri repeat
-declare -xr workflow
+declare -x owner
+declare -x repeat
+declare -x workflow
 
 declare -i dispatched=0
 declare -i no_bench=0

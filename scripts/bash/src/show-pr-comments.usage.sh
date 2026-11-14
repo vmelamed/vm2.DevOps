@@ -3,14 +3,14 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_args_usage
-declare -xr script_name
+declare -x common_args_usage
+declare -x script_name
 
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
+declare -x err_invalid_arguments
+declare -x err_argument_type
 
-declare -xr default_interval
-declare -xr default_timeout
+declare -x default_interval
+declare -x default_timeout
 
 #-----------------------------------------------------------------------------------------------
 # @description Builds and prints the usage/help text for 'show-pr-comments.sh'. When '$1' is true, appends the common switches

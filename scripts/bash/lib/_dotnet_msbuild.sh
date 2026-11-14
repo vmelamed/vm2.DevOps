@@ -8,51 +8,51 @@
 declare -ri __VM2_LIB_DOTNET_MSBUILD_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
-declare -xri err_argument_type
-declare -xri err_invalid_nameref
-declare -xri err_missing_argument
-declare -xri err_tool_error
-declare -xri err_not_found
+declare -x success
+declare -x failure
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_argument_value
+declare -x err_argument_type
+declare -x err_invalid_nameref
+declare -x err_missing_argument
+declare -x err_tool_error
+declare -x err_not_found
 
 # vm2 core lib constants
-declare -xr ci
-declare -xr warn_em
-declare -xr bug_prefix
+declare -x ci
+declare -x warn_em
+declare -x bug_prefix
 
 # vm2 core lib variables
 declare -x _ignore
 
 # vm2 core lib keys used in build info associative arrays:
 #   build keys:
-declare -xr key_project
-declare -xr key_configuration
-declare -xr key_target_frameworks
-declare -xr key_target_framework
-declare -xr key_runtime_identifier
-declare -xr key_platform
-declare -xr key_artifacts_path
-declare -xr key_artifacts_project_name
+declare -x key_project
+declare -x key_configuration
+declare -x key_target_frameworks
+declare -x key_target_framework
+declare -x key_runtime_identifier
+declare -x key_platform
+declare -x key_artifacts_path
+declare -x key_artifacts_project_name
 #   result keys
-declare -xr key_build_result
-declare -xr key_errors_count
-declare -xr key_warnings_count
-declare -xr key_target_path
-declare -xr key_exit_code
-declare -xr key_exit_message
+declare -x key_build_result
+declare -x key_errors_count
+declare -x key_warnings_count
+declare -x key_target_path
+declare -x key_exit_code
+declare -x key_exit_message
 #   version keys
-declare -xr key_assembly_version
-declare -xr key_file_version
-declare -xr key_informational_version
-declare -xr key_version
+declare -x key_assembly_version
+declare -x key_file_version
+declare -x key_informational_version
+declare -x key_version
 #   package keys
-declare -xr key_package_output_path
-declare -xr key_package_version
-declare -xr key_package_id
+declare -x key_package_output_path
+declare -x key_package_version
+declare -x key_package_id
 
 # vm2 core lib build info
 declare -xa build_info_keys

@@ -4,14 +4,14 @@
 # shellcheck disable=SC2148 # This file is intended to be sourced, not executed directly.
 
 # constants from lib:
-declare -xri success
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
-declare -xri err_logic_error
-declare -xri err_tool_error
-declare -xri err_invalid_item
-declare -xri err_io_failure
+declare -x success
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_argument_value
+declare -x err_logic_error
+declare -x err_tool_error
+declare -x err_invalid_item
+declare -x err_io_failure
 
 # One PackageVersion element on ONE line, Include before Version, double quotes. Groups: 1 prefix, 2 id, 3 middle,
 # 4 version, 5 suffix -- set_package_version reassembles 1..5 with a new 4, so the line's original spacing survives.
@@ -108,8 +108,8 @@ function select_upgrade_version()
 #   content" label) is purely descriptive and ignored by the scanner. The two marker LINES themselves are delimiters and are
 #   never considered part of the shared content.
 #-----------------------------------------------------------------------------------------------
-declare -xr shared_begin_marker
-declare -xr shared_end_marker
+declare -x shared_begin_marker
+declare -x shared_end_marker
 
 #-----------------------------------------------------------------------------------------------
 # @description Returns the section of 'Directory.Packages.props' a package line belongs to: the shared block between

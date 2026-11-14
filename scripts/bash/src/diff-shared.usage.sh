@@ -3,15 +3,15 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr common_args_usage
-declare -xr script_name
+declare -x common_args_usage
+declare -x script_name
 
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
+declare -x err_invalid_arguments
+declare -x err_argument_type
 
-declare -xr default_vm2_repos_path
-declare -xr shared_begin_marker
-declare -xr shared_end_marker
+declare -x default_vm2_repos_path
+declare -x shared_begin_marker
+declare -x shared_end_marker
 
 function usage_text()
 {

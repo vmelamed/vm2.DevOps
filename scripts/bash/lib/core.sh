@@ -51,22 +51,22 @@ source "$lib_dir/_dotnet_args.sh"
 source "$lib_dir/_dotnet_msbuild.sh"
 source "$lib_dir/_dotnet.sh"
 
-declare -xr ci
-declare -xr initial_cwd
+declare -x ci
+declare -x initial_cwd
 
-declare -xri success
-declare -xri err_logic_error
-declare -xri err_invalid_arguments
-declare -xri err_invalid_nameref
-declare -xri err_argument_type
-declare -xri err_not_git_directory
-declare -xri err_argument_value
-declare -xri err_not_found
+declare -x success
+declare -x err_logic_error
+declare -x err_invalid_arguments
+declare -x err_invalid_nameref
+declare -x err_argument_type
+declare -x err_not_git_directory
+declare -x err_argument_value
+declare -x err_not_found
 
-declare -xr error_em
+declare -x error_em
 
-declare -xr default__ignore
-declare -xr debugger
+declare -x default__ignore
+declare -x debugger
 
 # Override the default or environment values of common flags based on other flags upon sourcing.
 # Make sure that the other set_* functions are honoring the ci flag.

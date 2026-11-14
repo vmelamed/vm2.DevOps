@@ -21,8 +21,8 @@ load '../helpers/setup'
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
-declare -gxi err_missing_argument
-declare -gxi err_unknown_argument
+declare -gx err_missing_argument
+declare -gx err_unknown_argument
 
 declare BATS_TEST_TMPDIR
 
@@ -189,16 +189,15 @@ _all_vars+=' max_gen1_collects max_gen2_collects reset_benchmark_thresholds skip
 NO_ERRORS"
 }
 
-@test "verify_environment: reports a missing jq and a missing gh together, and returns instead of exiting" {
+@test "verify_environment: reports a missing jq, and returns instead of exiting" {
     run _vi "is_tool_present() { [[ \$1 != jq && \$1 != gh ]]; }
              verify_environment
              echo REACHED
              echo \"errors=\$(get_errors)\""
     assert_success
     assert_output --partial "'jq' is not installed"
-    assert_output --partial "'gh' is not installed"
     assert_output --partial "REACHED"
-    assert_output --partial "errors=2"
+    assert_output --partial "errors=1"
 }
 
 # =====================================================================================

@@ -8,16 +8,16 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
 # core constants
-declare -xri success
-declare -xri err_not_found
-declare -xri err_tool_error
+declare -x success
+declare -x err_not_found
+declare -x err_tool_error
 
 #-----------------------------------------------------------------------------------------------
 # @description Prints the reviews and the inline review comments of a GitHub pull request, straight from the GitHub API
@@ -46,11 +46,11 @@ source "$script_dir/show-pr-comments.usage.sh"
 get_arguments "$@"
 
 # script arguments
-declare -xr pr_number
-declare -xr repo
-declare -xr watch
-declare -xr interval
-declare -xr timeout
+declare -x pr_number
+declare -x repo
+declare -x watch
+declare -x interval
+declare -x timeout
 
 declare pr_title pr_url pr_head
 

@@ -3,25 +3,25 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
-declare -xr lib_dir
+declare -x script_name
+declare -x lib_dir
 
 # vm2 error codes
-declare -xri success
-declare -xri err_missing_argument
-declare -xri err_too_many_arguments
-declare -xri err_unknown_argument
-declare -xri err_logic_error
+declare -x success
+declare -x err_missing_argument
+declare -x err_too_many_arguments
+declare -x err_unknown_argument
+declare -x err_logic_error
 
-declare -xr default_vm2_repos_path
-declare -xr default_default_branch
+declare -x default_vm2_repos_path
+declare -x default_default_branch
 
 # external defaults
-declare -xr default_repo_owner
-declare -xr default_nuget_server
+declare -x default_repo_owner
+declare -x default_nuget_server
 
 # external constants
-declare -xr ci
+declare -x ci
 declare -x _ignore
 
 # script defaults

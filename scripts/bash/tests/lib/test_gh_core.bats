@@ -11,8 +11,8 @@ load '../helpers/setup'
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
-declare -gxi err_invalid_arguments
-declare -gxi err_invalid_nameref
+declare -gx err_invalid_arguments
+declare -gx err_invalid_nameref
 
 # --- gh_escape ------------------------------------------------------------
 

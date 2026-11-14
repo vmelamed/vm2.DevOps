@@ -3,25 +3,25 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
+declare -x script_name
 
 # reference error codes defined in the core library
-declare -xri success
-declare -xri err_argument_value
-declare -xri err_missing_argument
-declare -xri err_too_many_arguments
-declare -xri err_unknown_argument
-declare -xri err_logic_error
-declare -xri err_tool_not_found
+declare -x success
+declare -x err_argument_value
+declare -x err_missing_argument
+declare -x err_too_many_arguments
+declare -x err_unknown_argument
+declare -x err_logic_error
+declare -x err_tool_not_found
 
-declare -xr ci
+declare -x ci
 
 # parameters specific to this script only with initial values from environment variables or defaults
 declare -x package_project
 declare -x build
 declare -x reason
 
-declare -xra dump_common_dotnet_args
+declare -x dump_common_dotnet_args
 
 # variables specific to this script only with initial values from environment variables or defaults
 declare -x package_project=${PACKAGE_PROJECT:-}

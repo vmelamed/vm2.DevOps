@@ -13,19 +13,19 @@
 declare -ri __VM2_LIB_DUMP_VARS_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri err_argument_type
-declare -xri err_invalid_nameref
-declare -xri err_invalid_arguments
-declare -xri err_missing_argument
-declare -xri err_unexpected_error
+declare -x success
+declare -x err_argument_type
+declare -x err_invalid_nameref
+declare -x err_invalid_arguments
+declare -x err_missing_argument
+declare -x err_unexpected_error
 
 # vm2 core lib constants
-declare -xr secret_str
-declare -xr space_ch
-declare -xr error_em
+declare -x secret_str
+declare -x space_ch
+declare -x error_em
 
-declare -xr default_table_format
+declare -x default_table_format
 
 # shellcheck disable=SC2034 # variable appears unused. Verify it or export it.
 declare -A graphical=(

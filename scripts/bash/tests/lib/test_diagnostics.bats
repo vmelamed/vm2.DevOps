@@ -20,15 +20,15 @@ load '../helpers/setup'
 # global scope bash already put it in, which is always allowed regardless of readonly-ness.
 declare -gx lib_dir
 
-declare -gxi failure
-declare -gxi err_has_bugs
-declare -gxi err_has_errors
-declare -gxi err_argument_type
-declare -gxi err_invalid_arguments
-declare -gxi err_invalid_nameref
-declare -gxi err_argument_value
-declare -gxi err_logic_error
-declare -gxi err_tool_error
+declare -gx failure
+declare -gx err_has_bugs
+declare -gx err_has_errors
+declare -gx err_argument_type
+declare -gx err_invalid_arguments
+declare -gx err_invalid_nameref
+declare -gx err_argument_value
+declare -gx err_logic_error
+declare -gx err_tool_error
 
 # --- error counter --------------------------------------------------------------------------
 

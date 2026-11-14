@@ -10,34 +10,34 @@
 # variables, constants, tools, and functions for the VM2 DevOps diff and merge scripts.
 #===============================================================================================
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_argument_value
-declare -xri err_invalid_nameref
-declare -xri err_not_directory
-declare -xri err_invalid_arguments
-declare -xri err_logic_error
-declare -xri err_tool_error
-declare -xri err_dir_with_ci
-declare -xri err_argument_type
-declare -xri err_not_file
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_argument_value
+declare -x err_invalid_nameref
+declare -x err_not_directory
+declare -x err_invalid_arguments
+declare -x err_logic_error
+declare -x err_tool_error
+declare -x err_dir_with_ci
+declare -x err_argument_type
+declare -x err_not_file
 
-declare -xr clr_reset
-declare -xr clr_bold
-declare -xr clr_red
-declare -xr clr_green
-declare -xr clr_yellow
-declare -xr clr_blue
+declare -x clr_reset
+declare -x clr_bold
+declare -x clr_red
+declare -x clr_green
+declare -x clr_yellow
+declare -x clr_blue
 
 declare -x _ignore
 
-declare -xr vm2_sot_repo_name
+declare -x vm2_sot_repo_name
 declare -x sot
 declare -xa valid_actions
 declare -x all_actions_str
@@ -253,9 +253,7 @@ function get_tools()
 #-----------------------------------------------------------------------------------------------
 function configure()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
-                                                                                       "  - the SoT directory" \
-                                                                                       "  - the target directory" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#) - the SoT directory" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs

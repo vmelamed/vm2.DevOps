@@ -13,18 +13,18 @@
 declare -ri __VM2_LIB_DIAGNOSTICS_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_not_overridden
-declare -xri err_invalid_nameref
-declare -xri err_argument_type
-declare -xri err_argument_value
-declare -xri err_missing_argument
-declare -xri err_has_bugs
-declare -xri err_has_errors
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_not_overridden
+declare -x err_invalid_nameref
+declare -x err_argument_type
+declare -x err_argument_value
+declare -x err_missing_argument
+declare -x err_has_bugs
+declare -x err_has_errors
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║ IMPORTANT: The to_* functions are designed to be used on the RIGHT side    ║
@@ -546,13 +546,13 @@ function __message()
     return "$success"
 }
 
-declare -xr fail_em
-declare -xr fatal_em
-declare -xr bug_em
-declare -xr error_em
-declare -xr warn_em
-declare -xr info_em
-declare -xr trace_em
+declare -x fail_em
+declare -x fatal_em
+declare -x bug_em
+declare -x error_em
+declare -x warn_em
+declare -x info_em
+declare -x trace_em
 
 declare -xr error_exit_prefix="$error_em  ERROR: "
 declare -xr error_prefix="$error_em  ERROR: "
@@ -972,7 +972,7 @@ function show_stack()
 #-----------------------------------------------------------------------------------------------
 declare -a __summary_output
 
-declare -xr ci
+declare -x ci
 
 if ! $ci && is_tool_present glow; then
     # redirect summary markdown to glow for pretty printing on the console

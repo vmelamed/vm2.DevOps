@@ -28,12 +28,12 @@ declare BATS_TEST_TMPDIR
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
-declare -gxi err_invalid_arguments
-declare -gxi err_argument_value
-declare -gxi err_missing_argument
-declare -gxi err_unknown_argument
+declare -gx err_invalid_arguments
+declare -gx err_argument_value
+declare -gx err_missing_argument
+declare -gx err_unknown_argument
 
-declare -gxa vm2_repositories
+declare -gx vm2_repositories
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 

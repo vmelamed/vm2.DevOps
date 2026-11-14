@@ -8,24 +8,24 @@
 declare -ri __VM2_LIB_DOTNET_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
-declare -xri err_invalid_nameref
-declare -xri err_missing_argument
-declare -xri err_tool_error
-declare -xri err_not_file
-declare -xri err_io_failure
+declare -x success
+declare -x failure
+declare -x err_invalid_arguments
+declare -x err_argument_value
+declare -x err_invalid_nameref
+declare -x err_missing_argument
+declare -x err_tool_error
+declare -x err_not_file
+declare -x err_io_failure
 
 # vm2 core lib known `dotnet` return codes
-declare -xri dotnet_success
+declare -x dotnet_success
 
 # vm2 core lib constants
-declare -xr ci
+declare -x ci
 
 # vm2 core lib build keys used in the build info associative arrays
-declare -xr key_configuration
+declare -x key_configuration
 declare -xa build_info_keys
 
 #===============================================================================================

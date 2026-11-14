@@ -19,8 +19,8 @@ load '../helpers/setup'
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
-declare -gxi err_invalid_arguments
-declare -gxi err_argument_type
+declare -gx err_invalid_arguments
+declare -gx err_argument_type
 
 # Runs a snippet in a fresh shell with core.sh loaded and a graphical table format selected.
 _in_core() {

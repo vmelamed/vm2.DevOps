@@ -8,13 +8,13 @@
 declare -ri __VM2_LIB_DOTNET_CONSTANTS_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
-declare -xri err_argument_type
+declare -x success
+declare -x err_invalid_arguments
+declare -x err_argument_value
+declare -x err_argument_type
 
 # vm2 core lib constants
-declare -xr bug_prefix
+declare -x bug_prefix
 
 # known return codes from the `dotnet` command
 declare -xri dotnet_success=0                       # Build succeeded; no errors or warnings were reported
@@ -333,4 +333,4 @@ build_info_keys+=("${build_keys[@]}")
 build_info_keys+=("${result_keys[@]}")
 build_info_keys+=("${version_keys[@]}")
 build_info_keys+=("${package_keys[@]}")
-declare -xra build_info_keys
+declare -x build_info_keys

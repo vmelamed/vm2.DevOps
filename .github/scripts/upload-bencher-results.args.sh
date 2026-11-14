@@ -3,21 +3,21 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
+declare -x script_name
 
 # reference error codes defined in the core library
-declare -xri success
-declare -xri err_argument_value
-declare -xri err_missing_argument
-declare -xri err_too_many_arguments
-declare -xri err_unknown_argument
-declare -xri err_logic_error
-declare -xri err_tool_not_found
+declare -x success
+declare -x err_argument_value
+declare -x err_missing_argument
+declare -x err_too_many_arguments
+declare -x err_unknown_argument
+declare -x err_logic_error
+declare -x err_tool_not_found
 
-declare -xr ci
+declare -x ci
 declare -x _ignore
 
-declare -xr key_repo
+declare -x key_repo
 
 declare -xri default_max_regression_pct=20
 declare -xri default_max_gen1_collects=2

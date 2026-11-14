@@ -12,11 +12,11 @@ load '../libs/bats-assert/load'
 load '../helpers/setup'
 
 declare -gx lib_dir
-declare -gxi err_invalid_arguments
-declare -gxi err_invalid_item
-declare -gxi err_tool_error
-declare -gxi err_not_found
-declare -gxi err_logic_error
+declare -gx err_invalid_arguments
+declare -gx err_invalid_item
+declare -gx err_tool_error
+declare -gx err_not_found
+declare -gx err_logic_error
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 

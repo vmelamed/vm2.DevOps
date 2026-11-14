@@ -3,18 +3,18 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
+declare -x script_name
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri err_not_found
-declare -xri err_too_many_arguments
-declare -xri err_unknown_argument
-declare -xri err_tool_not_found
+declare -x success
+declare -x err_not_found
+declare -x err_too_many_arguments
+declare -x err_unknown_argument
+declare -x err_tool_not_found
 
 # vm2 core lib constants
-declare -xr ci
-declare -xra dump_common_dotnet_args
+declare -x ci
+declare -x dump_common_dotnet_args
 
 # vm2 core lib defaults
 

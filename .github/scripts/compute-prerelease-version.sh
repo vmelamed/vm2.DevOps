@@ -8,20 +8,20 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
 
 # vm2 core lib exit codes
-declare -xri err_tool_error
-declare -xri err_argument_value
+declare -x err_tool_error
+declare -x err_argument_value
 
 # vm2 core lib constants
-declare -xr semverTagReleaseRegex
-declare -xr semverTagPrereleaseRegex
+declare -x semverTagReleaseRegex
+declare -x semverTagPrereleaseRegex
 
 # vm2 core lib defaults
 
@@ -34,13 +34,13 @@ source "$script_dir/compute-prerelease-version.args.sh"
 
 # this script's arguments
 get_arguments "$@"
-declare -xr minver_tag_prefix
-declare -xr minver_prerelease_id
-declare -xr reason
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x reason
 
 # Derive the prerelease prefix by stripping the MinVer height seed (e.g. "preview.0" → "preview")
 prerelease_prefix="${minver_prerelease_id%.[0-9]*}"
-declare -xr prerelease_prefix
+declare -x prerelease_prefix
 trace "Prerelease prefix: $prerelease_prefix (from minver_prerelease_id: $minver_prerelease_id)"
 
 # ============================================================================
@@ -187,8 +187,8 @@ exit_if_has_errors
 # Output for GitHub Actions
 # ============================================================================
 
-declare -xr prerelease_version
-declare -xr prerelease_tag
+declare -x prerelease_version
+declare -x prerelease_tag
 
 args_to_github_output \
     prerelease_version \

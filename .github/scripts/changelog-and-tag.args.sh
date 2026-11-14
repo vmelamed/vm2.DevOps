@@ -3,23 +3,23 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
-declare -xr lib_dir
+declare -x script_name
+declare -x lib_dir
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri err_missing_argument
-declare -xri err_too_many_arguments
-declare -xri err_unknown_argument
-declare -xri err_logic_error
-declare -xri err_argument_value
-declare -xri err_tool_not_found
+declare -x success
+declare -x err_missing_argument
+declare -x err_too_many_arguments
+declare -x err_unknown_argument
+declare -x err_logic_error
+declare -x err_argument_value
+declare -x err_tool_not_found
 
 # vm2 core lib constants
-declare -xr ci
+declare -x ci
 
 # vm2 core lib defaults
-declare -xr default_minver_tag_prefix
+declare -x default_minver_tag_prefix
 
 # vm2 core lib variables
 

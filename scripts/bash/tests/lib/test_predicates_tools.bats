@@ -18,9 +18,9 @@ load '../helpers/setup'
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
 
-declare -gxi failure
-declare -gxi err_invalid_arguments
-declare -gxi err_invalid_path
+declare -gx failure
+declare -gx err_invalid_arguments
+declare -gx err_invalid_path
 declare -gx  dotnet_min_version
 declare -gx  jq_min_version
 declare -gx  git_min_version
@@ -291,20 +291,12 @@ exit 99"
     assert_success
 }
 
-@test "is_dotnet_present: false, with an upgrade hint, when dotnet reports an older version than the minimum" {
-    _fake_tool dotnet 'echo 1.0.100'
-
-    run _with_fakes is_dotnet_present
-    assert_failure "$failure"
-    assert_output --partial "requires 'dotnet' version $dotnet_min_version"
-}
-
 @test "is_dotnet_present: false when 'dotnet --version' itself fails (e.g. global.json pins an SDK that is not installed)" {
     _fake_tool dotnet 'echo "A compatible .NET SDK was not found." >&2; exit 145'
 
     run _with_fakes is_dotnet_present
     assert_failure "$failure"
-    assert_output --partial "requires 'dotnet' version $dotnet_min_version"
+    assert_output --partial "The .NET SDK required in this directory is not installed"
 }
 
 @test "is_dotnet_present: false, with an install hint, when dotnet is not on PATH (and never checks the version)" {

@@ -16,7 +16,7 @@ load '../libs/bats-assert/load'
 load '../helpers/setup'
 
 declare -gx lib_dir
-declare -gxi err_argument_value
+declare -gx err_argument_value
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 _script="$_src_dir/set-secret.sh"

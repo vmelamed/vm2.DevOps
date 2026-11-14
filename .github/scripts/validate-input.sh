@@ -9,21 +9,21 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
 
 # vm2 core lib exit codes
-declare -xri err_argument_value
-declare -xri err_tool_not_found
+declare -x err_argument_value
+declare -x err_tool_not_found
 
 # vm2 core lib constants
-declare -xr check_em
-declare -xra output_common_dotnet_args
-declare -xra dump_common_dotnet_args
+declare -x check_em
+declare -x output_common_dotnet_args
+declare -x dump_common_dotnet_args
 
 # Declare variables defined in the core library.
 declare -x _ignore
@@ -33,26 +33,26 @@ source "$script_dir/validate-input.args.sh"
 
 get_arguments "$@"
 # vm2 core lib arguments - dotnet
-declare -xr preprocessor_symbols
-declare -xr minver_tag_prefix
-declare -xr minver_prerelease_id
-declare -xr gh_nuget_username
-declare -xr gh_nuget_password
+declare -x preprocessor_symbols
+declare -x minver_tag_prefix
+declare -x minver_prerelease_id
+declare -x gh_nuget_username
+declare -x gh_nuget_password
 # this scripts arguments
-declare -xr build_projects
-declare -xr test_projects
-declare -xr benchmark_projects
-declare -xr package_projects
-declare -xr runners_os
-declare -xr min_coverage_pct
-declare -xr max_regression_pct
-declare -xr max_gen1_collects
-declare -xr max_gen2_collects
-declare -xr reset_benchmark_thresholds
-declare -xr skip_tests
-declare -xr skip_build
-declare -xr skip_benchmarks
-declare -xr skip_packages
+declare -x build_projects
+declare -x test_projects
+declare -x benchmark_projects
+declare -x package_projects
+declare -x runners_os
+declare -x min_coverage_pct
+declare -x max_regression_pct
+declare -x max_gen1_collects
+declare -x max_gen2_collects
+declare -x reset_benchmark_thresholds
+declare -x skip_tests
+declare -x skip_build
+declare -x skip_benchmarks
+declare -x skip_packages
 
 info "$check_em All parameters validated successfully"
 

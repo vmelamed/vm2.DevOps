@@ -13,18 +13,18 @@
 declare -ri __VM2_LIB_USER_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
-declare -xri err_argument_value
-declare -xri err_invalid_nameref
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_argument_type
+declare -x err_argument_value
+declare -x err_invalid_nameref
 
 # vm2 core lib constants
-declare -xr secret_str
-declare -xr secret_placeholder
+declare -x secret_str
+declare -x secret_placeholder
 
 #-----------------------------------------------------------------------------------------------
 # @description Displays a prompt and waits for the user to press any key before

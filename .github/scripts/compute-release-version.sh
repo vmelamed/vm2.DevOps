@@ -8,22 +8,22 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
 
 # vm2 core lib exit codes
-declare -xri err_tool_error
-declare -xri err_logic_error
+declare -x err_tool_error
+declare -x err_logic_error
 
 # vm2 core lib constants
-declare -xr semverReleaseRegex
-declare -xr semverPrereleaseRegex
-declare -xr semverTagReleaseRegex
-declare -xr semverTagPrereleaseRegex
+declare -x semverReleaseRegex
+declare -x semverPrereleaseRegex
+declare -x semverTagReleaseRegex
+declare -x semverTagPrereleaseRegex
 
 # vm2 core lib defaults
 
@@ -36,8 +36,8 @@ source "$script_dir/compute-release-version.args.sh"
 
 # this script's arguments
 get_arguments "$@"
-declare -xr minver_tag_prefix
-declare -xr reason
+declare -x minver_tag_prefix
+declare -x reason
 
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
@@ -137,9 +137,9 @@ if [[ "$needs_empty_commit" == true && -n "$head_tag" ]]; then
     fi
 fi
 
-declare -xr release_version
-declare -xr release_tag
-declare -xr needs_empty_commit
+declare -x release_version
+declare -x release_tag
+declare -x needs_empty_commit
 
 # Check if tag already exists
 if git rev-parse "$release_tag" >"$_ignore" 2>&1; then

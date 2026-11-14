@@ -20,42 +20,42 @@
 (( ${__VM2_LIB_GIT_VM2_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_GIT_VM2_SH_LOADED=1
 
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_dir
+declare -x lib_dir
 declare -x _ignore
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
+declare -x success
+declare -x failure
 
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
-declare -xri err_argument_value
-declare -xri err_invalid_nameref
-declare -xri err_not_found
-declare -xri err_not_file
-declare -xri err_not_directory
-declare -xri err_not_git_root
-declare -xri err_behind_latest_stable_tag
-declare -xri err_invalid_repo
-declare -xri err_found_too_many
-declare -xri err_repo_with_no_ci
-declare -xri err_dir_with_ci
-declare -xri err_dir_with_no_ci
-declare -xri err_not_git_directory
-declare -xri err_logic_error
-declare -xri err_not_current_commit
-declare -xri err_invalid_branch
-declare -xri err_invalid_path
-declare -xri err_unknown
-declare -xri err_unexpected_error
-declare -xri err_repo_not_in_vm2_repos
+declare -x err_invalid_arguments
+declare -x err_argument_type
+declare -x err_argument_value
+declare -x err_invalid_nameref
+declare -x err_not_found
+declare -x err_not_file
+declare -x err_not_directory
+declare -x err_not_git_root
+declare -x err_behind_latest_stable_tag
+declare -x err_invalid_repo
+declare -x err_found_too_many
+declare -x err_repo_with_no_ci
+declare -x err_dir_with_ci
+declare -x err_dir_with_no_ci
+declare -x err_not_git_directory
+declare -x err_logic_error
+declare -x err_not_current_commit
+declare -x err_invalid_branch
+declare -x err_invalid_path
+declare -x err_unknown
+declare -x err_unexpected_error
+declare -x err_repo_not_in_vm2_repos
 
 # vm2 core lib constants
-declare -xr default_vm2_repos_path
-declare -xr default_sot
-declare -xr vm2_devops_repo_name
-declare -xr vm2_sot_repo_name
+declare -x default_vm2_repos_path
+declare -x default_sot
+declare -x vm2_devops_repo_name
+declare -x vm2_sot_repo_name
 
 # get_devops_parent cache
 declare __devops_parent=''

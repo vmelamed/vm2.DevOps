@@ -13,35 +13,35 @@
 declare -ri __VM2_LIB_SANITIZE_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_invalid_nameref
-declare -xri err_argument_type
-declare -xri err_argument_value
-declare -xri err_not_found
-declare -xri err_not_file
-declare -xri err_not_directory
-declare -xri err_unsafe_argument
-declare -xri err_invalid_path
-declare -xri err_non_existent_path
-declare -xri err_missing_argument
-declare -xri err_invalid_json
-declare -xri err_invalid_json_array
-declare -xri err_logic_error
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_invalid_nameref
+declare -x err_argument_type
+declare -x err_argument_value
+declare -x err_not_found
+declare -x err_not_file
+declare -x err_not_directory
+declare -x err_unsafe_argument
+declare -x err_invalid_path
+declare -x err_non_existent_path
+declare -x err_missing_argument
+declare -x err_invalid_json
+declare -x err_invalid_json_array
+declare -x err_logic_error
 
 # vm2 core lib constants
-declare -xr nugetServersRegex
-declare -xr default_nuget_server
-declare -xr build_config_regex
-declare -xr tfm_regex
-declare -xr rid_regex
-declare -xra allowed_runners_os
-declare -xra known_configurations
-declare -xr known_tfms
-declare -xr known_runtimes
+declare -x nugetServersRegex
+declare -x default_nuget_server
+declare -x build_config_regex
+declare -x tfm_regex
+declare -x rid_regex
+declare -x allowed_runners_os
+declare -x known_configurations
+declare -x known_tfms
+declare -x known_runtimes
 
 declare -rx dangerous_chars_regex=$'[;|&$`<>(){}\n\r]'
 declare -rx dangerous_chars_and_whitespaces_regex='[;|&$`<>(){}[:space:]]'

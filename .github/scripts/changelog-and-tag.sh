@@ -9,25 +9,25 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/gh_core.sh"
 
 # vm2 core lib exit codes
-declare -xri err_argument_value
-declare -xri err_not_found
+declare -x err_argument_value
+declare -x err_not_found
 
 # vm2 core lib constants
-declare -xr check_em
-declare -xr ci
-declare -xr key_artifacts_path
-declare -xr semverTagReleaseRegex
+declare -x check_em
+declare -x ci
+declare -x key_artifacts_path
+declare -x semverTagReleaseRegex
 
 # vm2 core lib defaults
-declare -xr default_minver_tag_prefix
+declare -x default_minver_tag_prefix
 
 # vm2 core lib variables
 declare -x _ignore
@@ -38,12 +38,12 @@ source "$script_dir/changelog-and-tag.args.sh"
 
 # this script's arguments
 get_arguments "$@"
-declare -xr tag
-declare -xr reason
-declare -xr minver_tag_prefix
-declare -xr is_release
-declare -xr is_prerelease
-declare -xr needs_empty_commit
+declare -x tag
+declare -x reason
+declare -x minver_tag_prefix
+declare -x is_release
+declare -x is_prerelease
+declare -x needs_empty_commit
 
 # Configure git for CI
 if $ci; then

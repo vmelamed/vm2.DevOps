@@ -11,15 +11,15 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
-declare -xri err_logic_error
+declare -x err_invalid_arguments
+declare -x err_argument_value
+declare -x err_logic_error
 
 declare -x _ignore
 
@@ -28,10 +28,10 @@ source "$script_dir/re-tag.usage.sh"
 
 get_arguments "$@"
 
-declare -xr delete_mode
-declare -xr del_tag
-declare -xr old_tag
-declare -xr new_tag
+declare -x delete_mode
+declare -x del_tag
+declare -x old_tag
+declare -x new_tag
 
 #-----------------------------------------------------------------------------------------------
 # @description Main script body: renames an existing git tag to a new name, or deletes a tag, both locally and on 'origin'.

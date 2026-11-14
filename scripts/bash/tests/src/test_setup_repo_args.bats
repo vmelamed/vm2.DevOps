@@ -27,10 +27,10 @@ load '../helpers/setup'
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
-declare -gxi err_missing_argument
-declare -gxi err_too_many_arguments
-declare -gxi err_unknown_argument
-declare -gxi failure
+declare -gx err_missing_argument
+declare -gx err_too_many_arguments
+declare -gx err_unknown_argument
+declare -gx failure
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 

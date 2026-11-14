@@ -5,16 +5,16 @@
 # Characterization tests for scripts/bash/lib/_error_codes.sh, as it behaves TODAY -- written
 # before the tier-4 predicate/validator convention refactor so the refactor has a safety net.
 
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_has_errors
-declare -xri err_has_bugs
-declare -xri err_unknown
-declare -xri err_io_failure
-declare -xri err_not_found
+declare -gx success
+declare -gx failure
+declare -gx positive
+declare -gx negative
+declare -gx err_invalid_arguments
+declare -gx err_has_errors
+declare -gx err_has_bugs
+declare -gx err_unknown
+declare -gx err_io_failure
+declare -gx err_not_found
 
 bats_require_minimum_version 1.5.0
 

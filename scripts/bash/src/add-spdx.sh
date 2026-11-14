@@ -9,21 +9,21 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 # vm2 core lib
 source "$lib_dir/core.sh"
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_tool_error
-declare -xri err_not_directory
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_tool_error
+declare -x err_not_directory
 
 # vm2 core lib variables
 declare -x _ignore
@@ -77,8 +77,8 @@ source "$script_dir/add-spdx.usage.sh"
 
 # this scripts arguments
 get_arguments "$@"
-declare -xr dir
-declare -xr license
+declare -x dir
+declare -x license
 
 declare -xr cs_header="// SPDX-License-Identifier: $license
 // Copyright (c) 2025-2026 Val Melamed

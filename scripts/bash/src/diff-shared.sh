@@ -9,27 +9,27 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
 # vm2 core error codes
-declare -xri success
-declare -xri positive
-declare -xri negative
-declare -xri err_logic_error
-declare -xri err_unexpected_error
+declare -x success
+declare -x positive
+declare -x negative
+declare -x err_logic_error
+declare -x err_unexpected_error
 
 # vm2 core constants
-declare -xr cross_ch
-declare -xr check_ch
-declare -xr equals_ch
-declare -xr not_eq_ch
+declare -x cross_ch
+declare -x check_ch
+declare -x equals_ch
+declare -x not_eq_ch
 
-declare -xr vm2_sot_repo_name
-declare -xra vm2_repositories
+declare -x vm2_sot_repo_name
+declare -x vm2_repositories
 
 # vm2 core variables
 declare -x _ignore
@@ -43,34 +43,34 @@ source "$script_dir/diff-shared.summary.sh"
 
 # this script arguments:
 get_arguments "$@"
-declare -xr vm2_repos
-declare -xr sot
-declare -xra target_repos
-declare -xrA selectors_actions
-declare -xr diff_only
-declare -xr summary_file
-declare -xr sot_path
+declare -x vm2_repos
+declare -x sot
+declare -x target_repos
+declare -x selectors_actions
+declare -x diff_only
+declare -x summary_file
+declare -x sot_path
 
 # this script variables
-declare -xr action_ignore
-declare -xr action_merge_or_copy
-declare -xr action_ask_to_merge
-declare -xr action_ask_to_copy
+declare -x action_ignore
+declare -x action_merge_or_copy
+declare -x action_ask_to_merge
+declare -x action_ask_to_copy
 declare -xr action_merge action_copy
-declare -xr action_copy_shared
-declare -xr action_ask_to_copy_shared
+declare -x action_copy_shared
+declare -x action_ask_to_copy_shared
 
-declare -xri shared_equal
-declare -xri shared_not_equal
+declare -x shared_equal
+declare -x shared_not_equal
 
 # Summary variables:
-declare -xi summary_ignore_count
-declare -xi summary_shared_ignore_count
-declare -xi summary_skipped_count
-declare -xi summary_shared_skipped_count
+declare -x summary_ignore_count
+declare -x summary_shared_ignore_count
+declare -x summary_skipped_count
+declare -x summary_shared_skipped_count
 
-declare -xra target_roots
-declare -xra target_paths
+declare -x target_roots
+declare -x target_paths
 
 # this is the data model of the script. Bash does not have complex data structures, so we use parallel arrays to store the
 # source files, target files and actions. The index of the arrays corresponds to the same file pair and action. For example,
@@ -100,7 +100,7 @@ declare -i difference
 declare file_difference_txt todo_or_done_txt
 
 declare -A repo_state=()
-declare -xr key_name
+declare -x key_name
 declare repo_name
 
 declare -i targets_index

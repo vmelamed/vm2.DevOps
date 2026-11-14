@@ -8,24 +8,24 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_argument_type
-declare -xri err_argument_value
-declare -xri err_invalid_nameref
-declare -xri err_missing_argument
-declare -xri err_too_many_arguments
-declare -xri err_unknown_argument
-declare -xri err_tool_error
+declare -x success
+declare -x failure
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_argument_type
+declare -x err_argument_value
+declare -x err_invalid_nameref
+declare -x err_missing_argument
+declare -x err_too_many_arguments
+declare -x err_unknown_argument
+declare -x err_tool_error
 
 declare -x _ignore
 
@@ -67,8 +67,8 @@ source "$script_dir/rename-branch.args.sh"
 source "$script_dir/rename-branch.usage.sh"
 
 get_arguments "$@"
-declare -xr old_branch_name
-declare -xr new_branch_name
+declare -x old_branch_name
+declare -x new_branch_name
 
 [[ -n "$new_branch_name" ]] || usage "No new branch name provided." -ec "$err_missing_argument"
 

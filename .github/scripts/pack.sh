@@ -9,17 +9,17 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 source "$lib_dir/gh_core.sh"
 
-declare -xr check_em
+declare -x check_em
 
 # Declare error codes defined in the core library
-declare -xri success
-declare -xri err_tool_error
+declare -x success
+declare -x err_tool_error
 
 # Declare variables defined in the core library.
 declare -x _ignore
@@ -45,7 +45,7 @@ get_arguments "$@"
 
 declare -x pack_exec_path
 get_target_path "$package_project" pack_exec_path
-declare -xr pack_exec_path
+declare -x pack_exec_path
 
 # Build when explicitly requested (--build), or when the artifacts directory has no build output for this
 # project yet -- e.g. --skip-build-cache callers (template packages) that never downloaded a prior build.

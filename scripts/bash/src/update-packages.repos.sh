@@ -4,25 +4,25 @@
 # shellcheck disable=SC2148 # This file is intended to be sourced, not executed directly.
 
 # constants from lib:
-declare -xri success
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
-declare -xri err_tool_error
-declare -xri err_not_found
+declare -x success
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_argument_value
+declare -x err_tool_error
+declare -x err_not_found
 
-declare -xr fail_em
-declare -xr question_em
-declare -xr right_arrow_em
-declare -xr check_em
-declare -xr up_arrow_em
+declare -x fail_em
+declare -x question_em
+declare -x right_arrow_em
+declare -x check_em
+declare -x up_arrow_em
 
 declare -x _ignore
 
 # timing variables for performance measurement. us stands for microseconds.
-declare -xi search_us
-declare -xi restore_us
-declare -xi search_count
+declare -x search_us
+declare -x restore_us
+declare -x search_count
 
 #-----------------------------------------------------------------------------------------------
 # @description Decides how a repository may be changed. 'publish': on 'main', clean, and identical to 'origin/main' after

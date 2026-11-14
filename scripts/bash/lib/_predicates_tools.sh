@@ -8,17 +8,17 @@
 declare -ri __VM2_LIB_PREDICATES_TOOLS_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_invalid_path
-declare -xri err_tool_not_found
-declare -xri err_tool_unauthenticated
-declare -xri err_tool_version
+declare -x success
+declare -x positive
+declare -x negative
+declare -x err_invalid_arguments
+declare -x err_invalid_path
+declare -x err_tool_not_found
+declare -x err_tool_unauthenticated
+declare -x err_tool_version
 
 # vm2 core lib constants
-declare -xr ci
+declare -x ci
 declare -x semverReleaseRex
 
 # vm2 core lib variables

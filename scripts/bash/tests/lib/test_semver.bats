@@ -13,9 +13,9 @@ load '../helpers/setup'
 
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
-declare -gxi err_argument_value
-declare -gxi err_invalid_arguments
-declare -gxi failure
+declare -gx err_argument_value
+declare -gx err_invalid_arguments
+declare -gx failure
 declare -gx semverRegex
 
 # --- validate_minver_tag_components ------------------------------------------------------------

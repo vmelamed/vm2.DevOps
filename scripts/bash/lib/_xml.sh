@@ -14,12 +14,12 @@
 declare -ri __VM2_LIB_XML_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri err_not_found
-declare -xri err_invalid_arguments
-declare -xri err_argument_value
-declare -xri err_invalid_nameref
-declare -xri err_tool_error
+declare -x success
+declare -x err_not_found
+declare -x err_invalid_arguments
+declare -x err_argument_value
+declare -x err_invalid_nameref
+declare -x err_tool_error
 
 # vm2 core lib variables
 declare -x _ignore

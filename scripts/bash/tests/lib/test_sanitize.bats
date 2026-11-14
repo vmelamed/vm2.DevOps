@@ -15,19 +15,19 @@ load '../helpers/setup'
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
 
-declare -gxi success
-declare -gxi failure
-declare -gxi positive
-declare -gxi negative
-declare -gxi err_invalid_arguments
-declare -gxi err_invalid_nameref
-declare -gxi err_non_existent_path
-declare -gxi err_argument_type
-declare -gxi err_not_file
-declare -gxi err_invalid_json
-declare -gxi err_unsafe_argument
-declare -gxi err_argument_value
-declare -gxi err_logic_error
+declare -gx success
+declare -gx failure
+declare -gx positive
+declare -gx negative
+declare -gx err_invalid_arguments
+declare -gx err_invalid_nameref
+declare -gx err_non_existent_path
+declare -gx err_argument_type
+declare -gx err_not_file
+declare -gx err_invalid_json
+declare -gx err_unsafe_argument
+declare -gx err_argument_value
+declare -gx err_logic_error
 
 declare BATS_TEST_TMPDIR
 

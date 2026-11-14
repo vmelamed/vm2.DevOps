@@ -9,20 +9,20 @@ script_name=$(basename "${BASH_SOURCE[0]}")
 script_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 lib_dir=$(realpath -e "$script_dir/../../scripts/bash/lib")
 
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+declare -x script_name
+declare -x script_dir
+declare -x lib_dir
 
 source "$lib_dir/gh_core.sh"
 
 # Declare variables defined in the core library.
-declare -xr ci
+declare -x ci
 declare -x secret_str
 
 # Declare error codes defined in the core library
-declare -xri success
-declare -xri err_argument_value
-declare -xri err_tool_error
+declare -x success
+declare -x err_argument_value
+declare -x err_tool_error
 
 
 source "$script_dir/upload-bencher-results.usage.sh"
@@ -30,18 +30,18 @@ source "$script_dir/upload-bencher-results.args.sh"
 
 # this script arguments
 get_arguments "$@"
-declare -xr results_dir
-declare -xr testbed
-declare -xr repository
-declare -xr event_name
-declare -xr ref_name
-declare -xr head_ref
-declare -xr pr_number
-declare -xr pr_base_sha
-declare -xr max_regression_pct
-declare -xr max_gen1_collects
-declare -xr max_gen2_collects
-declare -xr reset_thresholds
+declare -x results_dir
+declare -x testbed
+declare -x repository
+declare -x event_name
+declare -x ref_name
+declare -x head_ref
+declare -x pr_number
+declare -x pr_base_sha
+declare -x max_regression_pct
+declare -x max_gen1_collects
+declare -x max_gen2_collects
+declare -x reset_thresholds
 
 trace "Preparing to upload results to Bencher.dev with max regression threshold of ±${max_regression_pct}%."
 

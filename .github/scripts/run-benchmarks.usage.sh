@@ -4,11 +4,11 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -xr script_name
+declare -x script_name
 
-declare -xr common_args_usage
-declare -xr common_dotnet_parameters
-declare -xr common_dotnet_vars
+declare -x common_args_usage
+declare -x common_dotnet_parameters
+declare -x common_dotnet_vars
 
 #-----------------------------------------------------------------------------------------------
 # @description Outputs the usage text for this script to stdout.

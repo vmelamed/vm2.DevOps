@@ -14,13 +14,13 @@ load '../helpers/setup'
 # ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
-declare -gxi failure
-declare -gxi err_invalid_arguments
-declare -gxi err_argument_value
+declare -gx failure
+declare -gx err_invalid_arguments
+declare -gx err_argument_value
 
 declare -gx minver_tag_prefix
 
-declare -x BATS_TEST_TMPDIR
+declare -gx BATS_TEST_TMPDIR
 
 # --- default values --------------------------------------------------------------------------
 
