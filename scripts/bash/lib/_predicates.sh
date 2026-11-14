@@ -15,14 +15,16 @@
 declare -ri __VM2_LIB_PREDICATES_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xri success
-declare -xri failure
-declare -xri positive
-declare -xri negative
-declare -xri err_invalid_arguments
-declare -xri err_invalid_nameref
+declare -xi success
+declare -xi failure
+declare -xi positive
+declare -xi negative
+declare -xi err_invalid_arguments
+declare -xi err_invalid_nameref
 
 # vm2 core lib constants
+declare -x nugetServersRegex
+
 declare -xr zero_rex='[+-]?0'
 declare -xr natural_rex='[1-9][0-9]*'
 declare -xr positive_rex="[+]?$natural_rex"
@@ -54,8 +56,6 @@ declare -xr rid_regex="^$rid_rex\$"
 declare -xr varNameRegex="^$varNameRex\$"
 declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
 declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
-
-declare -xr nugetServersRegex
 
 declare -xr base64_regex="^($base64_char_rex{4})*($base64_char_rex{3}=|$base64_char_rex{2}==)?\$"
 
