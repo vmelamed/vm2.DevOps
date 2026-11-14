@@ -23,6 +23,8 @@ declare -x err_invalid_arguments
 declare -x err_invalid_nameref
 
 # vm2 core lib constants
+declare -xa vm2_repositories
+
 declare -x nugetServersRegex
 
 declare -xr zero_rex='[+-]?0'
