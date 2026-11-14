@@ -14,7 +14,7 @@ declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
-# core constants
+# vm2 core lib exit codes
 declare -x success
 declare -x err_not_found
 declare -x err_tool_error
