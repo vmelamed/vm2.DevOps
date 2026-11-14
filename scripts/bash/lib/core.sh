@@ -27,9 +27,9 @@ declare -x lib_dir
 [[ ! -v lib_dir        || -z "$lib_dir"        ]] && lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 
 # variables commonly used for diagnostics
-declare -xr script_name
-declare -xr script_dir
-declare -xr lib_dir
+readonly script_name
+readonly script_dir
+readonly lib_dir
 
 # source the components of the core library
 source "$lib_dir/_constants.sh"

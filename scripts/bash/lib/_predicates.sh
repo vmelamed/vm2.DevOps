@@ -15,7 +15,7 @@
 declare -ri __VM2_LIB_PREDICATES_SH_LOADED=1
 
 # vm2 core lib exit codes
-declare -xi success
+declare -x success
 declare -x failure
 declare -x positive
 declare -x negative
