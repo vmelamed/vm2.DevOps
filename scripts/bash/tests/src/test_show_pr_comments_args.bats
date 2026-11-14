@@ -196,7 +196,7 @@ NO_ERRORS"
 @test "resolve_arguments: reports every invalid value together, then exits before querying gh" {
     run _pc "pr_number=abc repo=just-a-name interval=0 timeout=-5
              resolve_arguments; echo AFTER" "FAKE_NO_REPO=1"
-    assert_success
+    assert_failure
     assert_output --partial "The pull request number must be a positive integer (provided 'abc')."
     assert_output --partial "The repository must be given as 'owner/repo' (provided 'just-a-name')."
     assert_output --partial "The interval must be a positive number of seconds (provided '0')."
@@ -207,7 +207,7 @@ NO_ERRORS"
 @test "resolve_arguments: --repo without a number is an error" {
     run _pc "repo=acme/repo
              resolve_arguments; echo AFTER"
-    assert_success
+    assert_failure
     assert_output --partial "With '--repo', the pull request number is required"
 }
 
