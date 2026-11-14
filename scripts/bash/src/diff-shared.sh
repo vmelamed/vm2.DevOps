@@ -115,8 +115,8 @@ info "The Source of Truth '$sot' folder is in '$sot_path'"
     echo -e "## Source of truth: **$sot** (\`$sot_path\`)\n"
 } >> "$summary_file"
 
-configure "$sot_path"                                                           || exit_with_error "Failed to load configuration from the SoT directory '$sot_path'." -ec "$err_logic_error"
-trace "Configured from SoT '$sot_path' for '$target_path'."
+    configure "$sot_path"                                                           || exit_with_error "Failed to load configuration from the SoT directory '$sot_path'." -ec "$err_logic_error"
+    trace "Configured from SoT '$sot_path'."
 
 # iterate through the target repositories
 for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ )); do

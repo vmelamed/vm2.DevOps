@@ -24,7 +24,6 @@ declare -x semverReleaseRex
 # vm2 core lib variables
 declare -x _ignore
 
-declare -xr dotnet_min_version='10.0.404'
 declare -xr jq_min_version='1.8.0'
 declare -x git_min_version
 declare -x gh_min_version
@@ -196,12 +195,9 @@ function is_yq_present()
     $yq_present
 }
 
-declare dotnet_present=''
-
 #-----------------------------------------------------------------------------------------------
-# @description Checks if 'dotnet' is available on the `$PATH` and its version is greater than or
-#   equal to '$dotnet_min_version'. The result is cached and the errors are reported only on the
-#   first run.
+# @description Checks if 'dotnet' is available on the `$PATH` and its version is compatible with
+#   the project in the current repo.
 #
 # @exitcode positive=0: 'dotnet' is present.
 # @exitcode negative=1: 'dotnet' is not present.
@@ -210,21 +206,13 @@ function is_dotnet_present()
 {
     (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() does not use arguments." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
+    # no caching - has different answers in different cwd-s
+    local -i _rc=$success
+    local _output
 
-    if [[ -z $dotnet_present ]]; then
-        local -i _rc=$success
-        local _ver=''
-
-        is_tool_present dotnet                                                  || with_error _rc "$err_tool_not_found" "'dotnet' is not installed. Please install it: https://dotnet.microsoft.com/en-us/download"
-        (( _rc != success )) || {
-                                    _ver=$(dotnet --version) && \
-                                    semver_gte "$_ver" "$dotnet_min_version";
-                                }                                               || with_error _rc "$err_tool_version" "This script requires 'dotnet' version $dotnet_min_version. Please upgrade: https://dotnet.microsoft.com/en-us/download"
-        (( _rc == success )) && dotnet_present=true || dotnet_present=false
-        readonly dotnet_present
-    fi
-
-    $dotnet_present
+    is_tool_present dotnet                                                      || with_error _rc "$err_tool_not_found" "'dotnet' is not installed. Please install it: https://dotnet.microsoft.com/en-us/download"
+    (( _rc != success )) || _output=$(dotnet --version 2>&1)                    || with_error _rc "$err_tool_version" "The .NET SDK required in this directory is not installed:" "$_output"
+    (( _rc == success ))
 }
 
 #-----------------------------------------------------------------------------------------------

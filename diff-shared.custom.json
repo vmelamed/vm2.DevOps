@@ -17,7 +17,6 @@
         "Directory.Packages.props": "ignore",
         "codecov.yaml": "ignore",
         "coverage.settings.xml": "ignore",
-        "global.json": "ignore",
         "NuGet.config": "ignore",
         "testconfig.json": "ignore"
     }

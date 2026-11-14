@@ -7,6 +7,7 @@
 - [vm2 Shared Conventions](#vm2-shared-conventions)
   - [Workspace and Repository](#workspace-and-repository)
     - [Local Workspace](#local-workspace)
+    - [.NET SDKs](#net-sdks)
     - [Project Structure](#project-structure)
     - [Shared Content and Synchronization](#shared-content-and-synchronization)
   - [Build](#build)
@@ -85,6 +86,61 @@ The vm2.DevOps tools assume one shared workstation layout:
   both as the directory name under `$VM2_REPOS` and as the GitHub repository name, so a clone under a different name is skipped
   by some of them and mis-addressed by others. Compare the names case-sensitively: GitHub resolves repository names
   case-insensitively, but Linux file systems do not.
+
+### .NET SDKs
+
+Each repository pins its exact .NET SDK in `global.json` (`"version"`, with `"rollForward": "disable"`). The pin is exact on
+purpose: the SDK determines the versions of implicit package references (e.g. `Microsoft.NET.ILLink.Tasks`), so a different
+SDK on a workstation than in CI changes `packages.lock.json`, and CI's locked-mode restore fails with `NU1004`. With
+`"disable"`, the mismatch fails early and locally instead.
+
+How `dotnet` picks the SDK:
+
+- **From the current directory, not from the project argument.** `dotnet` searches for `global.json` upward from the current
+  directory and applies its `rollForward` policy. `dotnet restore ../vm2.Ulid/vm2.Ulid.slnx`, run from inside vm2.DevOps,
+  uses vm2.DevOps's `global.json`, not vm2.Ulid's. Scripts that work across repositories **MUST** run `dotnet` with the
+  repository as the current directory (`(cd "$repo" && dotnet …)`).
+- **No match, no command.** When no installed SDK satisfies the pin, every SDK command (`build`, `restore`, `test`, `pack`,
+  `tool`, even `--version`) fails with exit code 155 and "A compatible .NET SDK was not found". So `dotnet --version`, run
+  in a repository, is the check that the repository can build: it prints the SDK that `global.json` selects, or fails and
+  names the requested version and the `global.json` file.
+
+Repositories **MAY** pin different SDKs: a new SDK is adopted repository by repository (e.g. a gradual move to the next
+.NET version), not in one sweep. A workstation therefore needs **several SDKs side by side**, and that rules out apt:
+
+- **Do not install the .NET SDK with apt** (neither from Ubuntu's nor from Microsoft's `packages.microsoft.com` feed). apt
+  has one package per channel (`dotnet-sdk-10.0`), so it holds exactly one 10.0 SDK, and every upgrade *replaces* it.
+  After the upgrade, every repository still pinned to the previous SDK stops building.
+- **Install with Microsoft's [`dotnet-install.sh`](https://learn.microsoft.com/dotnet/core/tools/dotnet-install-script)
+  into one user-owned root**, `~/.dotnet` (the script's default). Install each SDK that a repository pins; they coexist,
+  and `dotnet` picks the right one per repository:
+
+    ```bash
+    curl -sSL https://dot.net/v1/dotnet-install.sh -o ~/dotnet-install.sh && chmod +x ~/dotnet-install.sh
+    ~/dotnet-install.sh --version 10.0.404              # the exact "version" from a repository's global.json
+    dotnet --list-sdks                                  # what is installed
+    ```
+
+- **Point the environment at it** in `~/.profile` (not only `~/.bashrc`: VS Code's WSL server and other non-interactive
+  shells may not read it). `DOTNET_ROOT` is how applications and global tools find the runtime; `PATH` is how the shell
+  finds `dotnet`:
+
+    ```bash
+    export DOTNET_ROOT="$HOME/.dotnet"
+    export PATH="$DOTNET_ROOT:$DOTNET_ROOT/tools:$PATH"
+    ```
+
+- **Remove any apt-installed .NET** (`sudo apt remove --purge 'dotnet-*' 'aspnetcore-*'`), so that `/usr/bin/dotnet` does
+  not compete with `~/.dotnet/dotnet` on the `PATH`. `which dotnet` **MUST** print `~/.dotnet/dotnet`.
+- **Tools that run with a minimal `PATH`** (e.g. the vm2.DevOps bats tests, `env -i PATH=/usr/local/bin:/usr/bin:/bin …`)
+  need a link: `sudo ln -s ~/.dotnet/dotnet /usr/local/bin/dotnet`. `dotnet` resolves the link, so it still finds the SDKs
+  in `~/.dotnet`.
+- **Updates are manual.** Without apt, runtime security patches do not arrive by themselves: install the new SDK with
+  `dotnet-install.sh`, then bump `global.json` and regenerate the lock files (`dotnet restore --force-evaluate`) in the
+  repositories that adopt it.
+
+CI needs none of this: the workflows install the SDK with `actions/setup-dotnet` and `global-json-file: global.json`, so
+each runner gets exactly the SDK that the repository pins.
 
 ### Project Structure
 
