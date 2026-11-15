@@ -93,6 +93,9 @@ execute --quiet git branch -m "$old_branch_name" "$new_branch_name"             
 (( _rc != success )) || execute --quiet git branch --set-upstream-to="origin/$new_branch_name" "$new_branch_name" \
                                                                                 || with_error _rc "$err_tool_error" "Failed to set upstream tracking for '$new_branch_name'."
 
-(( _rc != success )) || info "Branch '$old_branch_name' successfully renamed to '$new_branch_name'."
+# shellcheck disable=SC2015 # Info: Note that A && B || C is not if-then-else. C may run when A is true.
+(( _rc != success )) || { is_dry_run &&
+                            info "Branch '$old_branch_name' would be renamed to '$new_branch_name'." ||
+                            info "Branch '$old_branch_name' successfully renamed to '$new_branch_name'."; }
 
 exit_if_has_errors false
