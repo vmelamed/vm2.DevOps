@@ -80,11 +80,11 @@ function parse_arguments()
                 ;;
 
             * ) if (( _option_idx == 0 )); then
-                    new_branch_name="${_option#"$git_heads_ns"}"                # canonicalize by stripping refs/heads/
+                    new_branch_name=$_option
                     (( ++_option_idx ))
                 elif (( _option_idx == 1 )); then
                     old_branch_name=$new_branch_name
-                    new_branch_name="${_option#"$git_heads_ns"}"                # canonicalize by stripping refs/heads/
+                    new_branch_name=$_option
                     (( ++_option_idx ))
                 else
                                                                                 usage "Too many positional arguments: $_option" -ec "$err_too_many_arguments"
@@ -113,6 +113,7 @@ function resolve_arguments()
     if is_git_present; then
         # test the new name:
         (( _rc != success )) || is_valid_branch_name "$new_branch_name"         || with_error _rc "$err_argument_value" "Invalid branch name '$new_branch_name'."
+        (( _rc != success )) || new_branch_name="${new_branch_name#"$git_heads_ns"}" # canonicalize by stripping refs/heads/
 
         # Ensure that a local or remote branch with the new name does not exist already:
         (( _rc != success )) || ! git show-ref --verify --quiet "${git_heads_ns}$new_branch_name" \
@@ -124,6 +125,7 @@ function resolve_arguments()
         _rc=$success
         if [[ -n "$old_branch_name" ]]; then
             is_valid_branch_name "$old_branch_name"                             || with_error _rc "$err_argument_value" "Invalid branch name '$old_branch_name'."
+            (( _rc != success )) || old_branch_name="${old_branch_name#"$git_heads_ns"}" # canonicalize by stripping refs/heads/
         else
             # Get the current branch name
             old_branch_name=$(git branch --show-current 2>"$_ignore")           || with_error _rc "$err_tool_error" "Failed to get the current branch name."

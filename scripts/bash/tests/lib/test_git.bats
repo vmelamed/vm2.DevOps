@@ -95,6 +95,14 @@ setup() {
     assert_failure "$failure"
 }
 
+@test "is_valid_branch_name: validates the name without its refs/heads/ prefix" {
+    run is_valid_branch_name "refs/heads/feature/foo"
+    assert_success
+    # '-bad' is not a valid branch name, though 'refs/heads/-bad' is a valid ref
+    run is_valid_branch_name "refs/heads/-bad"
+    assert_failure
+}
+
 @test "is_valid_branch_name: false (not a bug) for an empty branch name" {
     run is_valid_branch_name ""
     assert_failure "$failure"

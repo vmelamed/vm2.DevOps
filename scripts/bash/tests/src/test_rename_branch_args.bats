@@ -105,12 +105,12 @@ _make_sandbox() {
     assert_output --partial 'new_branch_name="feature/new"'
 }
 
-@test "parse_arguments: strips the refs/heads/ prefix from both names" {
+@test "parse_arguments: keeps the names as given; canonicalizing them is resolve_arguments' job" {
     run _rb "parse_arguments refs/heads/feature/old refs/heads/feature/new
              declare -p old_branch_name new_branch_name" "$BATS_TEST_TMPDIR"
     assert_success
-    assert_output --partial 'old_branch_name="feature/old"'
-    assert_output --partial 'new_branch_name="feature/new"'
+    assert_output --partial 'old_branch_name="refs/heads/feature/old"'
+    assert_output --partial 'new_branch_name="refs/heads/feature/new"'
 }
 
 @test "parse_arguments: a third positional argument is rejected" {
@@ -196,6 +196,15 @@ _github_unreachable='get_repo_state() { return 1; }'
 @test "resolve_arguments: accepts an explicit old name and freezes both names" {
     _make_sandbox
     run _resolve "old feature/new"
+    assert_success
+    assert_output --partial "NO_ERRORS"
+    assert_output --partial 'declare -rx old_branch_name="old"'
+    assert_output --partial 'declare -rx new_branch_name="feature/new"'
+}
+
+@test "resolve_arguments: strips the refs/heads/ prefix from both names" {
+    _make_sandbox
+    run _resolve "refs/heads/old refs/heads/feature/new"
     assert_success
     assert_output --partial "NO_ERRORS"
     assert_output --partial 'declare -rx old_branch_name="old"'
