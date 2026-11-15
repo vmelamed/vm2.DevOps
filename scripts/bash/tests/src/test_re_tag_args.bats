@@ -26,10 +26,20 @@ declare BATS_TEST_TMPDIR
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 
-# Runs the snippet $1 in the directory $2 (default: this test directory, which is inside the vm2.DevOps working tree).
+# An empty git repository, the default directory of _rt. A sandbox rather than the directory bats was started from: that
+# one is not necessarily inside a git working tree (e.g. bats run from /tmp, or from an IDE). The user's hooks are
+# disabled ('git init' already runs the reference-transaction hook).
+_repo_dir() {
+    local _dir="$BATS_TEST_TMPDIR/repo"
+    [[ -d $_dir/.git ]] || git -c core.hooksPath=/dev/null init --quiet "$_dir"
+    echo "$_dir"
+}
+
+# Runs the snippet $1 in the directory $2 (default: an empty git repository, see _repo_dir).
 _rt() {
+    local _dir=${2:-$(_repo_dir)}
     env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" bash -c "
-        cd '${2:-$PWD}' || exit 99
+        cd '$_dir' || exit 99
         source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         source '$_src_dir/re-tag.args.sh'
         source '$_src_dir/re-tag.usage.sh'
