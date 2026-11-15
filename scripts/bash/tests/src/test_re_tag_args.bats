@@ -60,6 +60,19 @@ _rt() {
     assert_output --partial 'new_tag="v1.0.1-preview.1"'
 }
 
+@test "parse_arguments: keeps the tags as given; canonicalizing them is resolve_arguments' job" {
+    run _rt "parse_arguments ${git_tags_ns}v1.0.0 ${git_tags_ns}v2.0.0
+             declare -p old_tag new_tag"
+    assert_success
+    assert_output --partial "old_tag=\"${git_tags_ns}v1.0.0\""
+    assert_output --partial "new_tag=\"${git_tags_ns}v2.0.0\""
+
+    run _rt "parse_arguments --delete ${git_tags_ns}v1.0.0
+             declare -p del_tag"
+    assert_success
+    assert_output --partial "del_tag=\"${git_tags_ns}v1.0.0\""
+}
+
 @test "parse_arguments: --delete and -d select delete mode and take the tag" {
     local _option
     for _option in --delete -d --DELETE; do
@@ -196,13 +209,23 @@ NO_ERRORS"
     assert_output --partial 'declare -rx del_tag="v1.0.0"'
 }
 
-@test "resolve_arguments: validates the tag after stripping 'refs/tags/' (refs/tags/-v1 is -v1)" {
+@test "resolve_arguments: validates the tag without its 'refs/tags/' prefix (refs/tags/-v1 is -v1), and reports it as given" {
     run _rt "parse_arguments --delete ${git_tags_ns}-v1
              resolve_arguments
              echo \"errors=\$(get_errors)\""
     assert_success
-    assert_output --partial "Invalid tag to delete argument: '-v1'."
+    assert_output --partial "Invalid tag to delete argument: '${git_tags_ns}-v1'."
     assert_output --partial "errors=1"
+}
+
+@test "resolve_arguments: strips 'refs/tags/' exactly once (regression: the parser and the validator both stripped it)" {
+    run _rt "parse_arguments --delete ${git_tags_ns}${git_tags_ns}-v1
+             resolve_arguments
+             has_errors && echo HAS_ERRORS || echo NO_ERRORS
+             declare -p del_tag"
+    assert_success
+    assert_output --partial "NO_ERRORS"
+    assert_output --partial "declare -rx del_tag=\"${git_tags_ns}-v1\""
 }
 
 @test "resolve_arguments: reports an empty tag to delete, and returns instead of exiting" {
@@ -285,11 +308,11 @@ NO_ERRORS"
     refute_output --partial "AFTER"
 }
 
-@test "get_arguments: reports an invalid tag and a non-repository directory together, then exits with the usage" {
+@test "get_arguments: a non-repository directory ends the run before the tags are checked (circuit breaker)" {
     run _rt "get_arguments --delete 'bad..tag'; echo AFTER" "$BATS_TEST_TMPDIR"
     assert_failure
     assert_output --partial "The current directory is not a git repository."
-    assert_output --partial "Invalid tag to delete argument: "
+    refute_output --partial "Invalid tag to delete argument"
     assert_output --partial "Usage:"
     refute_output --partial "AFTER"
 }
