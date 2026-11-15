@@ -6,32 +6,37 @@
 declare -x script_name
 declare -x lib_dir
 
+# vm2 core lib exit codes
 declare -x success
 declare -x err_missing_argument
+declare -x err_argument_value
 declare -x err_unknown_argument
 declare -x err_logic_error
+declare -x err_tool_not_found
+declare -x err_too_many_arguments
 
+# vm2 core lib constants
 declare -x ci
+declare -x git_tags_ns
 
+# vm2 core lib variables
+declare -x _ignore
+
+# this script variables
 declare -x delete_mode=false
 declare -x del_tag=""
 declare -x old_tag=""
 declare -x new_tag=""
 
 #-----------------------------------------------------------------------------------------------
-# @description Parses the command-line arguments for 're-tag.sh'. Delegates common switches (help, quiet, verbose, trace,
-# dry-run) to 'get_common_arg'. Accepts either '--delete|-d <tag>' (delete mode) or up to two positional arguments,
-# '<old-tag> <new-tag>' (rename mode). A third positional argument is rejected.
+# @description Parses the command-line arguments for 're-tag.sh'. Delegates common switches
+#   (help, quiet, verbose, trace, dry-run) to 'get_common_arg'. Accepts either '--delete|-d <tag>'
+#   (delete mode) or up to two positional arguments, '<old-tag> <new-tag>' (rename mode). A
+#   third positional argument is rejected.
 #
 # @arg $@ string Either '--delete|-d <tag>', or up to two positional arguments '[<old-tag>] [<new-tag>]'.
 #
-# @exitcode success=0: Arguments parsed successfully.
-# @exitcode err_missing_argument: '--delete' was given without a following tag value, or combined with an
-#   already-parsed '<old-tag>'.
-# @exitcode err_unknown_argument: A third positional argument was given.
-#
-# Note: 'usage_if_requested' exits the process directly (via 'usage') when '--help'/'-h'/'-?' was given; it does
-#   not return a code to this function's caller.
+# @exitcode success=0: always.
 #
 # @example
 #   get_arguments v3.1.0-preview.5 v3.1.1-preview.2
@@ -39,6 +44,16 @@ declare -x new_tag=""
 #   get_arguments --delete v3.1.0-preview.4
 #-----------------------------------------------------------------------------------------------
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local _option_ndx=0
@@ -49,9 +64,11 @@ function get_arguments()
 
         case "${_option,,}" in
             --delete|-d )
-                [[ $# -ge 1 && -z "$old_tag" ]]                                 || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( _option_ndx == 0 ))                                          || usage "'--delete' takes exactly one tag and cannot be combined with other tags or another '--delete'." -ec "$err_too_many_arguments"
                 delete_mode=true
-                del_tag="$1"; shift
+                del_tag=${1#"$git_tags_ns"}; shift                              # canonicalize by stripping refs/tags/
+                _option_ndx=2 # do not allow more arguments
                 ;;
 
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
@@ -64,28 +81,47 @@ function get_arguments()
                 ;;
 
             * ) if (( _option_ndx == 0 )); then
-                    old_tag="$_option"
+                    old_tag=${_option#"$git_tags_ns"}                           # canonicalize by stripping refs/tags/
                     (( ++_option_ndx ))
                 elif (( _option_ndx == 1 )); then
-                    new_tag="$_option"
+                    new_tag=${_option#"$git_tags_ns"}                           # canonicalize by stripping refs/tags/
                     (( ++_option_ndx ))
                 else
-                                                                                usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+                                                                                usage "Too many arguments: '$_option'." -ec "$err_too_many_arguments"
                 fi
                 ;;
         esac
     done
 
-    usage_if_requested
-    validate_arguments
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
 {
-    #  TODO: add validation here
+    is_git_present                                                              || return "$success"
+
+    git rev-parse --git-dir &>"$_ignore"                                        || error "The current directory is not a git repository." -ec "$err_logic_error"
+
+    return "$success"
+}
+
+function resolve_arguments()
+{
+    local -i _rc=$success
+
+    if $delete_mode; then
+        [[ -n $del_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required tag to delete argument."
+        (( _rc != success )) || is_valid_tag_name "$del_tag"                    || with_error _rc "$err_argument_value" "Invalid tag to delete argument: '$del_tag'."
+    else
+        [[ -n $old_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required old tag argument."
+        (( _rc != success )) || is_valid_tag_name "$old_tag"                    || with_error _rc "$err_argument_value" "Invalid old tag argument: '$old_tag'."
+        _rc=$success
+        [[ -n $new_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required new tag argument."
+        (( _rc != success )) || is_valid_tag_name "$new_tag"                    || with_error _rc "$err_argument_value" "Invalid new tag argument: '$new_tag'."
+    fi
 
     readonly delete_mode
+    readonly del_tag
     readonly old_tag
     readonly new_tag
 
