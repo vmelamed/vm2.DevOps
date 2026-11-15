@@ -645,7 +645,7 @@ function get_repo_state()
 
     local -A _gh_state
 
-    # initialize the _gh_state entries that we are interested and we don't crash
+    # initialize the entries read below, so a missing key does not trip 'set -u'.
     _gh_state["$key_repo_id"]=''
     _gh_state["$key_default_branch"]=''
     _gh_state["$key_ssh_url"]=''
@@ -653,10 +653,11 @@ function get_repo_state()
 
     local _result
     _result=$(execute_gh_api_with_retry 3 2 --paginate "repos/$_repo" -q "$jq_gh_repo_state")   || with_error _rc "$err_tool_error" "Could not get the status of the repository from GitHub"
+    (( _rc == success ))                                                                        || return "$_rc"
 
     (( _rc != success )) || {
-                               local _k _v
-                               while IFS='=' read -r _k _v; do
+                                local _k _v
+                                while IFS='=' read -r _k _v; do
                                     _gh_state["$_k"]="$_v"
                                 done <<< "$_result"
                             }
