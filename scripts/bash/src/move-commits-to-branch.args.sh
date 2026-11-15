@@ -12,6 +12,9 @@ declare -x err_missing_argument
 declare -x err_too_many_arguments
 declare -x err_unknown_argument
 declare -x err_logic_error
+declare -x err_tool_not_found
+declare -x err_invalid_repo
+declare -x err_tool_error
 
 declare -x ci
 
@@ -21,6 +24,7 @@ declare -x commit_sha=""
 declare -x new_branch=""
 declare -x check_out_new_branch=false
 declare -x current_branch
+declare -x default_branch=''
 
 #-----------------------------------------------------------------------------------------------
 # @description Parses the command-line arguments for 'move-commits-to-branch.sh'. Delegates common switches (help, quiet,
@@ -40,6 +44,16 @@ declare -x current_branch
 #   get_arguments --commit-sha ff5c2d1 --branch feature/my-feature
 #-----------------------------------------------------------------------------------------------
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
 
@@ -73,41 +87,57 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_environment
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
-function validate_environment()
+function verify_environment()
 {
-    # Verify we're on main branch
-    current_branch=$(git branch --show-current)
-    [[ "$current_branch" == "main" ]]                                           || error "You must be on the 'main' branch. Currently on '$current_branch'" -ec "$err_argument_value"
+    is_git_present                                                              || exit_if_has_errors   # short circuit it right here: nothing can be done without Git!
+
+    local -i _rc=$success
+
+    # Note: fetch runs directly, not through execute: it only refreshes remote-tracking refs, and the checks below need them fresh, even in a dry run.
+    git fetch origin 1>"$_ignore"                                               || with_error _rc "$err_tool_error" "Failed to fetch from remote."
+
+    local -A _repo_state
+    (( _rc != success )) || get_repo_state "$(git rev-parse --show-toplevel)" _repo_state \
+                                                                                || with_error _rc "$err_invalid_repo" "Failed to obtain the name of the default branch from GitHub."
+    (( _rc != success )) || default_branch=${_repo_state[$key_default_branch]}
+    (( _rc != success )) || [[ -n $default_branch ]]                            || with_error _rc "$err_invalid_repo" "Origin is not a GitHub repository: cannot determine its default branch."
+
+    # Verify we're on the default branch (main)
+    (( _rc != success )) || current_branch=$(git branch --show-current)         || with_error _rc "$err_tool_error" "Failed to get the current branch."
+    (( _rc != success )) || [[ "$current_branch" == "$default_branch" ]]        || with_error _rc "$err_argument_value" "You must be on the default branch ('$default_branch'). Currently on '$current_branch'"
+
+    (( _rc != success )) || git merge-base --is-ancestor "origin/$default_branch" HEAD \
+                                                                                || with_error _rc "$err_logic_error" "Local '$default_branch' is behind 'origin/$default_branch'. Pull first."
 
     # Verify we don't have uncommitted changes
-    git diff-index --quiet HEAD --                                              || error "You have uncommitted changes. Please commit or stash them first." -ec "$err_logic_error"
+    (( _rc != success )) || git diff-index --quiet HEAD --                      || error "You have uncommitted changes. Please commit or stash them first." -ec "$err_logic_error"
+
+    return "$success"
 }
 
-function validate_arguments()
+function resolve_arguments()
 {
     local -i _rc=$success
 
-    # validate we have a valid branch name != main
+    # validate we have a valid branch name != default_branch
     is_valid_branch_name "$new_branch"                                          || with_error _rc "$err_argument_value" "The option '--branch' is mandatory and must have a valid value"
-    (( _rc != success )) || [[ "$new_branch" != "main" ]]                       || error "The new branch name cannot be 'main'" -ec "$err_argument_value"
+    (( _rc != success )) || [[ "$new_branch" != "$default_branch" ]]            || error "The new branch name cannot be '$default_branch'" -ec "$err_argument_value"
 
     # Verify we have a valid and existing SHA
     _rc=$success
-    is_valid_commit_sha "$commit_sha"                                           || with_error _rc "$err_argument_value" "The '--commit-sha' is mandatory and  must be a valid 7 to 40 hexadecimal digits string"
-    (( _rc != success )) || git cat-file -e "$commit_sha^{commit}" 2>"$_ignore" || error "Commit '$commit_sha' does not exist" -ec "$err_argument_value"
+    is_valid_commit_sha "$commit_sha"                                           || with_error _rc "$err_argument_value" "The '--commit-sha' is mandatory and must be a valid 4 to 64 hexadecimal digits string"
+    (( _rc != success )) || git cat-file -e "$commit_sha^{commit}" 2>"$_ignore" || with_error _rc "$err_argument_value" "Commit '$commit_sha' does not exist"
+    (( _rc != success )) || git merge-base --is-ancestor "$commit_sha" HEAD     || with_error _rc "$err_argument_value" "Commit '$commit_sha' is not on '$current_branch'."
 
     # freeze the arguments
-    readonly new_branch
     readonly commit_sha
     readonly check_out_new_branch
+    readonly new_branch
     readonly current_branch
+    readonly default_branch
 
     return "$success"
 }
@@ -122,10 +152,11 @@ function dump_args()
         --quiet
         --header "Arguments for $script_name:"
 
-        current_branch
-        new_branch
         commit_sha
         check_out_new_branch
+        new_branch
+        current_branch
+        default_branch
 
         --header "Core State:"
         --core-state

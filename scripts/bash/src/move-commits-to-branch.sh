@@ -3,30 +3,30 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 #-----------------------------------------------------------------------------------------------
-# @description Moves all commits from a given commit SHA (inclusive) onwards on the current 'main' branch to a new branch,
-# then resets 'main' back to the commit before that SHA and force-pushes it. Use this to split a chain of commits that was
-# accidentally accumulated on 'main' into its own feature branch.
+# @description Moves all commits from a given commit SHA (inclusive) onwards on the current default branch (main) to a new
+#   branch, then resets the default branch back to the commit before that SHA and force-pushes it. Use this to split a chain of
+#   commits that was accidentally accumulated on the default branch into its own feature branch.
 #
-# The script must be run from the 'main' branch with a clean working tree. It prompts for confirmation (default: no) after
+# The script must be run from the default branch branch with a clean working tree. It prompts for confirmation (default: no) after
 # showing the commits that would be moved, before making any destructive change.
 #
 # Steps performed once confirmed:
 #   1. Create '<new_branch>' at the current HEAD (so it carries all the commits from '<commit_sha>' onwards).
-#   2. Reset 'main' to the commit before '<commit_sha>' ('git reset --hard <commit_sha>^').
+#   2. Reset the default branch to the commit before '<commit_sha>' ('git reset --hard <commit_sha>^').
 #   3. Push '<new_branch>' to 'origin' (sets upstream tracking).
-#   4. Force-push the rewound 'main' to 'origin'.
+#   4. Force-push the rewound the default branch to 'origin'.
 #   5. If '--check-out-new' was given, check out '<new_branch>'.
 #
 # Notes:
-#   - This rewrites the history of 'origin/main' via a force push — coordinate with anyone else using the repository before
-#     running this.
+#   - This rewrites the history of 'origin/$default_branch' via a force push — coordinate with anyone else using the repository
+#     before running this.
 #
 # @arg $@ string Named options: '--commit-sha|-c <sha>' (required), '--branch|-b <name>' (required),
 #   '--check-out-new|-n' (optional switch).
 #
-# @exitcode success=0: The commits were moved and 'main' was reset and force-pushed successfully.
+# @exitcode success=0: The commits were moved and the default branch was reset and force-pushed successfully.
 # @exitcode failure=1: The user declined the confirmation prompt (see the 'confirm' check below).
-# @exitcode err_argument_value: Missing/invalid arguments, not on 'main', or the commit SHA does not exist.
+# @exitcode err_argument_value: Missing/invalid arguments, not on the default branch, or the commit SHA does not exist.
 # @exitcode err_tool_error: Uncommitted changes are present in the working tree.
 #
 # @stdout The list of commits that will be moved, a confirmation prompt, and progress/info messages for each step.
@@ -46,10 +46,10 @@ declare -x script_name
 declare -x script_dir
 declare -x lib_dir
 
-# core lib
+# vm2 core lib
 source "$lib_dir/core.sh"
 
-# core lib exit codes
+# vm2 core lib exit codes
 declare -x success
 declare -x failure
 declare -x positive
@@ -63,9 +63,9 @@ declare -x err_too_many_arguments
 declare -x err_unknown_argument
 declare -x err_tool_error
 
-# core lib constants
+# vm2 core lib constants
 
-# core lib variables
+# vm2 core lib variables
 declare -x _ignore
 
 # this script's components
@@ -80,6 +80,7 @@ declare -x check_out_new_branch
 
 # this script's variables
 declare -x current_branch
+declare -x default_branch
 
 # Show the commits that will be moved
 echo "Commits from $commit_sha onwards that would be moved to '$new_branch':"
@@ -89,20 +90,23 @@ confirm "Do you want to continue?" "n" || exit "$failure"
 
 echo ""
 info "Step 1: Creating branch '$new_branch' at current HEAD..."
-git branch "$new_branch"
+execute git branch "$new_branch"
 
-info "Step 2: Resetting main to commit before $commit_sha..."
-git reset --hard "$commit_sha^"
+info "Step 2: Resetting '$default_branch' to commit before $commit_sha..."
+execute git reset --hard "$commit_sha^"
 
 info "Step 3: Pushing new branch to the origin (GitHub)..."
-git push -u origin "$new_branch"
+execute git push -u origin "$new_branch"
 
-info "Step 4: Force pushing main to the origin (GitHub)..."
-git push --force origin main
+info "Step 4: Force pushing '$default_branch' to the origin (GitHub)..."
+execute git push --force-with-lease origin "$default_branch"
 
 if [[ "$check_out_new_branch" == true ]]; then
     info "Step 5: Checking out the new branch '$new_branch'..."
-    git checkout "$new_branch"
+    execute git checkout "$new_branch"
 fi
 echo ""
-info "Done! To switch to the new branch do: 'git checkout $new_branch'"
+# shellcheck disable=SC2015 # Info: Note that A && B || C is not if-then-else. C may run when A is true.
+is_dry_run &&
+    info "Nothing done in dry-run mode!" ||
+    info "Done! To switch to the new branch do: 'git checkout $new_branch'"
