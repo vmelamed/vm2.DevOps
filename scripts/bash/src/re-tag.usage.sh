@@ -32,8 +32,8 @@ Usage:
   $script_name <old-tag> <new-tag> [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
   $script_name --delete <tag> [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 
-Replaces an existing (old) git tag with a new tag or if '--delete' is specified - deletes it locally and on origin, and if
-'--delete' is not specified, the same commit is tagged with the new name and pushed to origin.
+Replaces an existing (old) git tag with a new one: deletes the old tag locally and on origin, then tags the same commit with the
+new name and pushes it to origin. With '--delete', only deletes the tag, locally and on origin.
 
 Note: the current working directory must be a git repository where you want to modify/delete tags, but it doesn't need to be the
 root of the working tree.

@@ -48,6 +48,7 @@ function get_arguments()
     parse_arguments "$@"
     usage_if_requested
     verify_environment
+    exit_if_has_errors  # circuit breaker: is_valid_tag_name in resolve_arguments needs git
     resolve_arguments
     exit_if_has_errors
     dump_args
@@ -67,7 +68,7 @@ function parse_arguments()
                 (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
                 (( _option_ndx == 0 ))                                          || usage "'--delete' takes exactly one tag and cannot be combined with other tags or another '--delete'." -ec "$err_too_many_arguments"
                 delete_mode=true
-                del_tag=${1#"$git_tags_ns"}; shift                              # canonicalize by stripping refs/tags/
+                del_tag=$1; shift
                 _option_ndx=2 # do not allow more arguments
                 ;;
 
@@ -81,10 +82,10 @@ function parse_arguments()
                 ;;
 
             * ) if (( _option_ndx == 0 )); then
-                    old_tag=${_option#"$git_tags_ns"}                           # canonicalize by stripping refs/tags/
+                    old_tag=$_option
                     (( ++_option_ndx ))
                 elif (( _option_ndx == 1 )); then
-                    new_tag=${_option#"$git_tags_ns"}                           # canonicalize by stripping refs/tags/
+                    new_tag=$_option
                     (( ++_option_ndx ))
                 else
                                                                                 usage "Too many arguments: '$_option'." -ec "$err_too_many_arguments"
@@ -110,14 +111,20 @@ function resolve_arguments()
     local -i _rc=$success
 
     if $delete_mode; then
+        # test the del tag
         [[ -n $del_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required tag to delete argument."
         (( _rc != success )) || is_valid_tag_name "$del_tag"                    || with_error _rc "$err_argument_value" "Invalid tag to delete argument: '$del_tag'."
+        (( _rc != success )) || del_tag=${del_tag#"$git_tags_ns"}               # canonicalize by stripping refs/tags/
     else
+        # test the old tag
         [[ -n $old_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required old tag argument."
         (( _rc != success )) || is_valid_tag_name "$old_tag"                    || with_error _rc "$err_argument_value" "Invalid old tag argument: '$old_tag'."
+        (( _rc != success )) || old_tag=${old_tag#"$git_tags_ns"}               # canonicalize by stripping refs/tags/
+        # test the new tag
         _rc=$success
         [[ -n $new_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required new tag argument."
         (( _rc != success )) || is_valid_tag_name "$new_tag"                    || with_error _rc "$err_argument_value" "Invalid new tag argument: '$new_tag'."
+        (( _rc != success )) || new_tag=${new_tag#"$git_tags_ns"}               # canonicalize by stripping refs/tags/
     fi
 
     readonly delete_mode
