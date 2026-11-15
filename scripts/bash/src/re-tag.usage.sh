@@ -18,9 +18,9 @@ declare -x script_name
 #-----------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
-    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
-    exit_if_has_bugs
+    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
+    is_boolean "$1"                                                             || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
+                                                                                exit_if_has_bugs
 
     local _long_text=$1
     local _common_args=''
@@ -32,8 +32,8 @@ Usage:
   $script_name <old-tag> <new-tag> [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
   $script_name --delete <tag> [--<long option> <value>|-<short option> <value> | --<long switch>|-<short switch> ]*
 
-Replaces an existing git tag with a new tag or if '--delete' is specified - deletes it. The old tag is deleted locally and on
-origin, and if '--delete' is not specified, the same commit is tagged with the new name and pushed to origin.
+Replaces an existing (old) git tag with a new tag or if '--delete' is specified - deletes it locally and on origin, and if
+'--delete' is not specified, the same commit is tagged with the new name and pushed to origin.
 
 Note: the current working directory must be a git repository where you want to modify/delete tags, but it doesn't need to be the
 root of the working tree.

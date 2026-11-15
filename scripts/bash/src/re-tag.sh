@@ -17,10 +17,15 @@ declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
+# vm2 core lib exit codes
 declare -x err_invalid_arguments
 declare -x err_argument_value
 declare -x err_logic_error
 
+# vm2 core lib constants
+declare -x git_tags_ns
+
+# vm2 core lib variables
 declare -x _ignore
 
 source "$script_dir/re-tag.args.sh"
@@ -64,22 +69,14 @@ declare -x new_tag
 
 # ─── argument validation & pre-flight ────────────────────────────────────────
 
-if [[ "$delete_mode" == false ]]; then
-    if [[ -z "$old_tag" ]]; then usage "Missing required old and new tag arguments." -ec "$err_invalid_arguments"; fi
-    if [[ -z "$new_tag" ]]; then usage "Missing required new tag argument." -ec "$err_invalid_arguments"; fi
-fi
-# We don't need to check for the presence of del_tag in delete mode, because get_arguments already checked for it.
-
-git rev-parse --git-dir 1>"$_ignore" ||  exit_with_error "Not a git repository." -ec "$err_logic_error"
-
 # Resolve the commit the old/del tag points to (dereference annotated tags)
-if [[ "$delete_mode" == false ]]; then
-    commit=$(git rev-list -n1 "$old_tag" 2>"$_ignore")       || usage "Tag '$old_tag' not found locally." -ec "$err_argument_value"
-    existing_sha=$(git rev-list -n1 "$new_tag" 2>"$_ignore") && usage "Tag '$new_tag' already exists → commit ${existing_sha:0:12}." -ec "$err_argument_value"
-    info "Tag '$old_tag' → commit ${commit:0:12}"
-else
-    commit=$(git rev-list -n1 "$del_tag" 2>"$_ignore")       || usage "Tag '$del_tag' not found locally." -ec "$err_argument_value"
+if $delete_mode; then
+    commit=$(git rev-list -n1 "${git_tags_ns}$del_tag" 2>"$_ignore")            || usage "Tag '$del_tag' not found locally." -ec "$err_argument_value"
     info "Tag '$del_tag' → commit ${commit:0:12}"
+else
+    commit=$(git rev-list -n1 "${git_tags_ns}$old_tag" 2>"$_ignore")            || usage "Tag '$old_tag' not found locally." -ec "$err_argument_value"
+    existing_sha=$(git rev-list -n1 "${git_tags_ns}$new_tag" 2>"$_ignore")      && usage "Tag '$new_tag' already exists → commit ${existing_sha:0:12}." -ec "$err_argument_value"
+    info "Tag '$old_tag' → commit ${commit:0:12}"
 fi
 
 # ─── helpers ─────────────────────────────────────────────────────────────────
@@ -100,10 +97,12 @@ fi
 delete_tag()
 {
     local _tag="$1"
-    execute git tag -d "$_tag"
+
+    execute git tag -d -- "$_tag"
     trace "Deleted local tag '$_tag'."
-    if git ls-remote --tags origin "$_tag" | grep -q "$_tag"; then
-        execute git push origin ":refs/tags/$_tag"
+
+    if git ls-remote --exit-code --tags origin "${git_tags_ns}$_tag" &>"$_ignore"; then
+        execute git push origin ":${git_tags_ns}$_tag"
         trace "Deleted remote tag 'origin/$_tag'."
     else
         warning "Tag '$_tag' not found on origin — skipping remote deletion."
@@ -118,10 +117,10 @@ if [[ "$delete_mode" == true ]]; then
 else
     delete_tag "$old_tag"
 
-    execute git tag "$new_tag" "$commit"
+    execute git tag -- "$new_tag" "$commit"
     trace "Created new tag '$new_tag' → commit ${commit:0:12}."
 
-    execute git push origin "$new_tag"
+    execute git push origin "${git_tags_ns}$new_tag"
     trace "Pushed new tag 'origin/$new_tag'."
 
     info "Renamed '$old_tag' → '$new_tag' at ${commit:0:12}."
