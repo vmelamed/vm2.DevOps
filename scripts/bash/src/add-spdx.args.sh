@@ -13,6 +13,7 @@ declare -x err_too_many_arguments
 declare -x err_unknown_argument
 declare -x err_logic_error
 declare -x err_not_directory
+declare -x err_tool_not_found
 
 # vm2 core lib constants
 declare -x ci
@@ -23,6 +24,16 @@ declare -x dir=${initial_cwd:-}
 declare -x license="${LICENSE:-MIT}"
 
 function get_arguments()
+{
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
 {
     local _option
     local _positional_arg_set=false
@@ -54,13 +65,17 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    validate_arguments
-    exit_if_has_errors
-    dump_args
+    return "$success"
 }
 
-function validate_arguments()
+function verify_environment
+{
+    is_git_present                                                              || true
+
+    return "$success"
+}
+
+function resolve_arguments()
 {
     [[ -n $dir && -d $dir ]]                                                    || error "Directory not found: '$dir'" -ec "$err_not_directory"
     [[ -n $license ]]                                                           || error "The license (--license) must not be empty." -ec "$err_argument_value"
