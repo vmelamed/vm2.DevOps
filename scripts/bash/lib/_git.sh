@@ -183,7 +183,9 @@ function is_valid_branch_name()
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a branch name" -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    [[ -n $1 ]]                                                                 || return "$negative"
+    local _branch=${1#"$git_heads_ns"}
+
+    [[ -n $_branch ]]                                                           || return "$negative"
     git check-ref-format --branch "$1" &> "$_ignore"                            || return "$negative"
 }
 
