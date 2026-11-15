@@ -364,6 +364,27 @@ _github_unreachable='get_repo_state() { return 1; }'
     assert_output --partial 'declare -rx default_branch="main"'
 }
 
+@test "get_arguments: a failed fetch leaves no unset current branch behind (regression: set -u aborted the run)" {
+    _make_repo
+    git -C "$_repo" switch --quiet -c elsewhere "$_sha"
+    git -C "$_repo" commit --quiet --allow-empty -m "chore: elsewhere"
+    local _elsewhere
+    _elsewhere=$(git -C "$_repo" rev-parse HEAD)
+    git -C "$_repo" switch --quiet main
+    rm -rf "$_origin"
+    # verify_environment fails before it sets current_branch; resolve_arguments still runs, and its message for a commit
+    # that is not on the current branch expands current_branch. The script itself runs with 'set -euo pipefail'.
+    run _mc "set -euo pipefail
+             $(_github_default_branch main)
+             get_arguments --branch feature/x --commit-sha $_elsewhere; echo AFTER" "$_repo"
+    assert_failure
+    refute_output --partial "unbound variable"
+    assert_output --partial "Failed to fetch from remote."
+    assert_output --partial "Commit '$_elsewhere' is not on 'HEAD'."
+    assert_output --partial "Usage:"
+    refute_output --partial "AFTER"
+}
+
 @test "get_arguments: -h prints the usage and exits 0, even off the default branch with a dirty tree" {
     _make_repo
     git -C "$_repo" switch --quiet -c feature
