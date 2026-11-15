@@ -186,7 +186,7 @@ function is_valid_branch_name()
     local _branch=${1#"$git_heads_ns"}
 
     [[ -n $_branch ]]                                                           || return "$negative"
-    git check-ref-format --branch "$1" &> "$_ignore"                            || return "$negative"
+    git check-ref-format --branch "$_branch" &> "$_ignore"                      || return "$negative"
 }
 
 #-----------------------------------------------------------------------------------------------

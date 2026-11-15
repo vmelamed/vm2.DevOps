@@ -20,7 +20,7 @@ function usage_text()
 {
     (( $# ==1 ))    || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
     is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _long_text=$1
     local _common_args=''
@@ -31,12 +31,12 @@ function usage_text()
 Usage:
   $script_name [ --<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
 
-Moves commits from a specified commit SHA onwards to a new branch, resetting the main branch to the commit before the specified
-SHA. This will:
+Moves commits from a specified commit SHA onwards to a new branch, resetting the default branch (main) branch to the commit
+before the specified SHA. This will:
   1. Create new branch <new_branch> with all current commits
-  2. Reset main to commit BEFORE <commit_sha>
+  2. Reset the default branch to commit BEFORE <commit_sha>
   3. Push the new branch to the origin (GitHub)
-  4. Force push main to the origin (GitHub)
+  4. Force push the default branch to the origin (GitHub)
   5. If --check-out-new is specified, check out the new branch
 
 Options:
