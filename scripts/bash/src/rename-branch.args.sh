@@ -15,12 +15,14 @@ declare -x err_logic_error
 declare -x err_tool_not_found
 declare -x err_tool_error
 declare -x err_argument_value
+declare -x err_invalid_repo
 
 # vm2 core lib constants
 declare -x ci
 declare -x default_default_branch
 declare -x git_heads_ns
 declare -x git_remotes_ns
+declare -x key_default_branch
 
 # vm2 core lib variables
 declare -x _ignore
@@ -128,8 +130,12 @@ function resolve_arguments()
             (( _rc != success )) || [[ -n $old_branch_name ]]                   || with_error _rc "$err_missing_argument" "HEAD is detached, so there is no current branch to rename. Check out the branch, or pass its name as the second argument."
         fi
 
-        (( _rc != success )) || [[ $old_branch_name != "$default_default_branch" ]] \
-                                                                                || with_error _rc "$err_argument_value" "Cannot rename the default branch '$default_default_branch'."
+        local -A _repo_state
+        (( _rc != success )) || get_repo_state "$(git rev-parse --show-toplevel)" _repo_state \
+                                                                                || with_error _rc "$err_invalid_repo" "Failed to obtain the default branch name from GitHub."
+
+        (( _rc != success )) || [[ $old_branch_name != "${_repo_state[$key_default_branch]}" ]] \
+                                                                                || with_error _rc "$err_argument_value" "Cannot rename the default branch '${_repo_state[$key_default_branch]}'."
 
         # Check if the old branch exists locally and remotely:
         (( _rc != success )) || git show-ref --verify --quiet "${git_heads_ns}$old_branch_name" &>"$_ignore" \

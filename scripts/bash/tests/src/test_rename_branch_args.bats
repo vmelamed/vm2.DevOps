@@ -50,14 +50,20 @@ _run_script() {
     "
 }
 
-# git in the sandbox, isolated from the user's hooks and identity.
+# git in the sandbox, with a test identity. The user's hooks are disabled in the sandbox repositories' own configs (see
+# _make_sandbox), so they stay disabled for every git command, including those that rename-branch.sh runs in _run_script.
 _git() {
-    git -C "$BATS_TEST_TMPDIR/repo" -c core.hooksPath=/dev/null -c user.name=test -c user.email=test@example.com "$@"
+    git -C "$BATS_TEST_TMPDIR/repo" -c user.name=test -c user.email=test@example.com "$@"
 }
 
+# core.hooksPath=/dev/null goes into each repository's own config, which overrides a global or system core.hooksPath:
+# 'git config' in the bare origin (its receive-side hooks run on every push), and 'git clone -c' in the clone ('-c' both
+# writes the setting into the new repository's config and applies it to the clone's own checkout). 'git init' gets it as
+# '-c' too: creating a repository already runs the reference-transaction hook.
 _make_sandbox() {
-    git init -q --bare "$BATS_TEST_TMPDIR/origin.git"
-    git clone -q "$BATS_TEST_TMPDIR/origin.git" "$BATS_TEST_TMPDIR/repo" 2> /dev/null
+    git -c core.hooksPath=/dev/null init -q --bare "$BATS_TEST_TMPDIR/origin.git"
+    git -C "$BATS_TEST_TMPDIR/origin.git" config core.hooksPath /dev/null
+    git clone -q -c core.hooksPath=/dev/null "$BATS_TEST_TMPDIR/origin.git" "$BATS_TEST_TMPDIR/repo" 2> /dev/null
     _git symbolic-ref HEAD refs/heads/main
     _git commit -q --allow-empty -m "init"
     local _b
@@ -171,12 +177,21 @@ NO_ERRORS"
 # =====================================================================================
 
 # $1: the arguments; the output ends with the error state and both (frozen) names
+# $1: the arguments; $2 (optional): commands to run first, e.g. a stub from _github_default_branch.
 _resolve() {
-    _rb "parse_arguments $1
+    _rb "${2:-}
+         parse_arguments $1
          resolve_arguments
          has_errors && echo HAS_ERRORS || echo NO_ERRORS
          declare -p old_branch_name new_branch_name"
 }
+
+# The sandbox's origin is a local bare repository, not GitHub, so get_repo_state() finds no default branch there. These
+# stubs stand in for the GitHub API: $1 is the default branch it reports (it does not have to be 'main').
+_github_default_branch() {
+    echo "get_repo_state() { local -n __stub_state=\$2; __stub_state[\$key_default_branch]='$1'; }"
+}
+_github_unreachable='get_repo_state() { return 1; }'
 
 @test "resolve_arguments: accepts an explicit old name and freezes both names" {
     _make_sandbox
@@ -248,8 +263,33 @@ _resolve() {
 
 @test "resolve_arguments: refuses to rename the default branch" {
     _make_sandbox
-    run _resolve "main feature/new"
+    run _resolve "main feature/new" "$(_github_default_branch main)"
     assert_output --partial "Cannot rename the default branch 'main'."
+    assert_output --partial "HAS_ERRORS"
+}
+
+@test "resolve_arguments: the default branch is the one GitHub reports, not a hard-coded 'main'" {
+    _make_sandbox
+    _git push -q origin "HEAD:refs/heads/develop" 2> /dev/null
+    _git branch -q --track develop origin/develop
+    run _resolve "develop feature/new" "$(_github_default_branch develop)"
+    assert_output --partial "Cannot rename the default branch 'develop'."
+    assert_output --partial "HAS_ERRORS"
+}
+
+@test "resolve_arguments: a branch named 'main' can be renamed when it is not the default branch" {
+    _make_sandbox
+    run _resolve "main feature/new" "$(_github_default_branch develop)"
+    assert_success
+    assert_output --partial "NO_ERRORS"
+    refute_output --partial "Cannot rename the default branch"
+    assert_output --partial 'declare -rx old_branch_name="main"'
+}
+
+@test "resolve_arguments: reports a failure to get the repository state from GitHub" {
+    _make_sandbox
+    run _resolve "old feature/new" "$_github_unreachable"
+    assert_output --partial "Failed to obtain the default branch name from GitHub."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -348,6 +388,29 @@ _resolve() {
     assert_output "refs/heads/old"
     run git -C "$BATS_TEST_TMPDIR/origin.git" for-each-ref --format='%(refname)' refs/heads/old refs/heads/feature/new
     assert_output "refs/heads/old"
+}
+
+@test "rename-branch: --dry-run says what would happen, not that it happened" {
+    _make_sandbox
+    run _run_script --dry-run old feature/new
+    assert_success
+    assert_output --partial "Branch 'old' would be renamed to 'feature/new'."
+    refute_output --partial "successfully renamed"
+}
+
+@test "rename-branch: a failed push reports the failure, and no rename message" {
+    _make_sandbox
+    # origin rejects every push: the local rename succeeds, the push that follows it fails
+    mkdir -p "$BATS_TEST_TMPDIR/rejecting-hooks"
+    printf '#!/bin/sh\nexit 1\n' > "$BATS_TEST_TMPDIR/rejecting-hooks/pre-receive"
+    chmod +x "$BATS_TEST_TMPDIR/rejecting-hooks/pre-receive"
+    git -C "$BATS_TEST_TMPDIR/origin.git" config core.hooksPath "$BATS_TEST_TMPDIR/rejecting-hooks"
+
+    run _run_script old feature/new
+    assert_failure
+    assert_output --partial "Failed to push branch 'feature/new' to remote."
+    refute_output --partial "would have be renamed"
+    refute_output --partial "successfully renamed"
 }
 
 @test "rename-branch: an invalid argument changes nothing" {
