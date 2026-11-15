@@ -515,7 +515,7 @@ declare -xr key_default_branch='default_branch'
 
 # keys used in gh api results
 declare -xr key_ssh_url='ssh_url'
-declare -xr key_https_url='https_url'
+declare -xr key_clone_url='clone_url'
 
 #===============================================================================================
 # The following list contains the predefined keys of a repo state:
@@ -533,7 +533,7 @@ declare -xar repo_state_keys=(
 )
 
 declare -xr jq_gh_repo_state="{
-    $key_https_url: .html_url,
+    $key_clone_url: .clone_url,
     $key_ssh_url: .ssh_url,
     $key_owner: .owner.login,
     $key_name: .name,
@@ -641,14 +641,25 @@ function get_repo_state()
 
     [[ $_name == "$_root_name" ]]                                                               || with_error _rc "$err_root_not_repo_name" "The root directory name '$_root_name' does not match the repository name '$_name'."
 
-    $_full_info || return "$_rc" # caller does not want full info - return with what we have from git, without trying to get GitHub API data
+    $_full_info                                                                                 || return "$_rc" # caller does not want full info - return with what we have from git, without trying to get GitHub API data
 
     local -A _gh_state
-    local _k _v
 
-    while IFS='=' read -r _k _v; do
-        _gh_state["$_k"]="$_v"
-    done < <(execute_gh_api_with_retry 3 2 --paginate "repos/$_repo" -q "$jq_gh_repo_state")
+    # initialize the _gh_state entries that we are interested and we don't crash
+    _gh_state["$key_repo_id"]=''
+    _gh_state["$key_default_branch"]=''
+    _gh_state["$key_ssh_url"]=''
+    _gh_state["$key_clone_url"]=''
+
+    local _result
+    _result=$(execute_gh_api_with_retry 3 2 --paginate "repos/$_repo" -q "$jq_gh_repo_state")   || with_error _rc "$err_tool_error" "Could not get the status of the repository from GitHub"
+
+    (( _rc != success )) || {
+                               local _k _v
+                               while IFS='=' read -r _k _v; do
+                                    _gh_state["$_k"]="$_v"
+                                done <<< "$_result"
+                            }
 
     # make sure all is kosher: the GitHub API data should match the local git remote data for the fields we care about
     # these are real logical problems that may occur if the git remote is misconfigured or the API is returning unexpected data,
@@ -659,7 +670,7 @@ function get_repo_state()
     _error_level0=$(get_errors)
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ $_schema == "$repo_ssh_schema_rex"   && ${_gh_state["$key_ssh_url"]}   == "$_url" ||
-       $_schema == "$repo_https_schema_rex" && ${_gh_state["$key_https_url"]} == "$_url"    ]]  || with_error _rc "$err_logic_error" "GitHub API returned URLs '${_gh_state["$key_ssh_url"]}' and '${_gh_state["$key_https_url"]}' that do not match the Git remote URL '$_url'."
+       $_schema == "$repo_https_schema_rex" && ${_gh_state["$key_clone_url"]} == "$_url"    ]]  || with_error _rc "$err_logic_error" "GitHub API returned URLs '${_gh_state["$key_ssh_url"]}' and '${_gh_state["$key_clone_url"]}' that do not match the Git remote URL '$_url'."
     [[ -n ${_gh_state["$key_repo_id"]}                                                      ]]  || with_error _rc "$err_logic_error" "GitHub API did not return repository identifier."
     [[ -n ${_gh_state["$key_default_branch"]}                                               ]]  || with_error _rc "$err_logic_error" "GitHub API did not return repository default branch."
 
