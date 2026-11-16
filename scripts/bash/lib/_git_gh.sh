@@ -46,7 +46,7 @@ declare -xr gh_repo_name_regex="^$gh_repo_name_rex$"                            
 declare -xr gh_repo_full_name_rex="($gh_repo_owner_rex)/($gh_repo_name_rex)"
 declare -xr gh_repo_full_name_regex="^$gh_repo_full_name_rex$"
 
-declare -xr github_url_regex="(^|[@/.])github\.com(:[0-9]+)?[:/]($gh_repo_owner_rex)/($gh_repo_name_rex)(\.git)?/?$"
+declare -xr github_url_regex="^([a-z][a-z0-9+.-]*://)?([^/@]+@)?(ssh\.)?github\.com(:[0-9]+)?[:/]($gh_repo_owner_rex)/($gh_repo_name_rex)(\.git)?/?$"
 
 readonly __valid_repo_names_msg="GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit.
 See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details."
