@@ -64,14 +64,12 @@ declare -x repo_url=''
 declare -x repo_id=''
 
 # repo state keys
-declare -x key_root
-declare -x key_url
-declare -x key_schema
-declare -x key_authority
+declare -x key_git_root
+declare -x key_git_url
 declare -x key_owner
 declare -x key_name
-declare -x key_repo
-declare -x key_repo_id
+declare -x key_gh_full_name
+declare -x key_gh_repo_id
 declare -x key_default_branch
 
 declare -x repo_path=''
@@ -161,9 +159,9 @@ dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
 if has_local_repo repo_state; then
 
-    if [[ "$repo_path" != "${repo_state[$key_root]}" ]]; then
-        warning "The repository path '$repo_path' is different from the repository root '${repo_state[$key_root]}' detected by git. Adjusting to the git-detected repository root."
-        repo_path="${repo_state[$key_root]}"
+    if [[ "$repo_path" != "${repo_state[$key_git_root]}" ]]; then
+        warning "The repository path '$repo_path' is different from the repository root '${repo_state[$key_git_root]}' detected by git. Adjusting to the git-detected repository root."
+        repo_path="${repo_state[$key_git_root]}"
         [[ -s "$repo_path/.github/workflows/CI.yaml" ]]                         || usage "The git-detected repository path '$repo_path' is missing .github/workflows/CI.yaml." \
                                                                                          "Please specify a valid path to the root of the project/repository using '--path <path>' or use 'dotnet new vm2.NewPkg' to create a valid directory structure." \
                                                                                          -ec "$err_repo_with_no_ci"
@@ -175,10 +173,10 @@ if has_local_repo repo_state; then
     declare -r repo_path
 
     if has_remote_repo repo_state; then
-        repo_url="${repo_state[$key_url]}"
+        repo_url="${repo_state[$key_git_url]}"
         repo_owner="${repo_state[$key_owner]}"
         repo_name="${repo_state[$key_name]}"
-        repo="${repo_state[$key_repo]}"
+        repo="${repo_state[$key_gh_full_name]}"
 
         readonly repo_url
         readonly repo_owner
@@ -199,7 +197,7 @@ if has_local_repo repo_state; then
         info "GitHub repository                => $repo"
 
         if has_github_remote repo_state; then
-            repo_id="${repo_state[$key_repo_id]}"
+            repo_id="${repo_state[$key_gh_repo_id]}"
             branch="${repo_state[$key_default_branch]}"
             main_protection_rs_name="${main_protection_rs_name:-$branch protection}"
 
@@ -328,7 +326,7 @@ if ! has_local_repo repo_state; then
     fi
 
     info "...initialized a new git repository in '$repo_path' in the default branch '$branch'."
-    repo_state["$key_root"]="$repo_path"
+    repo_state["$key_git_root"]="$repo_path"
 fi
 
 if ! has_remote_repo repo_state; then
@@ -392,8 +390,8 @@ if ! has_remote_repo repo_state; then
                                                                                                    "Please check the repository at $repo_path." \
                                                                                                    -ec "$rc"
 
-    repo_url="${repo_state[$key_url]}"
-    repo_id="${repo_state[$key_repo_id]}"
+    repo_url="${repo_state[$key_git_url]}"
+    repo_id="${repo_state[$key_gh_repo_id]}"
 
     [[ -n "$repo_url" && -n "$repo_id" ]]                                       || usage "The repository does not appear to be initialized and/or linked to the remote." -ec "$err_not_git_directory"
 

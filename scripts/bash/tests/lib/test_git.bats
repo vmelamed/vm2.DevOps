@@ -2,13 +2,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-# Characterization tests for scripts/bash/lib/_git.sh, as it behaves TODAY -- written before
-# the tier-4 predicate/validator convention refactor so the refactor has a safety net.
+# Tests for scripts/bash/lib/_git.sh: plain git, no GitHub (see test_git_gh.bats for that).
 #
-# Functions that make real network calls (execute_gh_with_retry, execute_gh_api_with_retry, the
-# full-info branch of get_repo_state, ensure_fresh_git_state's actual fetch) are only exercised
-# for their formal argument validation here, not their real network behavior -- these tests run
-# against the actual vm2.DevOps repository (read-only git operations only) for everything else.
+# The fetch in ensure_fresh_git_state is only exercised for its formal argument validation; everything else runs
+# read-only git operations against the actual vm2.DevOps repository.
 
 bats_require_minimum_version 1.5.0
 
@@ -26,7 +23,6 @@ declare -gx err_argument_value
 declare -gx err_argument_type
 declare -gx err_not_directory
 declare -gx err_not_git_directory
-declare -gx err_root_not_repo_name
 
 setup() {
     _repo_root="$(cd "$lib_dir/../../.." && pwd)"
@@ -34,40 +30,6 @@ setup() {
     # rule makes 'git remote get-url' return SSH URLs for HTTPS remotes, which once hid an HTTPS-only bug in
     # get_repo_state (the '.git' suffix was stripped for SSH only) -- the tests passed locally for the wrong reason.
     export GIT_CONFIG_GLOBAL=/dev/null
-}
-
-# --- validate_gh_repo_owner / validate_gh_repo_name / validate_gh_repo_description --------------
-
-@test "validate_gh_repo_owner: accepts empty and a valid owner, rejects an invalid one" {
-    run validate_gh_repo_owner ""
-    assert_success
-    run validate_gh_repo_owner "vmelamed"
-    assert_success
-    run validate_gh_repo_owner "-leading-hyphen"
-    assert_failure 4
-}
-
-@test "validate_gh_repo_owner: bug-exits with the wrong argument count" {
-    run validate_gh_repo_owner
-    assert_failure "$err_invalid_arguments"
-}
-
-@test "validate_gh_repo_name: rejects empty, rejects .git suffix, accepts a valid name" {
-    run validate_gh_repo_name ""
-    assert_failure 4
-    run validate_gh_repo_name "vm2.DevOps.git"
-    assert_failure 4
-    run validate_gh_repo_name "vm2.DevOps"
-    assert_success
-}
-
-@test "validate_gh_repo_description: enforces the 3-350 character range" {
-    run validate_gh_repo_description "ab"
-    assert_failure 4
-    run validate_gh_repo_description "A valid description"
-    assert_success
-    run validate_gh_repo_description "$(printf 'a%.0s' {1..351})"
-    assert_failure 4
 }
 
 # --- validate_branch_name -----------------------------------------------------------------------
@@ -211,145 +173,6 @@ setup() {
     assert_failure "$err_invalid_arguments"
 }
 
-# --- initialize_repo_state -----------------------------------------------------------------------
-
-@test "initialize_repo_state: populates every predefined key with an empty string" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); initialize_repo_state state; for k in \"\${!state[@]}\"; do echo \"\$k=[\${state[\$k]}]\"; done | sort"
-    assert_success
-    assert_line "name=[]"
-    assert_line "owner=[]"
-    assert_line "repo=[]"
-    assert_line "root=[]"
-    assert_line "url=[]"
-}
-
-@test "initialize_repo_state: bug-exits on a non-associative-array argument" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -a arr=(); initialize_repo_state arr"
-    assert_failure "$err_invalid_nameref"
-}
-
-# --- get_repo_state (local git only, full_info=false to avoid network calls) --------------------
-
-@test "get_repo_state: populates local fields for the real vm2.DevOps repo, without calling the GitHub API" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo_root' state false; echo \"root=[\${state[root]}]\"; echo \"owner=[\${state[owner]}]\"; echo \"name=[\${state[name]}]\"; echo \"repo_id=[\${state[repo_id]}]\""
-    assert_success
-    assert_output --partial "root=[$_repo_root]"
-    assert_output --partial "name=[vm2.DevOps]"
-    assert_output --partial "repo_id=[]"
-}
-
-@test "get_repo_state: bug-exits on a non-existent directory" {
-    # NOTE: 'state' must be a real pre-declared associative array, or a second bug (arg-2
-    # nameref) accumulates alongside the intended arg-1 directory bug, and exit_if_has_bugs
-    # reports the LAST one recorded (err_invalid_nameref), not this test's intended
-    # err_not_directory.
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '/definitely/not/a/real/path' state false"
-    assert_failure "$err_not_directory"
-}
-
-@test "get_repo_state: bug-exits with the wrong argument count" {
-    run get_repo_state "$_repo_root"
-    assert_failure "$err_invalid_arguments"
-}
-
-# --- get_repo_state: the repository-identity convention (directory name == GitHub repository name) --
-# Each test builds a throw-away local repo under $BATS_TEST_TMPDIR -- 'git init' plus an 'origin' URL is all
-# get_repo_state needs with full_info=false (no commits, no network).
-
-# Creates the directory $1 under $BATS_TEST_TMPDIR as a git working tree, with the remote 'origin' set to $2 if given.
-_make_repo() {
-    # shellcheck disable=SC2154 # BATS_TEST_TMPDIR is set by bats for each test at run time
-    local _dir="$BATS_TEST_TMPDIR/$1"
-    mkdir -p "$_dir"
-    git -C "$_dir" init -q
-    [[ -z ${2:-} ]] || git -C "$_dir" remote add origin "$2"
-    echo "$_dir"
-}
-
-# Runs get_repo_state on $1 (full_info=false) and prints its exit code and the resolved repository name.
-_run_get_repo_state() {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$1' state false; echo \"rc=[\$?] name=[\${state[name]}]\""
-}
-
-@test "get_repo_state: succeeds when the directory name matches the GitHub repository name (HTTPS URL with .git)" {
-    _run_get_repo_state "$(_make_repo vm2.Sample https://github.com/vmelamed/vm2.Sample.git)"
-    assert_success
-    assert_output --partial "rc=[0] name=[vm2.Sample]"
-}
-
-@test "get_repo_state: succeeds when the directory name matches the GitHub repository name (HTTPS URL without .git)" {
-    _run_get_repo_state "$(_make_repo vm2.Sample https://github.com/vmelamed/vm2.Sample)"
-    assert_success
-    assert_output --partial "rc=[0] name=[vm2.Sample]"
-}
-
-@test "get_repo_state: succeeds when the directory name matches the GitHub repository name (SSH URL)" {
-    _run_get_repo_state "$(_make_repo vm2.Sample git@github.com:vmelamed/vm2.Sample.git)"
-    assert_success
-    assert_output --partial "rc=[0] name=[vm2.Sample]"
-}
-
-@test "get_repo_state: returns err_root_not_repo_name and reports an error when the names differ" {
-    _run_get_repo_state "$(_make_repo vm2.Renamed https://github.com/vmelamed/vm2.Sample.git)"
-    assert_output --partial "rc=[$err_root_not_repo_name] name=[vm2.Sample]"
-    assert_output --partial "The root directory name 'vm2.Renamed' does not match the repository name 'vm2.Sample'"
-}
-
-@test "get_repo_state: compares the names case-sensitively (the convention says 'including case')" {
-    _run_get_repo_state "$(_make_repo vm2.sample https://github.com/vmelamed/vm2.Sample.git)"
-    assert_output --partial "rc=[$err_root_not_repo_name] name=[vm2.Sample]"
-}
-
-@test "get_repo_state: succeeds with an empty name for a repo without a remote (e.g. before setup-repo.sh)" {
-    _run_get_repo_state "$(_make_repo vm2.NoRemote)"
-    assert_success
-    assert_output --partial "rc=[0] name=[]"
-}
-
-# --- has_local_repo / has_remote_repo / has_github_remote ---------------------------------------
-
-@test "has_local_repo / has_remote_repo: true for the real vm2.DevOps repo state" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo_root' state false; has_local_repo state"
-    assert_success
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo_root' state false; has_remote_repo state"
-    assert_success
-}
-
-@test "has_local_repo: false for a freshly-initialized (empty) repo state" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); initialize_repo_state state; has_local_repo state"
-    assert_failure "$failure"
-}
-
-@test "has_github_remote: false without full repo-id info (full_info=false never populates it)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo_root' state false; has_github_remote state"
-    assert_failure "$failure"
-}
-
-# --- read_repo_state / print_repo_state ----------------------------------------------------------
-
-@test "read_repo_state: deserializes key=value lines into the repo state" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); read_repo_state state < <(printf 'owner=acme\nname=widget\n'); echo \"owner=[\${state[owner]}] name=[\${state[name]}]\""
-    assert_success
-    assert_output "owner=[acme] name=[widget]"
-}
-
-@test "print_repo_state: prints every predefined key" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); initialize_repo_state state; state[owner]=acme; print_repo_state state"
-    assert_success
-    assert_output --partial "owner: acme"
-    assert_output --partial "root:"
-}
-
-@test "print_repo_state: bug-exits with the wrong argument count (regression: was missing exit_if_has_bugs)" {
-    # NOTE: print_repo_state()'s nameref check (is_associative_array "$1") isn't '-v'-guarded, so
-    # it always runs even when $1 is simply missing, compounding a second bug (err_invalid_nameref)
-    # on top of the arity one -- exit_if_has_bugs reports the LAST one recorded either way.
-    run print_repo_state
-    assert_failure "$err_invalid_nameref"
-    run print_repo_state a b
-    assert_failure "$err_invalid_nameref"
-}
-
 # --- is_inside_work_tree / root_working_tree -----------------------------------------------------
 
 @test "is_inside_work_tree: true for the real vm2.DevOps repo, false for /tmp" {
@@ -421,37 +244,6 @@ _run_get_repo_state() {
     [[ $status -eq 0 || $status -eq 1 ]]
     run is_on_or_after_latest_stable_tag "$_repo_root" false
     [[ $status -eq 0 || $status -eq 1 ]]
-}
-
-# --- execute_gh_with_retry / execute_gh_api_with_retry (formal validation only, no network) ------
-
-@test "execute_gh_with_retry: bug-exits with too few arguments" {
-    run execute_gh_with_retry 3 2
-    assert_failure "$err_invalid_arguments"
-}
-
-@test "execute_gh_with_retry: bug-exits on a non-natural max-attempts or delay" {
-    run execute_gh_with_retry -1 2 repo view
-    assert_failure "$err_argument_type"
-    run execute_gh_with_retry 3 -1 repo view
-    assert_failure "$err_argument_type"
-}
-
-@test "execute_gh_with_retry: honors dry-run without invoking gh for real" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_dry_run; execute_gh_with_retry 3 2 repo delete some/nonexistent-repo --yes"
-    assert_success
-    assert_output --partial "dry-run"
-}
-
-@test "execute_gh_api_with_retry: bug-exits with too few arguments" {
-    run execute_gh_api_with_retry 3 2
-    assert_failure "$err_invalid_arguments"
-}
-
-@test "execute_gh_api_with_retry: honors dry-run without invoking gh for real" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; set_dry_run; execute_gh_api_with_retry 3 2 repos/acme/nonexistent"
-    assert_success
-    assert_output --partial "dry-run"
 }
 
 # --- ensure_fresh_git_state (formal validation only, no real fetch) ------------------------------

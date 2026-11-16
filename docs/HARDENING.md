@@ -91,9 +91,9 @@ Build the test suite bottom-up, from pure leaf modules to orchestrators:
 
 ### Layer 3 — Pure parts of external-process modules  *(no real git/gh needed)*
 
-`lib/_git.sh` (URL and owner/name validation functions only)
+`lib/_git_gh.sh` (URL and owner/name validation functions only)
 
-- Test `is_valid_github_owner`, `is_valid_repo_name`, URL-parse helpers with table-driven inputs.
+- Test `is_valid_gh_repo_owner`, `is_valid_gh_repo_name`, URL-parse helpers with table-driven inputs.
 - Stub `git` and `gh` with local `function` overrides for the few calls that do need a process.
 
 ### Layer 4 — CI script logic  *(mock git + gh)*

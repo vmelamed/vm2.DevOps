@@ -85,6 +85,7 @@ Located in **`scripts/bash/lib/`**. The foundation layer sourced by all scripts.
      ├── _dump_vars.sh      (dump_vars for debugging)
      ├── _user.sh           (user/identity helpers)
      ├── _git.sh            (Git repository helpers)
+     ├── _git_gh.sh         (GitHub helpers: naming rules, repo state, gh retry)
      ├── _git_vm2.sh        (Git helpers specific to vm2 repos)
      ├── _dotnet_args.sh    (shared dotnet CLI argument parsing/defaults)
      └── _dotnet.sh         (.NET SDK helpers)

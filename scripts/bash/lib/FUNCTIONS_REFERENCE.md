@@ -1,14 +1,231 @@
 # Bash Library Functions Reference
 
-This document provides a quick reference to all functions in the bash library, organized by file in the order they are sourced by `core.sh`.
+<!-- TOC tocDepth:2..3 chapterDepth:2..6 -->
 
-For detailed information about parameters, return values, and usage examples, refer to the function documentation (shdoc-style comment blocks) directly above each function in its source file.
+- [Bash Library Functions Reference](#bash-library-functions-reference)
+  - [\_constants.sh](#_constantssh)
+  - [core.sh](#coresh)
+    - [on\_exit()](#on_exit)
+    - [on\_err()](#on_err)
+    - [add\_trap()](#add_trap)
+    - [execute()](#execute)
+    - [execute\_with\_retry()](#execute_with_retry)
+    - [list\_of\_files()](#list_of_files)
+    - [find\_files\_by\_precedence()](#find_files_by_precedence)
+  - [\_core\_state.sh](#_core_statesh)
+    - [is\_verbose()](#is_verbose)
+    - [set\_verbose() / unset\_verbose()](#set_verbose--unset_verbose)
+    - [is\_quiet()](#is_quiet)
+    - [set\_quiet() / unset\_quiet()](#set_quiet--unset_quiet)
+    - [is\_dry\_run()](#is_dry_run)
+    - [set\_dry\_run() / unset\_dry\_run()](#set_dry_run--unset_dry_run)
+    - [show\_ignored\_output()](#show_ignored_output)
+    - [hide\_ignored\_output()](#hide_ignored_output)
+    - [set\_trace\_enabled()](#set_trace_enabled)
+    - [unset\_trace\_enabled()](#unset_trace_enabled)
+    - [is\_trace\_enabled()](#is_trace_enabled)
+    - [get\_table\_format()](#get_table_format)
+    - [set\_table\_format()](#set_table_format)
+    - [save\_state()](#save_state)
+    - [restore\_state()](#restore_state)
+    - [begin\_scope()](#begin_scope)
+    - [end\_scope()](#end_scope)
+    - [report\_open\_scopes()](#report_open_scopes)
+    - [set\_glob\_star()](#set_glob_star)
+    - [set\_null\_glob()](#set_null_glob)
+  - [\_error\_codes.sh](#_error_codessh)
+    - [error\_message()](#error_message)
+    - [error\_name()](#error_name)
+  - [\_predicates.sh](#_predicatessh)
+    - [is\_case\_sensitive()](#is_case_sensitive)
+    - [set\_case\_insensitive() / set\_case\_sensitive()](#set_case_insensitive--set_case_sensitive)
+    - [is\_variable\_name()](#is_variable_name)
+    - [is\_variable()](#is_variable)
+    - [is\_indexed\_array() / is\_associative\_array() / is\_array()](#is_indexed_array--is_associative_array--is_array)
+    - [is\_empty\_array()](#is_empty_array)
+    - [is\_function()](#is_function)
+    - [\_\_test\_with\_regex()](#__test_with_regex)
+    - [is\_boolean()](#is_boolean)
+    - [is\_natural()](#is_natural)
+    - [is\_non\_negative()](#is_non_negative)
+    - [is\_exit\_code()](#is_exit_code)
+    - [is\_positive()](#is_positive)
+    - [is\_non\_positive()](#is_non_positive)
+    - [is\_negative()](#is_negative)
+    - [is\_integer()](#is_integer)
+    - [is\_decimal()](#is_decimal)
+    - [is\_base64()](#is_base64)
+    - [is\_in()](#is_in)
+    - [is\_in\_i()](#is_in_i)
+    - [is\_windows()](#is_windows)
+    - [is\_valid\_filename()](#is_valid_filename)
+    - [is\_valid\_path()](#is_valid_path)
+    - [is\_valid\_secret\_name()](#is_valid_secret_name)
+    - [is\_valid\_secret()](#is_valid_secret)
+    - [is\_valid\_dotnet\_version()](#is_valid_dotnet_version)
+    - [is\_tool\_present()](#is_tool_present)
+    - [is\_valid\_json()](#is_valid_json)
+    - [is\_valid\_json\_file()](#is_valid_json_file)
+  - [\_diagnostics.sh](#_diagnosticssh)
+    - [to\_stdout() / to\_stderr() / to\_output()](#to_stdout--to_stderr--to_output)
+    - [has\_errors()](#has_errors)
+    - [get\_errors()](#get_errors)
+    - [set\_errors()](#set_errors)
+    - [reset\_errors()](#reset_errors)
+    - [exit\_if\_has\_bugs()](#exit_if_has_bugs)
+    - [usage()](#usage)
+    - [exit\_if\_has\_errors()](#exit_if_has_errors)
+    - [\_\_message()](#__message)
+    - [error()](#error)
+    - [exit\_with\_error()](#exit_with_error)
+    - [with\_error()](#with_error)
+    - [bug()](#bug)
+    - [exit\_with\_bug()](#exit_with_bug)
+    - [fatal\_exit()](#fatal_exit)
+    - [warning()](#warning)
+    - [info()](#info)
+    - [trace()](#trace)
+    - [warning\_var()](#warning_var)
+    - [show\_stack()](#show_stack)
+    - [to\_summary()](#to_summary)
+    - [now\_us()](#now_us)
+  - [\_core\_args.sh](#_core_argssh)
+    - [get\_common\_arg()](#get_common_arg)
+    - [usage\_if\_requested()](#usage_if_requested)
+    - [usage()](#usage-1)
+    - [usage\_text()](#usage_text)
+  - [\_semver.sh](#_semversh)
+    - [print\_semver\_regexes()](#print_semver_regexes)
+    - [validate\_minver\_tag\_components()](#validate_minver_tag_components)
+    - [get\_semver\_major() / get\_semver\_minor() / get\_semver\_patch() / get\_semver\_prerelease() / get\_semver\_build()](#get_semver_major--get_semver_minor--get_semver_patch--get_semver_prerelease--get_semver_build)
+    - [compare\_semver()](#compare_semver)
+    - [semver\_eq() / semver\_gt() / semver\_gte() / semver\_lt() / semver\_lte()](#semver_eq--semver_gt--semver_gte--semver_lt--semver_lte)
+    - [is\_semver()](#is_semver)
+    - [is\_semver\_tag()](#is_semver_tag)
+    - [is\_semver\_prerelease()](#is_semver_prerelease)
+    - [is\_semver\_prerelease\_tag()](#is_semver_prerelease_tag)
+    - [is\_semver\_release()](#is_semver_release)
+    - [is\_semver\_release\_tag()](#is_semver_release_tag)
+  - [\_sanitize.sh](#_sanitizesh)
+    - [ltrim() / rtrim() / trim()](#ltrim--rtrim--trim)
+    - [ltrim\_var() / rtrim\_var() / trim\_var()](#ltrim_var--rtrim_var--trim_var)
+    - [is\_safe\_input()](#is_safe_input)
+    - [is\_safe\_boolean()](#is_safe_boolean)
+    - [is\_safe\_integer()](#is_safe_integer)
+    - [is\_safe\_path()](#is_safe_path)
+    - [is\_safe\_valid\_path()](#is_safe_valid_path)
+    - [is\_safe\_existing\_path()](#is_safe_existing_path)
+    - [is\_safe\_existing\_directory() / is\_safe\_existing\_file()](#is_safe_existing_directory--is_safe_existing_file)
+    - [validate\_json\_array()](#validate_json_array)
+    - [is\_safe\_runner\_os()](#is_safe_runner_os)
+    - [is\_safe\_reason()](#is_safe_reason)
+    - [is\_valid\_nuget\_server()](#is_valid_nuget_server)
+    - [validate\_nuget\_server()](#validate_nuget_server)
+    - [is\_valid\_configuration()](#is_valid_configuration)
+    - [is\_safe\_configuration()](#is_safe_configuration)
+    - [is\_valid\_framework()](#is_valid_framework)
+    - [is\_safe\_framework()](#is_safe_framework)
+    - [is\_valid\_runtime()](#is_valid_runtime)
+    - [is\_safe\_runtime()](#is_safe_runtime)
+    - [validate\_runtime()](#validate_runtime)
+    - [validate\_preprocessor\_symbols()](#validate_preprocessor_symbols)
+    - [is\_safe\_secret()](#is_safe_secret)
+    - [is\_valid\_percentage()](#is_valid_percentage)
+    - [is\_safe\_min\_coverage\_pct() / is\_safe\_max\_regression\_pct()](#is_safe_min_coverage_pct--is_safe_max_regression_pct)
+    - [is\_valid\_minverTagPrefix()](#is_valid_minvertagprefix)
+    - [is\_safe\_minverTagPrefix()](#is_safe_minvertagprefix)
+    - [is\_valid\_minverPrereleaseId()](#is_valid_minverprereleaseid)
+    - [is\_safe\_minverPrereleaseId()](#is_safe_minverprereleaseid)
+    - [escape\_ere()](#escape_ere)
+    - [validate\_json\_schema()](#validate_json_schema)
+  - [\_dump\_vars.sh](#_dump_varssh)
+    - [\_write\_title()](#_write_title)
+    - [\_write\_line()](#_write_line)
+    - [dump\_vars()](#dump_vars)
+  - [\_user.sh](#_usersh)
+    - [press\_any\_key()](#press_any_key)
+    - [confirm()](#confirm)
+    - [enter\_value()](#enter_value)
+    - [choose()](#choose)
+    - [print\_sequence()](#print_sequence)
+  - [\_git.sh](#_gitsh)
+    - [is\_valid\_branch\_name()](#is_valid_branch_name)
+    - [is\_valid\_tag\_name()](#is_valid_tag_name)
+    - [is\_valid\_commit\_sha()](#is_valid_commit_sha)
+    - [validate\_branch\_name()](#validate_branch_name)
+    - [is\_inside\_work\_tree()](#is_inside_work_tree)
+    - [root\_working\_tree()](#root_working_tree)
+    - [should\_fetch\_for\_latest\_stable\_tag()](#should_fetch_for_latest_stable_tag)
+    - [ensure\_fresh\_git\_state()](#ensure_fresh_git_state)
+    - [get\_latest\_stable\_tag\_hash()](#get_latest_stable_tag_hash)
+    - [is\_after\_latest\_stable\_tag() / is\_on\_or\_after\_latest\_stable\_tag()](#is_after_latest_stable_tag--is_on_or_after_latest_stable_tag)
+  - [\_git\_gh.sh](#_git_ghsh)
+    - [is\_valid\_gh\_repo\_owner() / is\_valid\_gh\_repo\_name() / is\_valid\_gh\_repo\_full\_name() / is\_valid\_gh\_repo\_description()](#is_valid_gh_repo_owner--is_valid_gh_repo_name--is_valid_gh_repo_full_name--is_valid_gh_repo_description)
+    - [validate\_gh\_repo\_owner() / validate\_gh\_repo\_name() / validate\_gh\_repo\_description()](#validate_gh_repo_owner--validate_gh_repo_name--validate_gh_repo_description)
+    - [execute\_gh\_with\_retry()](#execute_gh_with_retry)
+    - [execute\_gh\_api\_with\_retry()](#execute_gh_api_with_retry)
+    - [get\_gh\_repo\_property()](#get_gh_repo_property)
+    - [is\_repo\_state\_initialized()](#is_repo_state_initialized)
+    - [initialize\_repo\_state()](#initialize_repo_state)
+    - [get\_gh\_repo\_state()](#get_gh_repo_state)
+    - [get\_repo\_state()](#get_repo_state)
+    - [has\_local\_repo() / has\_remote\_repo() / has\_github\_remote()](#has_local_repo--has_remote_repo--has_github_remote)
+    - [read\_repo\_state()](#read_repo_state)
+    - [print\_repo\_state()](#print_repo_state)
+  - [\_git\_vm2.sh](#_git_vm2sh)
+    - [get\_devops\_parent()](#get_devops_parent)
+    - [\_\_validate\_repo\_root()](#__validate_repo_root)
+    - [resolve\_vm2\_repos()](#resolve_vm2_repos)
+    - [\_\_search\_repo\_dir()](#__search_repo_dir)
+    - [resolve\_repo\_root()](#resolve_repo_root)
+    - [get\_vm2\_sot\_path()](#get_vm2_sot_path)
+  - [\_xml.sh](#_xmlsh)
+    - [get\_xml\_value()](#get_xml_value)
+  - [\_dotnet\_constants.sh](#_dotnet_constantssh)
+    - [dotnet\_error\_message()](#dotnet_error_message)
+  - [\_dotnet\_args.sh](#_dotnet_argssh)
+    - [get\_common\_dotnet\_arg()](#get_common_dotnet_arg)
+    - [sanitize\_common\_dotnet\_args()](#sanitize_common_dotnet_args)
+  - [\_dotnet\_msbuild.sh](#_dotnet_msbuildsh)
+    - [get\_msbuild\_property()](#get_msbuild_property)
+    - [get\_msbuild\_properties()](#get_msbuild_properties)
+    - [get\_target\_path()](#get_target_path)
+    - [get\_artifacts\_path()](#get_artifacts_path)
+    - [convert\_dotnet\_args\_to\_msbuild\_args()](#convert_dotnet_args_to_msbuild_args)
+    - [extract\_dotnet\_build\_info()](#extract_dotnet_build_info)
+    - [display\_dotnet\_build\_summary()](#display_dotnet_build_summary)
+  - [\_dotnet.sh](#_dotnetsh)
+    - [update\_nuget\_sources\_with\_github\_vm2()](#update_nuget_sources_with_github_vm2)
+    - [dotnet\_clean()](#dotnet_clean)
+    - [dotnet\_restore()](#dotnet_restore)
+    - [dotnet\_build()](#dotnet_build)
+    - [dotnet\_pack()](#dotnet_pack)
+    - [list\_solution\_projects()](#list_solution_projects)
+    - [expand\_solution\_projects()](#expand_solution_projects)
+  - [gh\_core.sh](#gh_coresh)
+    - [to\_stdout() / to\_stderr() (overrides)](#to_stdout--to_stderr-overrides)
+    - [to\_output() (override)](#to_output-override)
+    - [gh\_escape()](#gh_escape)
+    - [args\_to\_github\_output()](#args_to_github_output)
+  - [Summary](#summary)
+    - [Total Functions: 215](#total-functions-215)
+    - [Usage Pattern](#usage-pattern)
+    - [Key Design Principles](#key-design-principles)
+
+<!-- /TOC -->
+
+This document provides a quick reference to all functions in the bash library, organized by file in the order they are sourced
+by `core.sh`.
+
+For detailed information about parameters, return values, and usage examples, refer to the function documentation (shdoc-style
+comment blocks) directly above each function in its source file.
 
 ---
 
 ## _constants.sh
 
-Defines ANSI escape codes, emojis/glyphs, and vm2-wide constants (vm2 repository list, NuGet server regex, allowed conventional-commit types, etc.). Contains no functions, only constant declarations.
+Defines ANSI escape codes, emojis/glyphs, and vm2-wide constants (vm2 repository list, NuGet server regex, allowed conventional-
+commit types, etc.). Contains no functions, only constant declarations.
 
 ---
 
@@ -51,7 +268,8 @@ Searches a directory for the first of several file name patterns that matches an
 
 ## _core_state.sh
 
-Common state variables (`$ci`, `$debugger`, quiet/verbose/dry-run/trace modes, `$_ignore`, table format) and the functions that read, set, and save/restore them.
+Common state variables (`$ci`, `$debugger`, quiet/verbose/dry-run/trace modes, `$_ignore`, table format) and the functions that
+read, set, and save/restore them.
 
 ### is_verbose()
 
@@ -107,7 +325,8 @@ Sets the `dump_vars` table format to "graphical" or "markdown".
 
 ### save_state()
 
-Saves quiet/verbose/dry-run/`$_ignore`/table-format/tracing state into an associative array, for later `restore_state`. For the shell options, use `begin_scope`/`end_scope`.
+Saves quiet/verbose/dry-run/`$_ignore`/table-format/tracing state into an associative array, for later `restore_state`. For the
+shell options, use `begin_scope`/`end_scope`.
 
 ### restore_state()
 
@@ -148,7 +367,8 @@ Looks up an error code and prints `"<code>: <message>"`. Exits the process direc
 
 ### error_name()
 
-Looks up an error code and prints its symbolic name (e.g. `$err_not_found`). Exits the process directly, for the same reason as `error_message`.
+Looks up an error code and prints its symbolic name (e.g. `$err_not_found`). Exits the process directly, for the same reason as
+`error_message`.
 
 ---
 
@@ -277,11 +497,13 @@ Tests if the file at a given path contains valid JSON.
 
 ## _diagnostics.sh
 
-Logging functions (`error`, `warning`, `info`, `trace`, `bug`), the global error/bug counters, and the `exit_if_has_errors`/`exit_if_has_bugs` gates.
+Logging functions (`error`, `warning`, `info`, `trace`, `bug`), the global error/bug counters, and the
+`exit_if_has_errors`/`exit_if_has_bugs` gates.
 
 ### to_stdout() / to_stderr() / to_output()
 
-Read lines from stdin and echo them to stdout / stderr / stdout, respectively — overridable abstractions (`gh_core.sh` overrides them to also write to GitHub Actions step summary/output files).
+Read lines from stdin and echo them to stdout / stderr / stdout, respectively — overridable abstractions (`gh_core.sh` overrides
+them to also write to GitHub Actions step summary/output files).
 
 ### has_errors()
 
@@ -301,7 +523,8 @@ Resets the global error counter to zero.
 
 ### exit_if_has_bugs()
 
-Exits the script (via `exit_with_error`) if any bugs were recorded by this function's own call depth or deeper; defers to an ancestor's still-open validation block otherwise.
+Exits the script (via `exit_with_error`) if any bugs were recorded by this function's own call depth or deeper; defers to an
+ancestor's still-open validation block otherwise.
 
 ### usage()
 
@@ -313,7 +536,8 @@ Exits the script (via `usage`, or directly) if any errors were recorded.
 
 ### __message()
 
-Internal helper that formats and prints one or more message lines with a severity prefix, optional error-code translation, and an optional stack dump. Used by `error`/`warning`/`info`/`trace`/`bug`.
+Internal helper that formats and prints one or more message lines with a severity prefix, optional error-code translation, and
+an optional stack dump. Used by `error`/`warning`/`info`/`trace`/`bug`.
 
 ### error()
 
@@ -363,7 +587,8 @@ Prints the current call stack, one line per frame.
 
 ### to_summary()
 
-Logs one or more lines under a `## Summary` markdown heading, via `$__summary_output` (glow, if available and not in CI; otherwise `to_stdout`).
+Logs one or more lines under a `## Summary` markdown heading, via `$__summary_output` (glow, if available and not in CI;
+otherwise `to_stdout`).
 
 ### now_us()
 
@@ -373,7 +598,8 @@ Prints the current time in microseconds since the epoch (from `$EPOCHREALTIME`; 
 
 ## _core_args.sh
 
-Common command-line argument parsing (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--graphical`, `--markdown`, `--help`/`-h`/`-?`) and the default `usage`/`usage_text` implementation.
+Common command-line argument parsing (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--graphical`, `--markdown`,
+`--help`/`-h`/`-?`) and the default `usage`/`usage_text` implementation.
 
 ### get_common_arg()
 
@@ -487,7 +713,8 @@ Combine `is_safe_existing_path` with a directory / non-empty-file type check.
 
 ### validate_json_array()
 
-Validates and normalizes a JSON array of strings (or a single string) into a deduplicated, trimmed JSON array, optionally validating each item with a caller-supplied function.
+Validates and normalizes a JSON array of strings (or a single string) into a deduplicated, trimmed JSON array, optionally
+validating each item with a caller-supplied function.
 
 ### is_safe_runner_os()
 
@@ -589,7 +816,8 @@ Internal helper: writes a "name: value" line, handling scalars, arrays, associat
 
 ### dump_vars()
 
-If verbose (or `--force`), dumps a table of named variables with optional headers, secrets masking, and blank/dividing lines; optionally prompts "press any key" afterward.
+If verbose (or `--force`), dumps a table of named variables with optional headers, secrets masking, and blank/dividing lines;
+optionally prompts "press any key" afterward.
 
 ---
 
@@ -621,51 +849,26 @@ Prints a sequence of values with a customizable quote character, separator, and 
 
 ## _git.sh
 
-Git/GitHub repository validation, state retrieval, and latest-stable-tag helpers.
-
-### validate_gh_repo_owner() / validate_gh_repo_name() / validate_gh_repo_description()
-
-Validate a GitHub repository owner / name / description against GitHub's naming rules.
+Plain Git: branch, tag, and commit-SHA name validation, the working tree, and latest-stable-tag helpers. Knows nothing
+about GitHub (see `_git_gh.sh`).
 
 ### is_valid_branch_name()
 
-Tests if a string is a valid Git branch name, via `git check-ref-format`.
+Tests if a string is a valid Git branch name (with or without `refs/heads/`), via `git check-ref-format`.
+
+### is_valid_tag_name()
+
+Tests if a string is a valid Git tag name (with or without `refs/tags/`), via `git check-ref-format`; also rejects a
+leading `-`, which `git tag` refuses.
 
 ### is_valid_commit_sha()
 
-Tests that a string has the format of a commit SHA or an abbreviation of one (4 to 64 hexadecimal digits); it does not check that the commit exists.
+Tests that a string has the format of a commit SHA or an abbreviation of one (4 to 64 hexadecimal digits); it does not check
+that the commit exists.
 
 ### validate_branch_name()
 
 Validates a Git branch name, via `is_valid_branch_name`.
-
-### execute_gh_with_retry()
-
-Executes a `gh` command with retry logic for transient failures (rate limits, timeouts, etc.).
-
-### execute_gh_api_with_retry()
-
-Executes a `gh api` command with retry logic based on the response's HTTP status (or stderr pattern matching as a fallback).
-
-### initialize_repo_state()
-
-Initializes a repo-state associative array to all predefined keys with empty values.
-
-### get_repo_state()
-
-Retrieves the Git/GitHub repository state for a directory (local Git-derived fields, optionally cross-checked against the GitHub API).
-
-### has_local_repo() / has_remote_repo() / has_github_remote()
-
-Test if a repo-state array has a local Git repo / a remote URL / a remote GitHub repo (repo ID) recorded.
-
-### read_repo_state()
-
-Deserializes a repo state from `key=value` lines on stdin.
-
-### print_repo_state()
-
-Prints a repo state to stdout, one line per predefined key.
 
 ### is_inside_work_tree()
 
@@ -693,6 +896,62 @@ Test if the current commit is strictly after / on-or-after the latest stable tag
 
 ---
 
+## _git_gh.sh
+
+GitHub: repository naming rules, the GitHub remote URL, the repo state, and the `gh` / `gh api` retry wrappers.
+
+### is_valid_gh_repo_owner() / is_valid_gh_repo_name() / is_valid_gh_repo_full_name() / is_valid_gh_repo_description()
+
+Test a GitHub repository owner / name / full name (`<owner>/<name>`) / description against GitHub's rules.
+
+### validate_gh_repo_owner() / validate_gh_repo_name() / validate_gh_repo_description()
+
+Validate a GitHub repository owner / name / description, reporting an error when invalid.
+
+### execute_gh_with_retry()
+
+Executes a `gh` command with retry logic for transient failures (rate limits, timeouts, etc.).
+
+### execute_gh_api_with_retry()
+
+Executes a `gh api` command with retry logic based on the response's HTTP status (or stderr pattern matching as a fallback).
+
+### get_gh_repo_property()
+
+Prints the value of one property of a GitHub repository (e.g. `default_branch`), from the GitHub API.
+
+### is_repo_state_initialized()
+
+Tests if a repo-state associative array contains every predefined key.
+
+### initialize_repo_state()
+
+Initializes a repo-state associative array: every predefined key, with an empty value.
+
+### get_gh_repo_state()
+
+Fills an initialized repo state with a repository's owner, name, full name, ID, and default branch, from the GitHub API.
+
+### get_repo_state()
+
+Retrieves the repository state for a directory: the working-tree root and the `origin` URL from Git, the owner and name
+parsed from a GitHub URL, and optionally the GitHub fields, cross-checked against the full name GitHub reports. Starts
+from an empty state, so a reused array keeps nothing from a previous call.
+
+### has_local_repo() / has_remote_repo() / has_github_remote()
+
+Test if a repo-state array has a local Git repo / a remote URL / a remote GitHub repo (repo ID) recorded.
+
+### read_repo_state()
+
+Deserializes a repo state from `key=value` lines on stdin.
+
+### print_repo_state()
+
+Prints a repo state to stdout, one line per predefined key.
+
+---
+
 ## _git_vm2.sh
 
 vm2-specific repository resolution: locating `$VM2_REPOS` and individual vm2 repositories.
@@ -703,19 +962,23 @@ Returns (and caches) the parent directory of the vm2.DevOps repository.
 
 ### __validate_repo_root()
 
-Internal helper: validates that a named/pathed repository exists, is a Git root with CI configuration, is on the expected branch, and is at or ahead of its latest stable tag.
+Internal helper: validates that a named/pathed repository exists, is a Git root with CI configuration, is on the expected branch,
+and is at or ahead of its latest stable tag.
 
 ### resolve_vm2_repos()
 
-Resolves `$VM2_REPOS` (CLI arg > `$VM2_REPOS` env > vm2.DevOps's own parent > hardcoded default), validating vm2.DevOps and vm2.Templates under it.
+Resolves `$VM2_REPOS` (CLI arg > `$VM2_REPOS` env > vm2.DevOps's own parent > hardcoded default), validating vm2.DevOps and
+vm2.Templates under it.
 
 ### __search_repo_dir()
 
-Internal helper used by `resolve_repo_root`: searches for a directory by name/relative path under a parent, skipping noise directories (`.git`, `node_modules`, `bin`, `obj`, etc.).
+Internal helper used by `resolve_repo_root`: searches for a directory by name/relative path under a parent, skipping noise
+directories (`.git`, `node_modules`, `bin`, `obj`, etc.).
 
 ### resolve_repo_root()
 
-Finds the root of a Git repository (or nearest ancestor with CI configuration) by searching under `$vm2_repos`, falling back to `$HOME`.
+Finds the root of a Git repository (or nearest ancestor with CI configuration) by searching under `$vm2_repos`, falling back to
+`$HOME`.
 
 ### get_vm2_sot_path()
 
@@ -729,23 +992,28 @@ Generic XML value reading via `yq`'s XML support. Knows nothing about dotnet, MS
 
 ### get_xml_value()
 
-Reads a single element or attribute value out of an XML file by yq path expression (e.g. `.Project.PropertyGroup.IncludeSymbols`, or `.Project.ItemGroup.PackageReference.+@Version` for an attribute). A literal, single-file read -- does not resolve inherited values (e.g. from a project's `Directory.Build.props`) the way `get_msbuild_property()` does.
+Reads a single element or attribute value out of an XML file by yq path expression (e.g. `.Project.PropertyGroup.IncludeSymbols`,
+or `.Project.ItemGroup.PackageReference.+@Version` for an attribute). A literal, single-file read -- does not resolve inherited
+values (e.g. from a project's `Directory.Build.props`) the way `get_msbuild_property()` does.
 
 ---
 
 ## _dotnet_constants.sh
 
-The `dotnet` exit codes with their messages and names, and the keys of the build, build-result, version, and package information arrays.
+The `dotnet` exit codes with their messages and names, and the keys of the build, build-result, version, and package information
+arrays.
 
 ### dotnet_error_message()
 
-Prints `Dotnet <name> (<code>): <message>` for a `dotnet` process exit code, falling back to the unknown-code message. `error`'s `--dotnet-error-code`/`-dec` option uses it.
+Prints `Dotnet <name> (<code>): <message>` for a `dotnet` process exit code, falling back to the unknown-code message. `error`'s
+`--dotnet-error-code`/`-dec` option uses it.
 
 ---
 
 ## _dotnet_args.sh
 
-Common dotnet-CLI argument variables (`$configuration`, `$framework`, `$runtime`, `$artifacts`, MinVer settings, NuGet credentials) and their parsing/sanitization.
+Common dotnet-CLI argument variables (`$configuration`, `$framework`, `$runtime`, `$artifacts`, MinVer settings, NuGet
+credentials) and their parsing/sanitization.
 
 ### get_common_dotnet_arg()
 
@@ -813,7 +1081,8 @@ Builds a .NET project or solution (no restore) and captures build output informa
 
 ### dotnet_pack()
 
-Packs an already-built .NET project (`--no-build`), resolving `Configuration` from the project if not pinned, and returns the produced package/symbols paths.
+Packs an already-built .NET project (`--no-build`), resolving `Configuration` from the project if not pinned, and returns the
+produced package/symbols paths.
 
 ### list_solution_projects()
 
@@ -827,7 +1096,8 @@ Expands any solution-file entries in a JSON array of project/solution paths into
 
 ## gh_core.sh
 
-GitHub Actions environment integration. Sources `core.sh` and overrides its `to_*` functions to also write to the step-summary/output files.
+GitHub Actions environment integration. Sources `core.sh` and overrides its `to_*` functions to also write to the step-summary/
+output files.
 
 ### to_stdout() / to_stderr() (overrides)
 
@@ -839,7 +1109,8 @@ Sends input to stdout, and (in GitHub Actions) also appends to `$GITHUB_OUTPUT`.
 
 ### gh_escape()
 
-Escapes a value for safe inclusion in a GitHub Actions workflow command (`::notice::`, etc.), per GitHub's own `%`/CR/LF escaping rules.
+Escapes a value for safe inclusion in a GitHub Actions workflow command (`::notice::`, etc.), per GitHub's own `%`/CR/LF
+escaping rules.
 
 ### args_to_github_output()
 
@@ -849,7 +1120,7 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 
 ## Summary
 
-### Total Functions: 207
+### Total Functions: 215
 
 | File                 | Functions |
 |----------------------|----------:|
@@ -863,7 +1134,8 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 | _sanitize.sh         |        37 |
 | _dump_vars.sh        |         3 |
 | _user.sh             |         5 |
-| _git.sh              |        22 |
+| _git.sh              |        11 |
+| _git_gh.sh           |        19 |
 | _git_vm2.sh          |         6 |
 | _xml.sh              |         1 |
 | _dotnet_constants.sh |         1 |
@@ -872,18 +1144,25 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 | _dotnet.sh           |         7 |
 | gh_core.sh           |         5 |
 
-Counts include internal (`__`-prefixed) helper functions that are not part of the public library surface but are still documented in their source files. The `gh_core.sh` overrides of `to_stdout`/`to_stderr`/`to_output` and the `_core_args.sh` override of `usage` are counted in both files.
+Counts include internal (`__`-prefixed) helper functions that are not part of the public library surface but are still documented
+in their source files. The `gh_core.sh` overrides of `to_stdout`/`to_stderr`/`to_output` and the `_core_args.sh` override of
+`usage` are counted in both files.
 
 ### Usage Pattern
 
 1. Source `core.sh` in your scripts to get all base functionality (it sources every other component file in turn).
 2. Source `gh_core.sh` instead of `core.sh` when the script runs in GitHub Actions, to get step-summary/output integration.
-3. Individual component files (`_predicates.sh`, `_sanitize.sh`, etc.) can be sourced directly if only a narrow slice of functionality is needed.
+3. Individual component files (`_predicates.sh`, `_sanitize.sh`, etc.) can be sourced directly if only a narrow slice of
+4. functionality is needed.
 
 ### Key Design Principles
 
-- Functions read from stdin and write to stdout/stderr where appropriate, for pipeline composition (`to_stdout`, `to_stderr`, `to_output`, `to_summary`, `error`, `warning`, `info`, `trace`).
+- Functions read from stdin and write to stdout/stderr where appropriate, for pipeline composition (`to_stdout`, `to_stderr`,
+- `to_output`, `to_summary`, `error`, `warning`, `info`, `trace`).
 - Global state is saved/restored cooperatively via `save_state`/`restore_state`, never mutated ad hoc.
-- Predicate functions (`is_*`, `has_*`) return `$positive`/`$negative` (0/1); they answer a yes/no question, and "no" is a legitimate answer, not a failure.
-- Validation (`is_safe_*`, `validate_*`) and other action functions return `$success`/`$failure` or a specific named error code (`$err_argument_value`, `$err_tool_error`, etc.) on failure.
-- Caller-contract violations (`bug`) hard-exit via `exit_if_has_bugs`; runtime/environmental failures (`error`) accumulate and are surfaced via `exit_if_has_errors` at the top-level script only.
+- Predicate functions (`is_*`, `has_*`) return `$positive`/`$negative` (0/1); they answer a yes/no question, and "no" is a
+- legitimate answer, not a failure.
+- Validation (`is_safe_*`, `validate_*`) and other action functions return `$success`/`$failure` or a specific named error code
+- (`$err_argument_value`, `$err_tool_error`, etc.) on failure.
+- Caller-contract violations (`bug`) hard-exit via `exit_if_has_bugs`; runtime/environmental failures (`error`) accumulate and
+- are surfaced via `exit_if_has_errors` at the top-level script only.
