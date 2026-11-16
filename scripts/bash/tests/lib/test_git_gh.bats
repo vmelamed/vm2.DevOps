@@ -197,6 +197,47 @@ _run_get_repo_state() {
     assert_output "url=[https://github.com/vmelamed/vm2.Sample.git]"
 }
 
+# Runs get_repo_state (full_info=false) on a repo vm2.Sample with the origin $1 and prints the recorded URL and name.
+_run_get_repo_state_url() {
+    local _repo
+    _repo="$(_make_repo vm2.Sample "$1")"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo' state false; echo \"rc=[\$?] url=[\${state[url]}] name=[\${state[name]}]\""
+}
+
+@test "get_repo_state: never records the credentials of an HTTPS URL (user and password)" {
+    _run_get_repo_state_url https://user:s3cr3t@github.com/vmelamed/vm2.Sample.git
+    assert_success
+    assert_output "rc=[0] url=[https://github.com/vmelamed/vm2.Sample.git] name=[vm2.Sample]"
+    refute_output --partial "s3cr3t"
+}
+
+@test "get_repo_state: never records the credentials of an HTTPS URL (a token as the user name)" {
+    _run_get_repo_state_url https://ghp_FAKEtoken0123456789@github.com/vmelamed/vm2.Sample
+    assert_success
+    assert_output "rc=[0] url=[https://github.com/vmelamed/vm2.Sample] name=[vm2.Sample]"
+}
+
+@test "get_repo_state: keeps the user of an ssh:// URL -- it is the login, not a secret" {
+    _run_get_repo_state_url ssh://git@ssh.github.com:443/vmelamed/vm2.Sample.git
+    assert_success
+    assert_output "rc=[0] url=[ssh://git@ssh.github.com:443/vmelamed/vm2.Sample.git] name=[vm2.Sample]"
+}
+
+@test "get_repo_state: keeps the user of an scp-like SSH URL" {
+    _run_get_repo_state_url git@github.com:vmelamed/vm2.Sample.git
+    assert_success
+    assert_output "rc=[0] url=[git@github.com:vmelamed/vm2.Sample.git] name=[vm2.Sample]"
+}
+
+@test "print_repo_state: does not print the credentials of the origin URL" {
+    local _repo
+    _repo="$(_make_repo vm2.Sample https://user:s3cr3t@github.com/vmelamed/vm2.Sample.git)"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo' state false; print_repo_state state"
+    assert_success
+    assert_output --partial "url: https://github.com/vmelamed/vm2.Sample.git"
+    refute_output --partial "s3cr3t"
+}
+
 @test "has_github_remote: false without full repo-id info (full_info=false never populates it)" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_repo_state '$_repo_root' state false; has_github_remote state"
     assert_failure "$failure"
@@ -319,6 +360,44 @@ _run_get_repo_state() {
     assert_success
     assert_output "rc=[0] name=[] owner=[] full_name=[]"
 }
+
+@test "get_repo_state: treats a URL with github.com in its path as 'not GitHub' (regression: a mirror matched)" {
+    _run_get_repo_state "$(_make_repo vm2.Sample https://mirror.example/github.com/vmelamed/vm2.Sample.git)"
+    assert_success
+    assert_output "rc=[0] name=[] owner=[] full_name=[]"
+}
+
+@test "get_repo_state: treats a local path remote with a github.com directory as 'not GitHub'" {
+    _run_get_repo_state "$(_make_repo vm2.Sample /srv/github.com/vmelamed/vm2.Sample)"
+    assert_success
+    assert_output "rc=[0] name=[] owner=[] full_name=[]"
+}
+
+@test "get_repo_state: treats a host that merely starts with github.com as 'not GitHub'" {
+    _run_get_repo_state "$(_make_repo vm2.Sample https://github.com.evil.com/vmelamed/vm2.Sample)"
+    assert_success
+    assert_output "rc=[0] name=[] owner=[] full_name=[]"
+}
+
+@test "get_repo_state: treats github.com/owner/name without a scheme as a relative local path, not GitHub (regression)" {
+    # Git reads 'host:path' as the scp-like form only when a ':' comes before the first '/'; otherwise it is a local path.
+    _run_get_repo_state "$(_make_repo vm2.Sample github.com/vmelamed/vm2.Sample.git)"
+    assert_success
+    assert_output "rc=[0] name=[] owner=[] full_name=[]"
+}
+
+@test "get_repo_state: treats user@github.com/owner/name without a scheme as a relative local path, not GitHub" {
+    _run_get_repo_state "$(_make_repo vm2.Sample git@github.com/vmelamed/vm2.Sample)"
+    assert_success
+    assert_output "rc=[0] name=[] owner=[] full_name=[]"
+}
+
+@test "get_repo_state: accepts the scp-like form without a user (github.com:owner/name)" {
+    _run_get_repo_state "$(_make_repo vm2.Sample github.com:vmelamed/vm2.Sample)"
+    assert_success
+    assert_output "rc=[0] name=[vm2.Sample] owner=[vmelamed] full_name=[vmelamed/vm2.Sample]"
+}
+
 
 # --- get_repo_state: reusing one state variable ------------------------------------------------------------------------
 
