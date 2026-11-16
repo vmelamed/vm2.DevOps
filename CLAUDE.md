@@ -58,7 +58,8 @@ Val is currently the only developer on this project. There is no team. This affe
 vm2.DevOps is the shared CI/CD automation framework for all vm2 .NET packages. It provides:
 
 - **Reusable GitHub Actions workflows** — consumed by every vm2 package repo
-- **Bash script library** — 67 functions in `scripts/bash/lib/`, sourced by CI scripts and local utilities
+- **Bash script library** — shared functions in `scripts/bash/lib/` (see `scripts/bash/lib/FUNCTIONS_REFERENCE.md`),
+  sourced by CI scripts and local utilities
 - **CI/CD action scripts** — in `.github/scripts/`, each following the three-file convention
 
 Consumer repos use workflow templates from `vm2.Templates`. The reusable workflows and the scripts they call live here.
@@ -193,7 +194,8 @@ All core library files live in `scripts/bash/lib/` and are sourced by scripts th
 | `_sanitize.sh`         | Input validation (`is_safe_path`, `is_safe_configuration`, etc.) |
 | `_dump_vars.sh`        | Dumps the values of bash variables in a tabular format           |
 | `_user.sh`             | User interface primitives                                        |
-| `_git.sh`              | Git operations                                                   |
+| `_git.sh`              | Git operations (plain git, no hosting service)                   |
+| `_git_gh.sh`           | GitHub: naming rules, repo state, `gh`/`gh api` retry wrappers   |
 | `_git_vm2.sh`          | Git operations with focus on vm2 repos                           |
 | `_dotnet_constants.sh` | `dotnet` exit codes and build-information keys                   |
 | `_dotnet_args.sh`      | Common `dotnet` argument parsing and validation                  |

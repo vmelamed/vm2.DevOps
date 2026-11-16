@@ -17,7 +17,7 @@ declare -x err_tool_not_found
 declare -x ci
 declare -x _ignore
 
-declare -x key_repo
+declare -x key_gh_full_name
 
 declare -xri default_max_regression_pct=20
 declare -xri default_max_gen1_collects=2
@@ -169,7 +169,7 @@ function resolve_arguments()
         if [[ -n ${_repo_root:-} ]]; then
             declare -A _repo_state=()
             get_repo_state "$_repo_root" _repo_state false || true
-            repository=${_repo_state[$key_repo]:-}
+            repository=${_repo_state[$key_gh_full_name]:-}
         fi
     fi
 
