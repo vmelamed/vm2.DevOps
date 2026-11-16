@@ -46,10 +46,7 @@ declare -xr gh_repo_name_regex="^$gh_repo_name_rex$"                            
 declare -xr gh_repo_full_name_rex="($gh_repo_owner_rex)/($gh_repo_name_rex)"
 declare -xr gh_repo_full_name_regex="^$gh_repo_full_name_rex$"
 
-declare -xr github_url_regex="^([a-z][a-z0-9+.-]*://)?([^/@]+@)?(ssh\.)?github\.com(:[0-9]+)?[:/]($gh_repo_owner_rex)/($gh_repo_name_rex)(\.git)?/?$"
-
-readonly __valid_repo_names_msg="GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit.
-See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details."
+declare -xr github_url_regex="^([a-z][a-z0-9+.-]*://([^/@]+@)?(ssh\.)?github\.com(:[0-9]+)?/|([^/@:]+@)?(ssh\.)?github\.com:)($gh_repo_owner_rex)/($gh_repo_name_rex)(\.git)?/?$"
 
 #===============================================================================================
 # With the following constants and functions we define the repository state: it is an
@@ -226,6 +223,9 @@ function validate_gh_repo_owner()
     is_valid_gh_repo_owner "$1"                                                 || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid repository owner (provided '${1-<missing>}')."
     return "$_rc"
 }
+
+readonly __valid_repo_names_msg="GitHub repository names can be up to 100 characters, cannot end with .git, and can contain letters, digits, dots, underscores, and hyphens, but must start with a letter or digit.
+See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details."
 
 #-----------------------------------------------------------------------------------------------
 # @description Validates that the specified repository name is valid according to GitHub
@@ -651,8 +651,8 @@ function get_gh_repo_state()
 }
 
 # BASH_REMATCH indexes after matching a URL with $github_url_regex:
-declare -xri url_owner=5
-declare -xri url_name=6
+declare -xri url_owner=7
+declare -xri url_name=8
 
 #-----------------------------------------------------------------------------------------------
 # @description Retrieves the Git repository state for a specified directory by finding the Git
@@ -718,6 +718,9 @@ function get_repo_state()
     _name=${_name%.git} # strip off the .git suffix!
 
     [[ "$_name" == "$(basename "$_root_dir")" ]]                                || with_error _rc "$err_root_not_repo_name" "The root directory name '$(basename "$_root_dir")' does not match the repository name '$_name'."
+
+    # never store credentials: drop the userinfo of an HTTP(S) URL, which may hold a token (e.g. https://ghp_…@github.com/…)
+    [[ $_url =~ ^(https?://)[^/@]+@(.*)$ ]] && _url="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
 
     local _repo_full_name="$_owner/$_name"
 
