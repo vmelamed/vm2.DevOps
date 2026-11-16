@@ -651,8 +651,8 @@ function get_gh_repo_state()
 }
 
 # BASH_REMATCH indexes after matching a URL with $github_url_regex:
-declare -xri url_owner=3
-declare -xri url_name=4
+declare -xri url_owner=5
+declare -xri url_name=6
 
 #-----------------------------------------------------------------------------------------------
 # @description Retrieves the Git repository state for a specified directory by finding the Git
