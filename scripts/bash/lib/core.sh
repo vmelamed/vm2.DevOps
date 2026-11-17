@@ -285,78 +285,135 @@ function execute()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Executes a command, retrying on failure until it succeeds or the maximum number
-#    of attempts is reached, with a fixed delay between attempts.
+# @description Executes a command with retry logic for transient failures. In a dry run, a query
+#   (specified by the option `--query`) runs as usual; any other command is only printed.
 #
 # Notes:
-#   - $1 and $2 are always max_attempts and delay; there is no default when the arguments are
-#     omitted -- at least three arguments are required.
-#   - If $3 is a valid boolean ('true' or 'false') it is consumed as the "ignore output" flag:
-#     when 'true', the command's `stdout` is redirected to `$_ignore` instead of the terminal.
-#     If $3 is not a boolean, it is treated as the start of the command to execute.
-#   - Consequence of the above: a command whose own name is literally 'true' or 'false' can
-#     never be retried -- it is always consumed as the output-suppression flag instead,
-#     leaving no command and causing an argument-count bug-exit. This is accepted, not a bug
-#     to fix: nothing sane would ever retry the literal command 'true' (always succeeds,
-#     retrying is pointless) or 'false' (always fails identically, so every retry is wasted).
-#     If a real command ever needs that exact name, wrap it (`bash -c true`) to sidestep the
-#     ambiguity.
+#   - The command's stdout is written to the caller's stdout (unless `--quiet`); its stderr
+#     always goes to the caller's stderr.
+#   - The switches `--query`, `--quiet`, and `--is-transient <predicate>` come before the
+#     command, in any order: the first argument that is neither a switch nor a switch's value
+#     starts the command, which runs with its arguments unchanged.
 #
-# @arg $1 int `_max_attempts` - maximum number of attempts
-# @arg $2 int `_delay` - delay in seconds between retries
-# @arg $3 bool ignore output - if boolean, redirect the command's stdout to
-#    `$_ignore` when true (optional)
-# @arg $@ mixed command and arguments to execute
+# @arg $1 int Maximum number of attempts.
+# @arg $2 int Delay between attempts, in seconds.
+# @option --query The command has no side effects (typically a query): it runs in a dry run too,
+#   so the caller gets real data.
+# @option --quiet Discards the command's stdout (not its stderr).
+# @option --is-transient <predicate> The name of a function that decides whether a failure is
+#   worth retrying. It receives three arguments:
+#       - the command's exit code
+#       - the name of the file holding the command's stdout
+#       - the name of the file holding the command's stderr
+#   The predicate MUST return:
+#       positive=0 if the failure is transient, and the command can be retried
+#       negative=1 if the failure is persistent, and retrying would not help
+#   Without this option the predicate is `true`: every failure is treated as transient.
+# @arg $@ string The command to execute, and its arguments.
 #
-# @exitcode success=0: The command succeeded (including dry-run mode, where the
-#   command is not executed).
-# @exitcode N the command's own exit code, after the final failed attempt
+# @stdout The command's stdout; nothing with `--quiet`, or for a non-query in a dry run.
+# @stderr The command's stderr; in a dry run, `dry-run$ <command> <args>` for a non-query.
 #
-# @stdout whatever the executed command writes to stdout, unless redirected to $_ignore per
-#   the "ignore output" flag; in dry-run mode, nothing is written to stdout --
-#   "dry-run$ <command> [args...]" is written to stderr instead
+# @exitcode success=0: The command succeeded, or it is a non-query in a dry run (only printed).
+# @exitcode err_io_failure=21: A temporary file for the command's output could not be created.
+# @exitcode N The command's own exit code, after the final failed attempt.
 #
 # @example
-#   execute_with_retry 3 2 true gh api repos/owner/repo
+#   execute_with_retry 3 5 --quiet dotnet nuget push "$package" --source "$source"
+# @example
+#   # retry only on curl's network errors: 6 (resolve host), 7 (connect), 28 (timeout)
+#   function is_curl_transient() { [[ $1 == @(6|7|28) ]]; }
+#   status=$(execute_with_retry 3 2 --query --is-transient is_curl_transient curl -fsS https://example.com/status)
 #-----------------------------------------------------------------------------------------------
 function execute_with_retry()
 {
     (( $# >= 3 ))                                                               || bug "${FUNCNAME[0]}() requires at least three arguments (provided $#):" \
                                                                                        "  - maximum number of attempts" \
-                                                                                       "  - delay in seconds between retries" \
-                                                                                       "  - if present, boolean flag to suppress the output, optional" \
-                                                                                       "  - command and arguments to execute" \
+                                                                                       "  - delay between attempts, in seconds" \
+                                                                                       "  - the command to execute" \
+                                                                                       "  - [args...] Arguments for the command" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_natural "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1, the maximum attempt count, to be a natural number (provided '${1-<missing>}')." -ec "$err_argument_type"
-    [[ ! -v 2 ]] || is_natural "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the retry delay in seconds, to be a natural number (provided '${2-<missing>}')." -ec "$err_argument_type"
+    [[ ! -v 2 ]] || is_non_negative "$2"                                        || bug "${FUNCNAME[0]}() requires argument 2, the retry delay in seconds, to be a non-negative integer (provided '${2-<missing>}')." -ec "$err_argument_type"
+                                                                                exit_if_has_bugs
+    local -i _rc="$success"
 
-    local -i _max_attempts=$1; shift
-    local -i _delay=$1; shift
-    local _output="/dev/stdout"
+    # get the attempts and the delay; the switches follow
+    local _max_attempts=$1
+    local _delay=$2
+    shift 2
 
-    # shellcheck disable=SC2086
-    is_boolean "$1" && $1 && _output="$_ignore"
-    is_boolean "$1" && shift
+    local _is_query=false
+    local _is_quiet=false
+    local _is_transient=true
 
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires a command after the maximum-attempt, the delay arguments, and the optional output-suppression flag." -ec "$err_invalid_arguments"
+    while (( $# > 0 )) && [[ $1 == @(--query|--quiet|--is-transient) ]]; do
+        [[ $1 == --query ]] && _is_query=true
+        [[ $1 == --quiet ]] && _is_quiet=true
+        [[ $1 == --is-transient ]] && {
+            (( $# > 1 ))                                                        || bug "${FUNCNAME[0]}() option --is-transient MUST be followed by the name of a predicate function that can analyze the output from the command." -ec "$err_missing_argument"
+            [[ ! -v 2 ]] || is_function "$2"                                    || bug "${FUNCNAME[0]}() option --is-transient MUST be followed by the name of a predicate function that can analyze the output from the command (provided '${2-<missing>}')." -ec "$err_argument_type"
+                                                                                exit_if_has_bugs
+            _is_transient=$2
+            shift
+        }
+        shift
+    done
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires a command to execute, followed by 0 or more arguments." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    if is_dry_run; then
-        echo "dry-run$ $*" >&2
+    is_dry_run && ! $_is_query && {
+        printf 'dry-run$'; printf ' %q' "$@"; echo;
         return "$success"
-    fi
+    } >&2
+
+    # stdout and stderr go to temp files to preserve output fidelity (especially newlines), yet still allow us to process them separately
+    local _stderr_file=''
+    local _stdout_file=''
+    _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
+    (( _rc != success ))   || _stdout_file=$(mktemp)                            || with_error _rc "$err_io_failure" "Failed to create a temporary file"
+    (( _rc == success ))                                                        || {
+                                                                                        rm -f "$_stderr_file" "$_stdout_file"
+                                                                                        return "$_rc"
+                                                                                   }
 
     local IFS=" "
     trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $*"
 
-    local -i _rc=$success
     local -i _attempt=0
-    until "$@" 1>"$_output"; do
+    local _transient_error
+
+    until "$@" >"$_stdout_file" 2>"$_stderr_file"; do
         _rc=$?
-        (( ++_attempt < _max_attempts )) || return "$_rc"
-        warning "Command failed (attempt $_attempt/$_max_attempts). Retrying in ${_delay}s."
-        sleep "$_delay"
+
+        cat "$_stderr_file" >&2
+        (( ++_attempt ))
+
+        $_is_transient "$_rc" "$_stdout_file" "$_stderr_file" &&
+            _transient_error=true ||
+            _transient_error=false
+
+        if (( _attempt < _max_attempts )) && $_transient_error; then
+            # retry and reset rc to success to avoid returning a failure code if the last attempt fails with a transient error
+            warning "Transient command failure (attempt $_attempt/$_max_attempts). Retrying in ${_delay}s."
+            sleep "$_delay"
+            _rc=$success
+        else
+            if $_transient_error; then
+                error "After $_attempt attempts, the command is still failing." -ec "$err_logic_error"
+            else
+                error "The command failed with the non-transient exit code $_rc." -ec "$err_logic_error"
+            fi
+            break
+        fi
     done
+
+    (( _rc == success )) && cat "$_stderr_file" >&2
+    $_is_quiet || cat "$_stdout_file"
+
+    rm -f "$_stderr_file" "$_stdout_file"
+
+    return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------

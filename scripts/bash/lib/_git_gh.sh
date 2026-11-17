@@ -292,68 +292,82 @@ function validate_gh_repo_description()
 
 #-----------------------------------------------------------------------------------------------
 # @description Executes a GitHub CLI (`gh`) command with retry logic for transient failures.
+#   In a dry run, a query (`--query`) runs as usual; any other command is only printed.
 #
 # Notes:
-#   - stdout is written to `$output` (either `/dev/stdout` or `$_ignore`, depending on
-#     `ignore_output`); stderr is always written to the caller's stderr.
+#   - The `gh` command's stdout is written to the caller's stdout (unless `--quiet`); its stderr
+#     always goes to the caller's stderr.
 #   - Retries only on errors that look transient, based on a pattern match against stderr:
 #     `rate limit`, `server error`, `timeout`, `temporarily unavailable`, `try again`,
 #     `502`/`503`/`504`, `connection refused`, `network error`.
 #   - Non-transient errors (invalid args, not found, permissions, etc.) fail immediately
 #     without retrying.
-#   - Honors `$dry_run`: if set, prints the command to stderr and returns success without
-#     executing it.
+#   - The switches come before the `gh` command, in any order: everything after the first
+#     argument that is not a switch is passed to `gh` unchanged.
 #
 # @arg $1 int Maximum number of attempts.
 # @arg $2 int Delay between attempts, in seconds.
-# @arg $3 bool If present and a valid boolean, suppresses stdout when true (optional, default:
-#   false). If not a boolean, it is treated as the start of the `gh` command's own arguments.
-# @arg $@ string The `gh` command and its arguments (subcommand, flags, etc.) — starts at $3
-#   or $4 depending on whether the optional `ignore_output` flag was given.
+# @option --query The command only reads: it runs in a dry run too, so the caller gets real data.
+# @option --quiet Discards the command's stdout (not its stderr).
+# @arg $@ string The `gh` command and its arguments (subcommand, flags, etc.).
 #
-# @exitcode success=0: If the command eventually succeeds.
+# @stdout The command's stdout; nothing with `--quiet`, or for a non-query in a dry run.
+# @stderr The command's stderr; in a dry run, `dry-run$ gh <command>` for a non-query.
+#
+# @exitcode success=0: If the command eventually succeeds, or it is a non-query in a dry run.
 # @exitcode N Otherwise, the last exit code returned by `gh`, or `err_logic_error` if all
 #   retry attempts are exhausted.
 #
 # @example
-#   execute_gh_with_retry 3 5 repo create my-repo --public
-# @example
-#   execute_gh_with_retry 3 2 true repo delete owner/repo --yes
+#   execute_gh_with_retry 3 5 --quiet repo create my-repo --public
+#   default_branch=$(execute_gh_with_retry 3 2 --query repo view --json defaultBranchRef -q .defaultBranchRef.name)
 #-----------------------------------------------------------------------------------------------
 function execute_gh_with_retry()
 {
     (( $# >= 3 ))                                                               || bug "${FUNCNAME[0]}() requires at least three arguments (provided $#):" \
                                                                                        "  - maximum number of attempts" \
                                                                                        "  - delay between attempts, in seconds" \
-                                                                                       "  - <gh-command> [args...]" \
+                                                                                       "  - <gh-command>" \
+                                                                                       "  - [args...]" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 ]]  || is_natural "$1"                                            || bug "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>" -ec "$err_argument_type"
-    [[ ! -v 2 ]]  || is_natural "$2"                                            || bug "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds" -ec "$err_argument_type"
+    [[ ! -v 2 ]]  || is_non_negative "$2"                                       || bug "${FUNCNAME[0]}() requires the second argument, the delay in seconds, to be a non-negative integer" -ec "$err_argument_type"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
 
-    # get the first two and the optional third (ignore_output) boolean parameter
+    # get the attempts and the delay; the switches follow
     local _max_attempts=$1
     local _delay=$2
     shift 2
 
-    local _ignore_output=false
-    is_boolean "$1" && _ignore_output=$1 && shift
+    local _is_query=false
+    local _is_quiet=false
 
-    local _output
-    $_ignore_output &&
-        _output="$_ignore" ||
-        _output="/dev/stdout"
+    while (( $# > 0 )) && [[ $1 == @(--query|--quiet) ]]; do
+        [[ $1 == --query ]] && _is_query=true
+        [[ $1 == --quiet ]] && _is_quiet=true
+        shift
+    done
 
-    is_dry_run && echo "dry-run$ gh $*" >&2 && return "$success"
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires a gh command to execute, followed by 0 or more arguments." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
-    # stderr goes to a temp file to preserve output fidelity (especially newlines), yet still allows us to process them separately
+    # in a dry run, queries run; everything else is only printed
+    is_dry_run && ! $_is_query && {
+        { printf 'dry-run$'; printf ' %q' "$@"; echo; } >&2
+        return "$success"
+    }
+
+    # stdout and stderr go to temp files to preserve output fidelity (especially newlines), yet still allow us to process them separately
     local _stderr_file=''
     local _stdout_file=''
     _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
     (( _rc != success )) || _stdout_file=$(mktemp)                              || with_error _rc "$err_io_failure" "Failed to create a temporary file";
-    (( _rc == success ))                                                        || { rm -f "$_stderr_file" "$_stdout_file"; return "$_rc"; }
+    (( _rc == success ))                                                        || {
+                                                                                        rm -f "$_stderr_file" "$_stdout_file"
+                                                                                        return "$_rc"
+                                                                                   }
 
     local _attempt=0
     local _message=""
@@ -362,10 +376,10 @@ function execute_gh_with_retry()
 
     until gh "$@" >"$_stdout_file" 2>"$_stderr_file"; do
         _rc=$?
+        (( ++_attempt ))
 
         cat "$_stderr_file" >&2
         _message=$(cat "$_stderr_file") || true
-        (( ++_attempt ))
 
         # Check if error is transient - retry
         if [[ ! "$_message" =~ (rate.limit|server.error|timeout|temporarily.unavailable|try.again|502|503|504|connection.refused|network.error) ]]; then
@@ -387,7 +401,7 @@ function execute_gh_with_retry()
     done
 
     (( _rc == success )) && cat "$_stderr_file" >&2
-    cat "$_stdout_file" >> "$_output"
+    $_is_quiet || cat "$_stdout_file"
 
     rm -f "$_stderr_file" "$_stdout_file"
 
@@ -395,68 +409,76 @@ function execute_gh_with_retry()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Executes a `gh api` command with retry logic for transient failures.
+# @description Executes a `gh api` command with retry logic for transient failures. In a dry
+#   run, a query (specified by the option `--query`) runs as usual; any other request is only
+#   printed.
 #
 # Notes:
-#   - stdout is written to `$output` (either `/dev/stdout` or `$_ignore`, depending on
-#     `ignore_output`); stderr is always written to the caller's stderr.
+#   - The response (stdout) is written to the caller's stdout (unless `--quiet`); stderr always
+#     goes to the caller's stderr.
 #   - Prefers the JSON `.status` field from the response body to decide whether an error is
 #     transient: `425`, `429`, `500`, `502`, `503`, `504` are retried; `1xx`/`2xx`/`3xx` are
 #     treated as success; anything else fails immediately.
 #   - If the response has no usable JSON `.status`, falls back to a pattern match against
 #     stderr (`authentication`, `network`, `timeout`, `dns`, `connection`) to decide whether
 #     to retry.
-#   - Honors `$dry_run`: if set, prints the command to stderr and returns success without
-#     executing it.
+#   - The switches '--query' and '--quiet' come before the route, in any order: everything after
+#     the first argument that is not a switch is passed to `gh api` unchanged.
 #
 # @arg $1 int Maximum number of attempts.
 # @arg $2 int Delay between attempts, in seconds.
-# @arg $3 bool If present and a valid boolean, suppresses stdout when true (optional, default:
-#   false). If not a boolean, it is treated as the start of the `gh api` command's own
-#   arguments.
-# @arg $@ string The `gh api` route and its arguments — starts at $3 or $4 depending on
-#   whether the optional `ignore_output` flag was given.
+# @option --query The request only reads (a GET): it runs in a dry run too, so the caller gets real data.
+# @option --quiet Discards the response (stdout), not stderr.
+# @arg $@ string The `gh api` route and its arguments.
 #
-# @exitcode success=0: If the command eventually succeeds.
+# @stdout The response; nothing with `--quiet`, or for a non-query in a dry run.
+# @stderr The command's stderr; in a dry run, `dry-run$ gh api <route>` for a non-query.
+#
+# @exitcode success=0: If the request eventually succeeds, or it is a non-query in a dry run.
 # @exitcode N Otherwise, the last exit code returned by `gh api`, or `err_logic_error` if all
 #   retry attempts are exhausted.
 #
 # @example
-#   execute_gh_api_with_retry 3 5 repos/vmelamed/my-repo
+#   repo_id=$(execute_gh_api_with_retry 3 2 --query "repos/vmelamed/vm2.Ulid" --jq .id)
+#   execute_gh_api_with_retry 3 2 --quiet -X PATCH "repos/vmelamed/vm2.Ulid" -F delete_branch_on_merge=true
 #-----------------------------------------------------------------------------------------------
 function execute_gh_api_with_retry()
 {
     (( $# >= 3 ))                                                               || bug "${FUNCNAME[0]}() requires at least three arguments (provided $#):" \
                                                                                        "  - maximum number of attempts" \
                                                                                        "  - delay between attempts, in seconds" \
-                                                                                       "  - if present and a valid boolean, suppresses stdout when true (optional, default: false)" \
-                                                                                       "  - the 'gh api' command to execute" \
+                                                                                       "  - the 'gh api' route to request" \
                                                                                        "  - [args...] Arguments for the 'gh api' command" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_non_negative "$1"                                        || bug "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>" -ec "$err_argument_type"
-    [[ ! -v 2 ]] || is_non_negative "$2"                                        || bug "${FUNCNAME[0]}() requires the second argument to be a natural number: <delay> in seconds" -ec "$err_argument_type"
+    [[ ! -v 1 ]] || is_natural "$1"                                             || bug "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>" -ec "$err_argument_type"
+    [[ ! -v 2 ]] || is_non_negative "$2"                                        || bug "${FUNCNAME[0]}() requires the second argument, the delay in seconds, to be a non-negative integer" -ec "$err_argument_type"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
 
-    # get the first two and the optional third (ignore_output) boolean parameter
+    # get the attempts and the delay; the switches follow
     local _max_attempts=$1
     local _delay=$2
     shift 2
 
-    local _ignore_output=false
-    is_boolean "$1" &&
-        _ignore_output=$1 &&
+    local _is_query=false
+    local _is_quiet=false
+
+    while (( $# > 0 )) && [[ $1 == @(--query|--quiet) ]]; do
+        [[ $1 == --query ]] && _is_query=true
+        [[ $1 == --quiet ]] && _is_quiet=true
         shift
+    done
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires an API route to request, followed by 0 or more arguments." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
 
-    local _output
-    $_ignore_output &&
-        _output="$_ignore" ||
-        _output="/dev/stdout"
+    # in a dry run, queries run; everything else is only printed
+    if is_dry_run && ! $_is_query; then
+        { printf 'dry-run$'; printf ' %q' "$@"; echo; } >&2
+        return "$success"
+    fi
 
-    is_dry_run && echo "dry-run$ gh $*" >&2 && return "$success"
-
-    # stderr and stdout go to temp files to preserve output fidelity (especially newlines), yet still allow us to process them separately
+    # stdout and stderr go to temp files to preserve output fidelity (especially newlines), yet still allow us to process them separately
     local _stderr_file=''
     local _stdout_file=''
     _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
@@ -473,12 +495,11 @@ function execute_gh_api_with_retry()
 
     until gh api "$@" >"$_stdout_file" 2>"$_stderr_file"; do
         _rc=$?
+        (( ++_attempt ))
 
         cat "$_stderr_file" >&2
-
         _response=$(cat "$_stdout_file")           || true
         status=$(jq -r '.status' <<< "$_response") || true
-        (( ++_attempt ))
 
         # If no JSON status, check stderr for network/auth errors
         if [[ -z "$status" || "$status" == "null" ]]; then
@@ -517,7 +538,7 @@ function execute_gh_api_with_retry()
     done
 
     (( _rc == success )) && cat "$_stderr_file" >&2
-    cat "$_stdout_file" >> "$_output"
+    $_is_quiet || cat "$_stdout_file"
 
     rm -f "$_stderr_file" "$_stdout_file"
 
@@ -553,8 +574,8 @@ function get_gh_repo_property()
     local _property_name=$2
     local -i _rc=$success
 
-    execute_gh_api_with_retry 3 2 --paginate "repos/$_repo_full_name" -q ".$_property_name" \
-                                                                                || with_error _rc "$err_tool_error" "Could not get the property '$_property_name' of the repository '$_repo_full_name' from GitHub"
+    execute_gh_api_with_retry 3 2 --query \
+        --paginate "repos/$_repo_full_name" -q ".$_property_name"               || with_error _rc "$err_tool_error" "Could not get the property '$_property_name' of the repository '$_repo_full_name' from GitHub"
 
     return "$_rc"
 }
@@ -636,7 +657,8 @@ function get_gh_repo_state()
     local -i _rc=$success
 
     local _query_result
-    _query_result=$(execute_gh_api_with_retry 3 2 --paginate "repos/$_repo_full_name" -q "$jq_gh_repo_state") \
+    _query_result=$(execute_gh_api_with_retry 3 2 --query \
+                        --paginate "repos/$_repo_full_name" -q "$jq_gh_repo_state") \
                                                                                 || with_error _rc "$err_tool_error" "Could not get the status of the repository '$_repo_full_name' from GitHub"
 
     (( _rc != success )) || {

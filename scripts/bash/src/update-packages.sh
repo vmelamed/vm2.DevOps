@@ -216,7 +216,9 @@ for repo in "${!target_repos[@]}"; do
     }
 
     if open_pull_request "$repo_path" "$new_branch" _pr_link; then
-        reasons[$repo]="📬 PR opened: $_pr_link -- please see it through"
+        is_dry_run &&
+            reasons[$repo]="📬 would open a PR for '$new_branch'" ||
+            reasons[$repo]="📬 PR opened: $_pr_link -- please see it through"
     else
         warning "'$repo': the branch was pushed, but opening a PR failed. Run 'gh pr create' in '$repo_path'."
         reasons[$repo]="pushed to '$new_branch', but the PR was not created -- open it yourself"

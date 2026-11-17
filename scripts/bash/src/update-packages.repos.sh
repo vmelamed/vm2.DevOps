@@ -291,7 +291,6 @@ function refresh_lock_files()
     return "$_rc"
 }
 
-
 #-----------------------------------------------------------------------------------------------
 # @description Opens a pull request for the upgrade branch, or finds the one already open for
 #   it. The branch must already be pushed.
@@ -305,27 +304,35 @@ function refresh_lock_files()
 #-----------------------------------------------------------------------------------------------
 function open_pull_request()
 {
-    (( $# == 3 ))                          || bug "${FUNCNAME[0]}() requires three arguments (provided $#):" \
-                                                  "  - the repository path" \
-                                                  "  - the branch" \
-                                                  "  - the URL output." \
-                                                  -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                  || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided ${1-<missing>})." -ec "$err_argument_value"
-    [[ ! -v 2 || -n $2 ]]                  || bug "${FUNCNAME[0]}() requires argument 2, the branch name, to be non-empty." -ec "$err_argument_value"
-    [[ ! -v 3 ]] || is_variable_name "$3"  || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided ${3-<missing>})." -ec "$err_argument_value"
-    exit_if_has_bugs
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires three arguments (provided $#):" \
+                                                                                       "  - the repository path" \
+                                                                                       "  - the branch" \
+                                                                                       "  - the URL output." \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided ${1-<missing>})." -ec "$err_argument_value"
+    [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the branch name, to be non-empty." -ec "$err_argument_value"
+    [[ ! -v 3 ]] || is_variable_name "$3"                                       || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided ${3-<missing>})." -ec "$err_argument_value"
+                                                                                exit_if_has_bugs
 
     local _repo=$1 _branch=$2
     local -n _url_ref=$3
     _url_ref=''
 
-    _url_ref=$(cd "$_repo" && gh pr list --head "$_branch" --state open --json url --jq '.[0].url // empty' 2>/dev/null) || true
+    _url_ref=$(cd "$_repo" && execute_gh_with_retry 3 2 --query \
+                                    pr list \
+                                    --head "$_branch" \
+                                    --state open \
+                                    --json url \
+                                    --jq '.[0].url // empty' 2>/dev/null)       || true
     [[ -n $_url_ref ]] && return "$success"
 
     _url_ref=$(cd "$_repo" &&
-               execute gh pr create --head "$_branch" \
-                                    --title "chore(deps): update NuGet package versions in Directory.Packages.props" \
-                                    --body "Automated dependency upgrade (stable versions only, never a downgrade) by 'update-packages.sh'." 2>/dev/null) || true
-    [[ -n $_url_ref ]] && return "$success"
-    return "$err_tool_error"
+               execute_gh_with_retry 3 2 \
+                    pr create --head "$_branch" \
+                    --title "chore(deps): update NuGet package versions in Directory.Packages.props" \
+                    --body "Automated dependency upgrade (stable versions only, never a downgrade) by 'update-packages.sh'." 2>/dev/null) || true
+    is_dry_run && return "$success" # the PR was only printed: there is no URL to report
+    [[ -n $_url_ref ]]                                                          || return "$err_tool_error"
+    return "$success"
+
 }

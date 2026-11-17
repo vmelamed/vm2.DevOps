@@ -53,20 +53,32 @@ declare -x interval
 declare -x timeout
 
 declare pr_title pr_url pr_head
+declare result
 
-{
-    IFS=$'\t' read -r pr_title pr_url pr_head
-} < <(gh pr view "$pr_number" --repo "$repo" --json title,url,headRefOid --jq '[.title, .url, .headRefOid] | @tsv')             || exit_with_error "Could not read pull request #$pr_number of '$repo'." -ec "$err_tool_error"
-[[ -n $pr_head ]]                                                                                                               || exit_with_error "Pull request #$pr_number of '$repo' was not found." -ec "$err_not_found"
+result=$(execute_gh_with_retry 3 2 --query \
+                pr view "$pr_number" \
+                --repo "$repo" \
+                --json title,url,headRefOid \
+                --jq '[.title, .url, .headRefOid] | @tsv')                      || exit_with_error "Could not read pull request #$pr_number of '$repo'." -ec "$err_tool_error"
+IFS=$'\t' read -r pr_title pr_url pr_head <<< "$result"
+[[ -n $pr_head ]]                                                               || exit_with_error "Pull request #$pr_number of '$repo' was not found." -ec "$err_not_found"
 
 # Counts the submitted reviews of the pull request's head commit. A PENDING review (the authenticated user's draft, not
 # yet submitted) already carries the head commit's id, but is not a review yet: it must not end '--watch'. The SHA is 40
 # hex digits from GitHub, so it is safe to put into the jq filter.
 function count_head_reviews()
 {
-    gh api --paginate "repos/$repo/pulls/$pr_number/reviews" \
-           --jq ".[] | select(.commit_id == \"$pr_head\" and .state != \"PENDING\") | .id" |
-        wc -l
+    local _result
+    _result=$(execute_gh_api_with_retry 3 2 --query \
+            --paginate "repos/$repo/pulls/$pr_number/reviews" \
+            --jq ".[] | select(.commit_id == \"$pr_head\" and .state != \"PENDING\") | .id") \
+                                                                                || return $?
+    [[ -n $_result ]]                                                           || {
+                                                                                        # a here-string adds a newline: wc -l would count 1
+                                                                                        echo 0
+                                                                                        return "$success"
+                                                                                   }
+    wc -l <<< "$_result"
 }
 
 if $watch; then
@@ -74,10 +86,10 @@ if $watch; then
     declare -i head_reviews=0
     declare -i remaining=0
     while :; do
-        head_reviews=$(count_head_reviews)                                                                                      || exit_with_error "Could not read the reviews of #$pr_number." -ec "$err_tool_error"
+        head_reviews=$(count_head_reviews)                                      || exit_with_error "Could not read the reviews of #$pr_number." -ec "$err_tool_error"
         (( head_reviews == 0 )) || break
         remaining=$(( deadline - SECONDS ))
-        (( remaining > 0 ))                                                                                                     || exit_with_error "No review of commit ${pr_head:0:7} of #$pr_number within $timeout seconds." -ec "$err_not_found"
+        (( remaining > 0 ))                                                     || exit_with_error "No review of commit ${pr_head:0:7} of #$pr_number within $timeout seconds." -ec "$err_not_found"
         info "Waiting for a review of commit ${pr_head:0:7} of #$pr_number (checking every $interval seconds)..."
         # never sleep past the deadline: '--timeout' limits the wait, whatever the interval
         sleep $(( interval < remaining ? interval : remaining ))
@@ -169,11 +181,16 @@ printf '#%s: %s\n%s\n' "$pr_number" "$pr_title" "$pr_url"
 # PENDING reviews (the authenticated user's draft, not yet submitted) are skipped: they have no 'submitted_at' yet, and the text
 # is not final. The '// ""' keeps the formatting safe even so.
 printf '\n== Reviews\n\n'
-gh api --paginate "repos/$repo/pulls/$pr_number/reviews" \
-       --jq '.[] | select(.state != "PENDING" and .body != "") | "-- \(.user.login) [\(.state)] \((.submitted_at // "")[:16] | sub("T"; " "))\n\(.body)\n"' |
-    strip_html                                                                                                                  || exit_with_error "Could not read the reviews of #$pr_number." -ec "$err_tool_error"
+result=$(execute_gh_api_with_retry 3 2 --query \
+            --paginate "repos/$repo/pulls/$pr_number/reviews" \
+            --jq '.[] | select(.state != "PENDING" and .body != "") | "-- \(.user.login) [\(.state)] \((.submitted_at // "")[:16] | sub("T"; " "))\n\(.body)\n"') \
+                                                                                || exit_with_error "Could not read the reviews of #$pr_number." -ec "$err_tool_error"
+strip_html <<< "$result"
+
 
 printf '\n== Inline comments\n\n'
-gh api --paginate "repos/$repo/pulls/$pr_number/comments" \
-       --jq '.[] | "-- \(.path):\(.line // .original_line)\(if .in_reply_to_id then " (reply)" else "" end) -- \(.user.login)\n\(.body)\n"' |
-    strip_html                                                                                                                  || exit_with_error "Could not read the inline comments of #$pr_number." -ec "$err_tool_error"
+result=$(execute_gh_api_with_retry 3 2 --query \
+            --paginate "repos/$repo/pulls/$pr_number/comments" \
+            --jq '.[] | "-- \(.path):\(.line // .original_line)\(if .in_reply_to_id then " (reply)" else "" end) -- \(.user.login)\n\(.body)\n"') \
+                                                                                || exit_with_error "Could not read the inline comments of #$pr_number." -ec "$err_tool_error"
+strip_html <<< "$result"

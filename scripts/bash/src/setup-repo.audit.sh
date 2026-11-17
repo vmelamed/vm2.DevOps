@@ -145,9 +145,10 @@ function compare_settings()
         _keys=("${_keys_in_order[@]}")
         # make sure that all expected keys are included in the display order
         for _var in "${!_expected_key_values[@]}"; do
-            is_in "$_var" "${_keys[@]}"                                         || { warning "The variable '$_var' is not listed in the display order. Appending it at the end of the array."
-                                                                                     _keys+=("$_var")
-                                                                                }
+            is_in "$_var" "${_keys[@]}" || {
+                                                warning "The variable '$_var' is not listed in the display order. Appending it at the end of the array."
+                                                _keys+=("$_var")
+                                           }
         done
     else
         # otherwise put the keys in the array in sorted order
@@ -157,9 +158,9 @@ function compare_settings()
     # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
     local _json
 
-    _json=$(execute_gh_api_with_retry 3 2 --paginate "$_gh_endpoint")           || { with_error _rc "$err_tool_error" "Failed to fetch data from GitHub API: $_gh_endpoint."
-                                                                                     return "$_rc"
-                                                                                }
+    _json=$(execute_gh_api_with_retry 3 2 --query \
+                --paginate "$_gh_endpoint")                                     || with_error _rc "$err_tool_error" "Failed to fetch data from GitHub API: $_gh_endpoint."
+    ((_rc == success ))                                                         || return "$_rc"
 
     # read the key=value pairs into $actual_key_values
     local -A _known_key_values=()
@@ -167,7 +168,9 @@ function compare_settings()
 
     local _key='' _value=''
     while IFS='=' read -r _key _value; do
-        [[ -v _expected_key_values["$_key"] ]] && _known_key_values["$_key"]="$_value" || _unknown_key_values["$_key"]="$_value"
+        [[ -v _expected_key_values["$_key"] ]] &&
+            _known_key_values["$_key"]="$_value" ||
+            _unknown_key_values["$_key"]="$_value"
     done < <(jq -r "$_jq_transform" <<< "$_json")
 
     local _expected_value='' _actual_value=''
@@ -248,7 +251,8 @@ function audit_branch_ruleset()
     local _rulesets_json
     local _ruleset_id
 
-    _rulesets_json=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets") || true
+    _rulesets_json=$(execute_gh_api_with_retry 3 2 --query \
+                        --paginate "$path_rulesets")                            || true
     [[ -n "${_rulesets_json:-}" ]]                                              || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$branch' is missing"
     (( _rc != success )) || _ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$_rulesets_json" 2>"$_ignore")
     (( _rc != success )) || [[ -n "$_ruleset_id" ]]                             || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$branch' does not exist"
@@ -266,11 +270,10 @@ function audit_required_status_checks()
     echo "      $info_em  Required status checks list:"
 
     local _json
-    _json=$(execute_gh_api_with_retry 3 2 --paginate "$path_main_protection_ruleset") \
-                                                                                || { with_error _rc "$err_tool_error" "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
-                                                                                     return "$_rc"
-                                                                                }
-
+    _json=$(execute_gh_api_with_retry 3 2 --query \
+                --paginate "$path_main_protection_ruleset")                     || with_error _rc "$err_tool_error" "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
+    (( _rc == success ))                                                        || return "$_rc"
+                                                                                
     local -a _present_checks=()
     local _check
 
