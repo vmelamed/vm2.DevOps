@@ -48,7 +48,8 @@ _make_path_excluding() {
 }
 
 # Fake `gh` covering the two calls this script makes: the read-only `contents/benchmarks`
-# probe (succeeds only for repos listed in $HAS_BENCHMARKS, space-separated) and
+# probe (succeeds only for repos listed in $HAS_BENCHMARKS, space-separated; for the others it answers like the real
+# `gh api` does on a 404: a JSON body with "status": "404" on stdout, the message on stderr, exit 1) and
 # `workflow run` (fails for repos listed in $FAIL_DISPATCH_FOR, with a non-transient-looking
 # stderr message so execute_gh_with_retry doesn't waste time retrying).
 _install_fake_gh() {
@@ -64,11 +65,14 @@ _install_fake_gh() {
 _all="$*"
 echo "$_all" >> "$GH_CALL_LOG"
 case "$_all" in
-    api\ repos/*/contents/benchmarks\ --silent)
+    api\ repos/*/contents/benchmarks)
         _rest="${_all#api repos/}"
         _repo="${_rest%%/contents*}"
         _name="${_repo#*/}"
-        [[ " $HAS_BENCHMARKS " == *" $_name "* ]] && exit 0 || exit 1
+        [[ " $HAS_BENCHMARKS " == *" $_name "* ]] && { echo '[]'; exit 0; }
+        echo '{"message":"Not Found","documentation_url":"https://docs.github.com/rest","status":"404"}'
+        echo 'gh: Not Found (HTTP 404)' >&2
+        exit 1
         ;;
     workflow\ run\ *)
         for bad in $FAIL_DISPATCH_FOR; do
@@ -104,6 +108,9 @@ _run_rebuild_history() {
     # vm2_repositories currently has 11 entries (including vm2.DevOps itself); 2 report
     # benchmarks/ here, so 9 are expected to be skipped.
     assert_output --partial "no benchmarks/skipped : 9"
+    # a 404 is the expected answer for a repo without benchmarks/, not an error (regression: the probe used '--silent', so
+    # the 404 had no JSON body, and execute_gh_api_with_retry reported an "unrecoverable error" for every such repo)
+    refute_output --partial "ERROR"
 }
 
 @test "rebuild-bench-history: a custom --workflow is dispatched instead of the default" {

@@ -123,9 +123,14 @@ function resolve_arguments()
                                                                                 exit_if_has_errors # circuit breaker: resolving the values below needs valid environment and arguments above
 
     # resolve what was omitted: the current directory's repository, the current branch's pull request
-    [[ -n $repo ]] || repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") \
-                                                                                || error "The current directory is not in a GitHub repository; use '--repo <owner/repo>'." -ec "$err_not_found"
-    [[ -n $pr_number || -z $repo ]] || pr_number=$(gh pr view --json number --jq .number 2>"$_ignore") \
+    [[ -n $repo ]] || repo=$(execute_gh_with_retry 3 2 --query \
+                                repo view \
+                                --json nameWithOwner \
+                                --jq .nameWithOwner 2>"$_ignore")               || error "The current directory is not in a GitHub repository; use '--repo <owner/repo>'." -ec "$err_not_found"
+    [[ -n $pr_number || -z $repo ]] || pr_number=$(execute_gh_with_retry 3 2 --query \
+                                                        pr view \
+                                                        --json number \
+                                                        --jq .number 2>"$_ignore") \
                                                                                 || error "The current branch has no pull request; give the pull request number." -ec "$err_not_found"
 
     readonly pr_number

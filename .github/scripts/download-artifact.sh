@@ -46,8 +46,9 @@ declare -x workflow_id
 declare -x workflow_name
 declare -x workflow_path
 
-[[ -n $repository ]] ||
-    repository=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") || exit_with_error "The current directory is not in a GitHub repository; use '--repository <owner/repo>'." -ec "$err_not_found"
+[[ -n $repository ]] || repository=$(execute_gh_with_retry 3 2 --query \
+                                        repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") \
+                                                                                || exit_with_error "The current directory is not in a GitHub repository; use '--repository <owner/repo>'." -ec "$err_not_found"
 
 readonly repository
 
@@ -77,7 +78,8 @@ if [[ -z "$workflow_id" ]]; then
     declare -a workflow_ids=()
     declare what=''
 
-    _workflows=$(gh workflow list --repo "$repository" --json "id,name,path")   || exit_with_error "Could not list the workflows of '$repository'." -ec "$err_tool_error"
+    _workflows=$(execute_gh_with_retry 3 2 --query \
+                    workflow list --repo "$repository" --json "id,name,path")   || exit_with_error "Could not list the workflows of '$repository'." -ec "$err_tool_error"
 
     readarray -t workflow_ids < <(jq -r --arg n "$workflow_name" --arg p "$workflow_path" "$query" <<< "$_workflows")
 
@@ -135,13 +137,14 @@ declare artifact_present=false
 rc=$success
 
 # get the IDs of the last 100 successful runs of the specified workflow
-runs_text=$(gh run list \
-                 --repo "$repository" \
-                 --workflow "$workflow_id" \
-                 --status success \
-                 --limit 100 \
-                 --json databaseId \
-                 --jq '.[].databaseId')                                         || with_error rc "$err_tool_error" "Query for successful runs of workflow '$workflow_id' failed ('gh run list...')."
+runs_text=$(execute_gh_with_retry 3 2 --query \
+                run list \
+                --repo "$repository" \
+                --workflow "$workflow_id" \
+                --status success \
+                --limit 100 \
+                --json databaseId \
+                --jq '.[].databaseId')                                          || with_error rc "$err_tool_error" "Query for successful runs of workflow '$workflow_id' failed ('gh run list...')."
 [[ $rc -ne $success || -z $runs_text ]] || readarray -t runs <<< "$runs_text"   || with_error rc "$err_io_failure" "'readarray' failed"
 (( rc == success ))                                                             || exit_with_error "Failed to retrieve the list of successful runs of the workflow '$workflow_id' in the repository '$repository'." -ec "$rc"
 (( ${#runs[@]} > 0 ))                                                           || exit_with_error "No successful runs found for the workflow '$workflow_id' in the repository '$repository'." -ec "$err_not_found"
@@ -154,7 +157,8 @@ for run in "${runs[@]}"; do
     trace "Checking run $run for the artifact '$artifact_name'..."
     rc=$success
     artifact_present=false
-    artifacts_list=$(gh api "repos/$repository/actions/runs/$run/artifacts")    || with_error rc "$err_tool_error" "Could not list the artifacts of run $run."
+    artifacts_list=$(execute_gh_api_with_retry 3 2 --query \
+                        "repos/$repository/actions/runs/$run/artifacts")        || with_error rc "$err_tool_error" "Could not list the artifacts of run $run."
     (( rc != success )) || artifact_present=$(jq -r --arg n "$artifact_name" 'any (.artifacts[]; .name==$n)' <<< "$artifacts_list")
     (( rc == success ))                                                         || continue
     if ! $artifact_present; then
@@ -168,7 +172,8 @@ for run in "${runs[@]}"; do
                 "You may want to refresh the artifact."
     fi
 
-    download_result=$(execute gh run download "$run" \
+    download_result=$(execute_gh_with_retry 3 2 \
+                            run download "$run" \
                             --repo "$repository" \
                             --name "$artifact_name" \
                             --dir "$artifacts" 2>&1)                            || exit_with_error "Error while downloading '$artifact_name': $download_result" -ec "$err_tool_error"

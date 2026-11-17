@@ -368,22 +368,22 @@ if ! has_remote_repo repo_state; then
     fi
 
     info "  ...creating repository '$repo' with $visibility visibility and default branch '$branch'. Description: '$description'. parameters;"
-    execute_gh_with_retry 3 2 true  repo create "${create_repo_params[@]}"
-    undos+=("gh repo delete '$repo' --yes")
+    execute_gh_with_retry 3 2 --quiet repo create "${create_repo_params[@]}"    || rc=$?
+    (( rc != success )) || undos+=("gh repo delete '$repo' --yes")
 
-    info "  ...setting the remote origin URL to '$repo_url';"
-    execute --quiet git -C "$repo_path" remote set-url origin "$repo_url"
-    undos+=("git -C '$repo_path' remote remove origin")
+    (( rc != success )) || info "  ...setting the remote origin URL to '$repo_url';"
+    (( rc != success )) || execute --quiet git -C "$repo_path" remote set-url origin "$repo_url"
+    (( rc != success )) || undos+=("git -C '$repo_path' remote remove origin")
 
-    info "  ...pushing the default branch '$branch' to GitHub;"
-    execute_with_retry 3 2 true git -C "$repo_path" push -u origin "$branch"
-    undos+=("git -C '$repo_path' push -u origin --delete '$branch'")
+    (( rc != success )) || info "  ...pushing the default branch '$branch' to GitHub;"
+    (( rc != success )) || execute_with_retry 3 2 --quiet git -C "$repo_path" push -u origin "$branch"
+    (( rc != success )) || undos+=("git -C '$repo_path' push -u origin --delete '$branch'")
 
-    info "...GitHub repository '$repo' created and linked to the local repository in '$repo_path'."
+    (( rc != success )) || info "...GitHub repository '$repo' created and linked to the local repository in '$repo_path'."
 
     # Checks: get the repo state again that will have more real git and github information in it.
-    get_repo_state "$repo_path" repo_state || rc=$?
-    dump_vars --quiet --header "Repository State 'repo_state':" repo_state
+    (( rc != success )) || get_repo_state "$repo_path" repo_state               || rc=$?
+    (( rc != success )) || dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
     (( rc == 0 ))                                                               || exit_with_error "Failed to get repository state after creation. " \
                                                                                                    "The repository may have been created successfully, but the script cannot continue with configuration." \

@@ -910,11 +910,13 @@ Validate a GitHub repository owner / name / description, reporting an error when
 
 ### execute_gh_with_retry()
 
-Executes a `gh` command with retry logic for transient failures (rate limits, timeouts, etc.).
+Executes a `gh` command with retry logic for transient failures (rate limits, timeouts, etc.). `--query` marks a read-only
+command, which runs in a dry run too; any other command is only printed. `--quiet` discards its stdout.
 
 ### execute_gh_api_with_retry()
 
-Executes a `gh api` command with retry logic based on the response's HTTP status (or stderr pattern matching as a fallback).
+Executes a `gh api` command with retry logic based on the response's HTTP status (or stderr pattern matching as a fallback). `--query` and
+`--quiet` as in `execute_gh_with_retry()`.
 
 ### get_gh_repo_property()
 

@@ -86,17 +86,23 @@ function resolve_github_app_ids()
     # Resolve the GitHub Actions app ID dynamically via the API.
     # Used to pin required status checks to GitHub Actions specifically.
     # this function cannot be called before initialize_gh_paths() because the latter relies on the actions_app_id variable being set - circular dependency
-    actions_app_id=$(gh api --paginate apps/github-actions --jq '.id' 2>"$_ignore") || error "${FUNCNAME[0]}() Failed to resolve GitHub Actions app ID from the API." -ec "$err_tool_error"
+    actions_app_id=$(execute_gh_api_with_retry 3 2 --query \
+                            --paginate apps/github-actions \
+                            --jq '.id' 2>"$_ignore")                            || error "${FUNCNAME[0]}() Failed to resolve GitHub Actions app ID from the API." -ec "$err_tool_error"
     trace "GitHub Actions app ID: $actions_app_id"
-    [[ "$actions_app_id" == "15368" ]]                                              || warning "Unexpected GitHub Actions app ID: $actions_app_id (expected 15368). Required status check matching may not work correctly."
+    [[ "$actions_app_id" == "15368" ]]                                          || warning "Unexpected GitHub Actions app ID: $actions_app_id (expected 15368). Required status check matching may not work correctly."
 
-    dependabot_app_id=$(gh api --paginate apps/dependabot --jq '.id' 2>"$_ignore")  || error "${FUNCNAME[0]}() Failed to resolve Dependabot app ID from the API." -ec "$err_tool_error"
+    dependabot_app_id=$(execute_gh_api_with_retry 3 2 --query \
+                            --paginate apps/dependabot \
+                            --jq '.id' 2>"$_ignore")                            || error "${FUNCNAME[0]}() Failed to resolve Dependabot app ID from the API." -ec "$err_tool_error"
     trace "Dependabot app ID: $dependabot_app_id"
-    [[ "$dependabot_app_id" == "29110" ]]                                           || warning "Unexpected Dependabot app ID: $dependabot_app_id (expected 29110). Required status check matching may not work correctly for Dependabot."
+    [[ "$dependabot_app_id" == "29110" ]]                                       || warning "Unexpected Dependabot app ID: $dependabot_app_id (expected 29110). Required status check matching may not work correctly for Dependabot."
 
-    codespaces_app_id=$(gh api --paginate apps/codespaces --jq '.id' 2>"$_ignore")  || error "${FUNCNAME[0]}() Failed to resolve Codespaces app ID from the API." -ec "$err_tool_error"
+    codespaces_app_id=$(execute_gh_api_with_retry 3 2 --query \
+                            --paginate apps/codespaces \
+                            --jq '.id' 2>"$_ignore")                            || error "${FUNCNAME[0]}() Failed to resolve Codespaces app ID from the API." -ec "$err_tool_error"
     trace "Codespaces app ID: $codespaces_app_id"
-    [[ "$codespaces_app_id" == "231849" ]]                                          || warning "Unexpected Codespaces app ID: $codespaces_app_id (expected 231849). Required status check matching may not work correctly for Codespaces."
+    [[ "$codespaces_app_id" == "231849" ]]                                      || warning "Unexpected Codespaces app ID: $codespaces_app_id (expected 231849). Required status check matching may not work correctly for Codespaces."
     exit_if_has_errors
 
     # `readonly` (a POSIX special builtin), not `declare -r`: this runs inside a function body,
@@ -310,8 +316,8 @@ function initialize_main_protection_rs_id()
     (( main_protection_rs_id <= 0 ))                                            || return "$success"
 
     # try to get the main_protection_rs_id
-    main_protection_rs_id=$(execute_gh_api_with_retry 3 2 --paginate "$path_rulesets" -q "$jq_ruleset_id") ||
-        return "$failure"
+    main_protection_rs_id=$(execute_gh_api_with_retry 3 2 --query --paginate "$path_rulesets" -q "$jq_ruleset_id") \
+                                                                                || return "$failure"
 
     if (( main_protection_rs_id > 0 )); then
         trace "Initialized main protection ruleset ID: $main_protection_rs_id"
@@ -346,7 +352,7 @@ function get_current_nuget_server()
 
     local _repo_owner=${repo_owner:-$default_repo_owner}
 
-    read -r nuget_server < <(execute_gh_api_with_retry 3 2 "repos/$_repo_owner/$repo_name/actions/variables/NUGET_SERVER" --jq .value 2> "$_ignore") ||
+    read -r nuget_server < <(execute_gh_api_with_retry 3 2 --query "repos/$_repo_owner/$repo_name/actions/variables/NUGET_SERVER" --jq .value 2> "$_ignore") ||
         nuget_server=$default_nuget_server
 }
 
@@ -372,7 +378,7 @@ function configure_default_repo_settings()
 
     while IFS='=' read -r _key _value; do
         _existing["$_key"]="$_value"
-    done < <(execute_gh_api_with_retry 3 2 "$path_repo" -q "$jq_entries")
+    done < <(execute_gh_api_with_retry 3 2 --query "$path_repo" -q "$jq_entries")
 
     local -a _rs=()
     local _actual
@@ -396,7 +402,7 @@ function configure_default_repo_settings()
 
     if [[ ${#_rs[@]} -gt 0 ]]; then
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-        execute_gh_api_with_retry 3 2 true -X PATCH "$path_repo" "${_rs[@]}" &&
+        execute_gh_api_with_retry 3 2 --quiet -X PATCH "$path_repo" "${_rs[@]}" &&
             info "...repository settings configured." ||
             warning "Could not configure repository settings. Run the script with '--verbose' to see more details and troubleshoot."
     else
@@ -426,7 +432,7 @@ function configure_actions_permissions()
 
     while IFS='=' read -r _key _value; do
         _existing["$_key"]="$_value"
-    done < <(execute_gh_api_with_retry 3 2 "$path_permissions" -q "$jq_entries")
+    done < <(execute_gh_api_with_retry 3 2 --query "$path_permissions" -q "$jq_entries")
 
     local -a _rs=()
     local _actual
@@ -447,7 +453,7 @@ function configure_actions_permissions()
 
     if [[ ${#_rs[@]} -gt 0 ]]; then
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-        execute_gh_api_with_retry 3 2 true -X PUT "$path_permissions" -H "Accept: application/vnd.github+json" "${_rs[@]}" &&
+        execute_gh_api_with_retry 3 2 --quiet -X PUT "$path_permissions" -H "Accept: application/vnd.github+json" "${_rs[@]}" &&
             info "...actions workflow permissions configured." ||
             warning "Could not configure Actions workflow permissions. Run the script with '--verbose' to see more details and troubleshoot."
     else
@@ -513,7 +519,7 @@ function configure_variables()
 
     while IFS='=' read -r _var _value; do
         _current["$_var"]="$_value"
-    done < <(execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/variables" -q "$jq_vars")
+    done < <(execute_gh_api_with_retry 3 2 --query --paginate "$path_repo/$_app/variables" -q "$jq_vars")
 
     local _exists _default
     local _new_value=''
@@ -659,7 +665,7 @@ function set_var()
     local -i _rc=$success
 
     # create and/or set the secret value on GitHub
-    execute_gh_with_retry 3 2 true variable set "$_name" --body "$_value" -R "$repo" || {
+    execute_gh_with_retry 3 2 --quiet variable set "$_name" --body "$_value" -R "$repo" || {
         _rc=$?
         warning "Failed to create or assign a value to the variable $_name. Run the script with '--verbose' to see more details and troubleshoot."
     }
@@ -690,7 +696,7 @@ function delete_var()
     local -i _rc=$success
 
     # delete the variable on GitHub
-    execute_gh_with_retry 3 2 true variable delete "$_name" --repo "$repo" || {
+    execute_gh_with_retry 3 2 --quiet variable delete "$_name" --repo "$repo" || {
         _rc=$?
         warning "Failed to delete variable $_name. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
     }
@@ -756,7 +762,8 @@ function configure_secrets()
                                                                                      return "$_rc"
                                                                                 }
 
-    execute_gh_api_with_retry 3 2 --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names" > "$_temp" || _rc=$?
+    execute_gh_api_with_retry 3 2 --query --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names" > "$_temp" \
+                                                                                || _rc=$?
 
     local -a _current
 
@@ -907,7 +914,7 @@ function set_secret()
 
 
     # create and/or set the secret value on GitHub
-    execute_gh_with_retry 3 2 true secret set "$_name" --body "$__value" --app "$_app" --repo "$repo" || _rc=$?
+    execute_gh_with_retry 3 2 --quiet secret set "$_name" --body "$__value" --app "$_app" --repo "$repo" || _rc=$?
 
     restore_state _core_state
 
@@ -951,7 +958,7 @@ function delete_secret()
     local -i _rc=$success
 
     # delete the secret value on GitHub
-    execute_gh_with_retry 3 2 true secret delete "$_name" --app "$_app" --repo "$repo" || {
+    execute_gh_with_retry 3 2 --quiet secret delete "$_name" --app "$_app" --repo "$repo" || {
         _rc=$?
         warning "Failed to delete secret $_name for ${_app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
     }
@@ -1004,7 +1011,7 @@ function configure_branch_protection()
         _status_checks_json="[${_entries[*]}]"
     fi
 
-    execute_gh_api_with_retry 3 2 true -X "$_method" "$_endpoint" -H "Accept: application/vnd.github+json" \
+    execute_gh_api_with_retry 3 2 --quiet -X "$_method" "$_endpoint" -H "Accept: application/vnd.github+json" \
         --input - >"$_ignore" << JSON
 {
     "name": "$main_protection_rs_name",

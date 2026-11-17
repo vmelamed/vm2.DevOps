@@ -49,9 +49,9 @@ declare name
 # Fire-and-forget fan-out: one dispatch per repo. Each repo's own workflow loops $repeat times in its own Actions, so the
 # repos run in parallel and this script returns immediately -- nothing to wait on.
 for name in "${vm2_repositories[@]}"; do
-    # Read-only remote probe for a benchmarks/ directory. Run directly (not via the dry-run-aware wrapper) so --dry-run
-    # still reports an accurate target list.
-    if ! gh api "repos/$owner/$name/contents/benchmarks" --silent &> "$_ignore"; then
+    # Read-only remote probe for a benchmarks/ directory: a --query, so it runs in a dry run too, and --dry-run reports
+    # an accurate target list.
+    if ! execute_gh_api_with_retry 3 2 --quiet --query "repos/$owner/$name/contents/benchmarks"; then
         info "'$owner/$name' has no 'benchmarks/' directory (or is unreachable); skipping."
         no_bench=$(( no_bench + 1 ))
         continue

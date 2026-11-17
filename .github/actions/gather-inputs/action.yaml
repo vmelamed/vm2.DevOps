@@ -181,13 +181,14 @@ runs:
 
             # how many open PRs exist for this branch?
 
-            open_pr_count=$(gh pr list \
-                                  --repo '${{ github.repository }}' \
-                                  --state open \
-                                  --json headRefName \
-                                  --jq 'map(select(.headRefName == "${{ github.ref_name }}")) | length') || {
+            open_pr_count=$(execute_gh_with_retry 3 2 --query \
+                              pr list \
+                              --repo '${{ github.repository }}' \
+                              --state open \
+                              --json headRefName \
+                              --jq 'map(select(.headRefName == "${{ github.ref_name }}")) | length') || {
                 open_pr_count=0
-                warning "Failed to query open PR-s via gh. Running push-triggered CI with SHORT_RUN."
+                warning "Failed to query the open PRs via gh. Running push-triggered CI with SHORT_RUN."
             }
             info "Open PR count for '${{ github.ref_name }}': $open_pr_count"
 
