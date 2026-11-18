@@ -336,7 +336,7 @@ A shared function library sourced by scripts at startup.
 | `_error_codes.sh`      | Standardized error codes for CI scripts                                                                                                                                     |
 | `_git_vm2.sh`          | Git repository helpers specific to vm2 repos                                                                                                                                |
 | `_git.sh`              | Git repository helpers (plain git, no hosting service)                                                                                                                      |
-| `_git_gh.sh`           | GitHub helpers: naming rules, the repo state (`get_repo_state`), `gh`/`gh api` retry wrappers                                                                               |
+| `_git_gh.sh`           | GitHub helpers: naming rules, the repo state (`get_repo_state`), the `gh` transient-failure predicate                                                                       |
 | `_predicates.sh`       | Boolean test functions                                                                                                                                                      |
 | `_sanitize.sh`         | Input sanitization                                                                                                                                                          |
 | `_semver.sh`           | Semantic versioning utilities                                                                                                                                               |

@@ -55,8 +55,8 @@ declare -x timeout
 declare pr_title pr_url pr_head
 declare result
 
-result=$(execute_gh_with_retry 3 2 --query \
-                pr view "$pr_number" \
+result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+                gh pr view "$pr_number" \
                 --repo "$repo" \
                 --json title,url,headRefOid \
                 --jq '[.title, .url, .headRefOid] | @tsv')                      || exit_with_error "Could not read pull request #$pr_number of '$repo'." -ec "$err_tool_error"
@@ -69,8 +69,8 @@ IFS=$'\t' read -r pr_title pr_url pr_head <<< "$result"
 function count_head_reviews()
 {
     local _result
-    _result=$(execute_gh_api_with_retry 3 2 --query \
-            --paginate "repos/$repo/pulls/$pr_number/reviews" \
+    _result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+            gh api --paginate "repos/$repo/pulls/$pr_number/reviews" \
             --jq ".[] | select(.commit_id == \"$pr_head\" and .state != \"PENDING\") | .id") \
                                                                                 || return $?
     [[ -n $_result ]]                                                           || {
@@ -181,16 +181,16 @@ printf '#%s: %s\n%s\n' "$pr_number" "$pr_title" "$pr_url"
 # PENDING reviews (the authenticated user's draft, not yet submitted) are skipped: they have no 'submitted_at' yet, and the text
 # is not final. The '// ""' keeps the formatting safe even so.
 printf '\n== Reviews\n\n'
-result=$(execute_gh_api_with_retry 3 2 --query \
-            --paginate "repos/$repo/pulls/$pr_number/reviews" \
+result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+            gh api --paginate "repos/$repo/pulls/$pr_number/reviews" \
             --jq '.[] | select(.state != "PENDING" and .body != "") | "-- \(.user.login) [\(.state)] \((.submitted_at // "")[:16] | sub("T"; " "))\n\(.body)\n"') \
                                                                                 || exit_with_error "Could not read the reviews of #$pr_number." -ec "$err_tool_error"
 strip_html <<< "$result"
 
 
 printf '\n== Inline comments\n\n'
-result=$(execute_gh_api_with_retry 3 2 --query \
-            --paginate "repos/$repo/pulls/$pr_number/comments" \
+result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+            gh api --paginate "repos/$repo/pulls/$pr_number/comments" \
             --jq '.[] | "-- \(.path):\(.line // .original_line)\(if .in_reply_to_id then " (reply)" else "" end) -- \(.user.login)\n\(.body)\n"') \
                                                                                 || exit_with_error "Could not read the inline comments of #$pr_number." -ec "$err_tool_error"
 strip_html <<< "$result"

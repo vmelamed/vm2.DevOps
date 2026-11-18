@@ -318,8 +318,8 @@ function open_pull_request()
     local -n _url_ref=$3
     _url_ref=''
 
-    _url_ref=$(cd "$_repo" && execute_gh_with_retry 3 2 --query \
-                                    pr list \
+    _url_ref=$(cd "$_repo" && execute_with_retry --query --is-transient is_transient_gh_error \
+                                    gh pr list \
                                     --head "$_branch" \
                                     --state open \
                                     --json url \
@@ -327,8 +327,8 @@ function open_pull_request()
     [[ -n $_url_ref ]] && return "$success"
 
     _url_ref=$(cd "$_repo" &&
-               execute_gh_with_retry 3 2 \
-                    pr create --head "$_branch" \
+               execute_with_retry --is-transient is_transient_gh_error \
+                    gh pr create --head "$_branch" \
                     --title "chore(deps): update NuGet package versions in Directory.Packages.props" \
                     --body "Automated dependency upgrade (stable versions only, never a downgrade) by 'update-packages.sh'." 2>/dev/null) || true
     is_dry_run && return "$success" # the PR was only printed: there is no URL to report

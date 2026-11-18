@@ -57,16 +57,12 @@ for repo in "${vm2_repositories[@]}"; do
     _temp=$(mktemp)                                                             || with_error _rc "$err_io_failure" "Failed to create a temporary file."
     (( _rc == success ))                                                        || continue
 
-    execute_gh_api_with_retry 3 2 --query \
-        --paginate \
-        "repos/$repo_owner/$repo/$app/secrets" \
-        -q '.secrets[] | .name' > "$_temp"                                      || _rc=$?
-    (( _rc != success ))  || readarray -t repo_secrets < "$_temp" || _rc=$err_tool_error
+    execute_with_retry --query --is-transient is_transient_gh_error \
+        gh api --paginate "repos/$repo_owner/$repo/$app/secrets" -q '.secrets[] | .name' > "$_temp" \
+                                                                                || with_error _rc $? "  Failed to retrieve the list of secrets. Moving on to the next repository."
+    (( _rc != success ))  || readarray -t repo_secrets < "$_temp"               || with_error _rc "$err_tool_error" "  Failed to convert the GitHub response to a list of secrets. Moving on to the next repository."
     rm -f "$_temp" || true
-    (( _rc == success )) ||                                                     {
-                                                                                    error "  Failed to retrieve the list of secrets for repository '$repo_owner/$repo'. Moving on to the next repository." -ec "$_rc"
-                                                                                    continue
-                                                                                }
+    (( _rc == success )) ||                                                     continue
 
     is_in_i "$secret_name" "${repo_secrets[@]}" && secret_exists=true || secret_exists=false
     $secret_exists || confirm "  Secret '$secret_name' is not present in repository '$repo_owner/$repo'. Do you want to create it?" || continue
@@ -91,7 +87,8 @@ for repo in "${vm2_repositories[@]}"; do
 
     # ! $secret_exists || {
     #     trace "  Deleting secret '$secret_name' from repository '$repo' if it exists."
-    #     execute_gh_with_retry 3 2 --quiet secret delete "$secret_name" --app "$app" --repo "$repo"
+    #     execute_with_retry --quiet --is-transient is_transient_gh_error \
+    #         gh secret delete "$secret_name" --app "$app" --repo "$repo"
     # }
 
     trace "  Setting the secret '$secret_name' for application '$app' in repository '$repo'..."
@@ -100,12 +97,12 @@ for repo in "${vm2_repositories[@]}"; do
     __value=$secret_value
 
     is_dry_run && __value=$secret_placeholder
-    # This passes the plaintext secret to execute_gh_with_retry (_git_gh.sh), whose trace logs the complete argument list;
+    # This passes the plaintext secret to execute_with_retry (core.sh), whose trace logs the complete argument list;
     # --trace can also expand this call before the helper runs. Thus --verbose, --trace, and dry-run output can disclose the
     # secret. Suppress verbose/xtrace before expanding the command and restore the state afterward, as set_secret() in
     # setup-repo.functions.sh does, and log only a placeholder.
-    execute_gh_with_retry 3 2 --quiet \
-        secret \
+    execute_with_retry --quiet --is-transient is_transient_gh_error \
+        gh secret \
         set "$secret_name" \
         --body "$__value" \
         --app "$app" \

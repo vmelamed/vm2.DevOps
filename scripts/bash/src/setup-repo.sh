@@ -368,7 +368,8 @@ if ! has_remote_repo repo_state; then
     fi
 
     info "  ...creating repository '$repo' with $visibility visibility and default branch '$branch'. Description: '$description'. parameters;"
-    execute_gh_with_retry 3 2 --quiet repo create "${create_repo_params[@]}"    || rc=$?
+    execute_with_retry --quiet --is-transient is_transient_gh_error \
+        gh repo create "${create_repo_params[@]}"                               || rc=$?
     (( rc != success )) || undos+=("gh repo delete '$repo' --yes")
 
     (( rc != success )) || info "  ...setting the remote origin URL to '$repo_url';"
@@ -376,7 +377,7 @@ if ! has_remote_repo repo_state; then
     (( rc != success )) || undos+=("git -C '$repo_path' remote remove origin")
 
     (( rc != success )) || info "  ...pushing the default branch '$branch' to GitHub;"
-    (( rc != success )) || execute_with_retry 3 2 --quiet \
+    (( rc != success )) || execute_with_retry --quiet \
                                 git -C "$repo_path" push -u origin "$branch"
     (( rc != success )) || undos+=("git -C '$repo_path' push -u origin --delete '$branch'")
 

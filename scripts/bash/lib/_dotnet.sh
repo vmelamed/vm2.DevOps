@@ -83,7 +83,7 @@ function update_nuget_sources_with_github_vm2()
                 --username "$_gh_nuget_username" \
                 --password "$_gh_nuget_password" \
                 --store-password-in-clear-text                                  || with_error _rc "$err_tool_error" "${FUNCNAME[0]}() Failed to update the NuGet sources with GitHub packages from vm2." \
-                                                                                                                    "$(dotnet_error_message "$?")"
+                                                                                                                    "$(dotnet_error_message $?)"
     return "$_rc"
 }
 

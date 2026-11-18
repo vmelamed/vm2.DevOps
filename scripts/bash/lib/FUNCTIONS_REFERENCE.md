@@ -253,7 +253,19 @@ Executes a command, or (in dry-run mode) prints what would have been executed wi
 
 ### execute_with_retry()
 
-Executes a command, retrying on failure until it succeeds or a maximum attempt count is reached, with a fixed delay between attempts.
+Executes a command, retrying on failure until it succeeds or a maximum attempt count is reached, with a fixed delay between
+attempts. A prefix of the real command, written on its own line:
+
+    execute_with_retry 3 2 --query --is-transient is_transient_gh_error \
+        gh api "repos/$repo" --jq .id
+
+`--query` marks a read-only command, which runs in a dry run too; any other command is only printed. `--quiet` discards its
+stdout. `--is-transient <predicate>` decides from the exit code, stdout, and stderr whether a failure is worth retrying
+(default: every failure is). A failure returns `$err_tool_error`; it is not reported as an error: the caller decides.
+
+### are_transient_args_valid()
+
+Validates the arguments of an `--is-transient` predicate (exit code, stdout file, stderr file); bug-exits when invalid.
 
 ### list_of_files()
 
@@ -898,7 +910,7 @@ Test if the current commit is strictly after / on-or-after the latest stable tag
 
 ## _git_gh.sh
 
-GitHub: repository naming rules, the GitHub remote URL, the repo state, and the `gh` / `gh api` retry wrappers.
+GitHub: repository naming rules, the GitHub remote URL, the repo state, and the transient-failure predicate for `gh`.
 
 ### is_valid_gh_repo_owner() / is_valid_gh_repo_name() / is_valid_gh_repo_full_name() / is_valid_gh_repo_description()
 
@@ -908,15 +920,11 @@ Test a GitHub repository owner / name / full name (`<owner>/<name>`) / descripti
 
 Validate a GitHub repository owner / name / description, reporting an error when invalid.
 
-### execute_gh_with_retry()
+### is_transient_gh_error()
 
-Executes a `gh` command with retry logic for transient failures (rate limits, timeouts, etc.). `--query` marks a read-only
-command, which runs in a dry run too; any other command is only printed. `--quiet` discards its stdout.
-
-### execute_gh_api_with_retry()
-
-Executes a `gh api` command with retry logic based on the response's HTTP status (or stderr pattern matching as a fallback). `--query` and
-`--quiet` as in `execute_gh_with_retry()`.
+The `--is-transient` predicate of `execute_with_retry()` for every `gh` command, `gh api` included: the HTTP status of a
+`gh api` JSON error body decides (`425`, `429`, `5xx` are transient); failing that, the stderr message (an `HTTP 5xx`, a
+rate limit, a timeout, the connection, the network, ...).
 
 ### get_gh_repo_property()
 

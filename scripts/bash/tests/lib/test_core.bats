@@ -276,14 +276,16 @@ declare -gx err_tool_error
 }
 
 @test "add_trap: appends to every given signal" {
+    # TERM, not INT: a background job (bats -j) starts with SIGINT ignored, and bash cannot trap a signal that was ignored
+    # when the shell started -- 'trap -p INT' would then print "trap -- '' SIGINT"
     run env -i HOME="$HOME" PATH="$PATH" LIB="$lib_dir" bash -c '
         source "$LIB/core.sh" --no-trap > /dev/null 2>&1
-        add_trap "echo cleanup" EXIT INT
-        trap -p INT
+        add_trap "echo cleanup" EXIT TERM
+        trap -p TERM
         trap - EXIT
     '
     assert_success
-    assert_output "trap -- 'echo cleanup' SIGINT"
+    assert_output "trap -- 'echo cleanup' SIGTERM"
 }
 
 @test "add_trap: bug-exits with fewer than two arguments" {
@@ -388,36 +390,43 @@ SCRIPT
 }
 
 @test "execute_with_retry: bug-exits with fewer than three arguments" {
-    run execute_with_retry 3 1
-    assert_failure "$err_invalid_arguments"
+    run execute_with_retry --delay 1
+    assert_failure "$err_missing_argument"
 }
 
 @test "execute_with_retry: bug-exits on zero attempts or a negative delay" {
-    run execute_with_retry 0 1 echo hi
+    run execute_with_retry --attempts 0 --delay 1 echo hi
     assert_failure "$err_argument_type"
-    run execute_with_retry 3 -1 echo hi
+    run execute_with_retry --delay -1 echo hi
     assert_failure "$err_argument_type"
 }
 
 @test "execute_with_retry: accepts a delay of 0 (retry immediately)" {
-    _ewr "execute_with_retry 3 0 echo hi"
+    _ewr "execute_with_retry --delay 0 echo hi"
+    assert_success
+    assert_output "hi"
+}
+
+# bats test_tags=time:4
+@test "execute_with_retry: accepts default attempts (3) and default retry (2): 4sec)" {
+    _ewr "execute_with_retry echo hi"
     assert_success
     assert_output "hi"
 }
 
 @test "execute_with_retry: bug-exits on switches without a command" {
-    run execute_with_retry 3 0 --quiet --query
-    assert_failure "$err_invalid_arguments"
+    run execute_with_retry --delay 0 --quiet --query
+    assert_failure "$err_missing_argument"
 }
 
 @test "execute_with_retry: succeeds without retrying when the command succeeds immediately" {
-    _ewr "execute_with_retry 3 0 echo hi"
+    _ewr "execute_with_retry --delay 0 echo hi"
     assert_success
     refute_output --partial "Retrying"
 }
 
 @test "execute_with_retry: runs a command literally named 'true' (regression: was taken as the old output-suppression flag)" {
-    _ewr "execute_with_retry 3 0 true; echo \"rc=[\$?]\""
+    _ewr "execute_with_retry --delay 0 true; echo \"rc=[\$?]\""
     assert_success
     assert_output "rc=[0]"
 }
@@ -425,61 +434,61 @@ SCRIPT
 @test "execute_with_retry: retries on failure and returns success once the command succeeds" {
     local _counter="$BATS_TEST_TMPDIR/counter" _flaky
     _flaky="$(_flaky_command "$_counter")"
-    _ewr "execute_with_retry 3 0 '$_flaky' '$_counter'"
+    _ewr "execute_with_retry --delay 0 '$_flaky' '$_counter'"
     assert_success
-    assert_output --partial "Transient command failure (attempt 1/3). Retrying in 0s: $_flaky $_counter"
+    assert_output --partial "Transient command failure after attempt 1/3 (1). Retrying in 0s: $_flaky $_counter"
     [[ "$(cat "$_counter")" == 2 ]]
 }
 
 @test "execute_with_retry: returns err_tool_error after exhausting all attempts" {
-    _ewr "execute_with_retry 2 0 bash -c 'exit 7'; _rc=\$?; echo \"errors=\$(get_errors)\"; exit \$_rc"
+    _ewr "execute_with_retry --attempts 2 --delay 0 bash -c 'exit 7'; _rc=\$?; echo \"errors=\$(get_errors)\"; exit \$_rc"
     assert_failure "$err_tool_error"
-    assert_output --partial "Transient command failure (attempt 1/2). Retrying in 0s: bash -c exit\\ 7"
+    assert_output --partial "Transient command failure after attempt 1/2 (7). Retrying in 0s: bash -c exit\\ 7"
     # the failure is the caller's to report: no error, and the error counter is untouched
     refute_output --partial "ERROR"
     assert_output --partial "errors=0"
 }
 
 @test "execute_with_retry: with --verbose, traces that the retries are exhausted" {
-    _ewr "set_verbose; execute_with_retry 2 0 bash -c 'exit 7'"
+    _ewr "set_verbose; execute_with_retry --attempts 2 --delay 0 bash -c 'exit 7'"
     assert_failure "$err_tool_error"
-    assert_output --partial "After 2 attempts, the command is still failing: bash -c exit\\ 7"
+    assert_output --partial "After 2 attempts, the command is still failing (7): bash -c exit\\ 7"
 }
 
 @test "execute_with_retry: --quiet discards the command's stdout, not its stderr" {
-    _ewr "execute_with_retry 3 0 --quiet bash -c 'echo to-stdout; echo to-stderr >&2'"
+    _ewr "execute_with_retry --delay 0 --quiet bash -c 'echo to-stdout; echo to-stderr >&2'"
     assert_success
     refute_output --partial "to-stdout"
     assert_output --partial "to-stderr"
 }
 
 @test "execute_with_retry: without --quiet, the command's stdout reaches the caller" {
-    _ewr "x=\$(execute_with_retry 3 0 echo should-be-visible); echo \"captured=[\$x]\""
+    _ewr "x=\$(execute_with_retry --delay 0 echo should-be-visible); echo \"captured=[\$x]\""
     assert_success
     assert_output --partial "captured=[should-be-visible]"
 }
 
 @test "execute_with_retry: takes the switches in any order" {
-    _ewr "set_dry_run; execute_with_retry 3 0 --quiet --query touch '$BATS_TEST_TMPDIR/a'; execute_with_retry 3 0 --query --quiet touch '$BATS_TEST_TMPDIR/b'"
+    _ewr "set_dry_run; execute_with_retry --delay 0 --quiet --query touch '$BATS_TEST_TMPDIR/a'; execute_with_retry --delay 0 --query --quiet touch '$BATS_TEST_TMPDIR/b'"
     assert_success
     [[ -e "$BATS_TEST_TMPDIR/a" && -e "$BATS_TEST_TMPDIR/b" ]]
 }
 
 @test "execute_with_retry: in a dry run, never executes a command that is not a --query, and prints it" {
-    _ewr "set_dry_run; execute_with_retry 3 0 touch '$BATS_TEST_TMPDIR/should-not-exist'"
+    _ewr "set_dry_run; execute_with_retry --delay 0 touch '$BATS_TEST_TMPDIR/should-not-exist'"
     assert_success
     assert_output --partial "dry-run\$ touch"
     [[ ! -e "$BATS_TEST_TMPDIR/should-not-exist" ]]
 }
 
 @test "execute_with_retry: in a dry run, quotes the printed arguments like execute does (%q)" {
-    _ewr "set_dry_run; execute_with_retry 3 0 echo 'two words'"
+    _ewr "set_dry_run; execute_with_retry --delay 0 echo 'two words'"
     assert_success
     assert_output 'dry-run$ echo two\ words'
 }
 
 @test "execute_with_retry: in a dry run, a --query runs, so the caller gets real data" {
-    _ewr "set_dry_run; x=\$(execute_with_retry 3 0 --query echo real-data); echo \"captured=[\$x]\""
+    _ewr "set_dry_run; x=\$(execute_with_retry --delay 0 --query echo real-data); echo \"captured=[\$x]\""
     assert_success
     assert_output --partial "captured=[real-data]"
 }
@@ -487,7 +496,7 @@ SCRIPT
 @test "execute_with_retry: --is-transient stops retrying when the predicate says the failure is persistent" {
     local _counter="$BATS_TEST_TMPDIR/counter" _flaky
     _flaky="$(_flaky_command "$_counter")"
-    _ewr "is_never_transient() { return 1; }; execute_with_retry 3 0 --is-transient is_never_transient '$_flaky' '$_counter'; _rc=\$?; echo \"errors=\$(get_errors)\"; exit \$_rc"
+    _ewr "is_never_transient() { return 1; }; execute_with_retry --delay 0 --is-transient is_never_transient '$_flaky' '$_counter'; _rc=\$?; echo \"errors=\$(get_errors)\"; exit \$_rc"
     assert_failure "$err_tool_error"
     # an expected "no" (e.g. a 404 probe) is the caller's to judge: no error, and the error counter is untouched
     refute_output --partial "ERROR"
@@ -498,23 +507,23 @@ SCRIPT
 @test "execute_with_retry: with --verbose, traces a non-transient failure" {
     local _counter="$BATS_TEST_TMPDIR/counter" _flaky
     _flaky="$(_flaky_command "$_counter")"
-    _ewr "set_verbose; is_never_transient() { return 1; }; execute_with_retry 3 0 --is-transient is_never_transient '$_flaky' '$_counter'"
+    _ewr "set_verbose; is_never_transient() { return 1; }; execute_with_retry --delay 0 --is-transient is_never_transient '$_flaky' '$_counter'"
     assert_failure "$err_tool_error"
-    assert_output --partial "The command failed with the non-transient exit code 1: $_flaky $_counter"
+    assert_output --partial "The command failed with a non-transient exit code (1): $_flaky $_counter"
 }
 
 @test "execute_with_retry: --is-transient receives the exit code and the files with the command's stdout and stderr" {
     local _log="$BATS_TEST_TMPDIR/predicate.log"
     _ewr "inspect() { echo \"\$1|\$(<\"\$2\")|\$(<\"\$3\")\" > '$_log'; return 1; }
-          execute_with_retry 3 0 --is-transient inspect bash -c 'echo out; echo err >&2; exit 5'"
+          execute_with_retry --delay 0 --is-transient inspect bash -c 'echo out; echo err >&2; exit 5'"
     assert_failure "$err_tool_error"
     [[ "$(cat "$_log")" == "5|out|err" ]]
 }
 
 @test "execute_with_retry: bug-exits when --is-transient names no function, or nothing" {
-    _ewr "execute_with_retry 3 0 --is-transient not_a_function echo hi"
+    _ewr "execute_with_retry --delay 0 --is-transient not_a_function echo hi"
     assert_failure "$err_argument_type"
-    _ewr "execute_with_retry 3 0 --is-transient"
+    _ewr "execute_with_retry --delay 0 --is-transient"
     assert_failure "$err_missing_argument"
 }
 

@@ -297,24 +297,25 @@ function execute()
 #     always goes to the caller's stderr.
 #   - A failure is not reported as an error: the caller decides what it means (e.g. a 404 from a
 #     probe can be the expected answer). With `--verbose`, a trace says why it stopped retrying.
-#   - The switches `--query`, `--quiet`, and `--is-transient <predicate>` come before the
-#     command, in any order: the first argument that is neither a switch nor a switch's value
-#     starts the command, which runs with its arguments unchanged.
+#   - All switches MUST come before the command, in any order: the first argument that is
+#     neither a switch nor a switch's value starts the command, which runs with its arguments
+#     unchanged.
 #
-# @arg $1 int Maximum number of attempts.
-# @arg $2 int Delay between attempts, in seconds.
+# @option -a|--attempts <natural> Maximum number of attempts. Default 3.
+# @option -d|--delay <non-negative int> Delay between attempts, in seconds. Default 2sec.
 # @option --query The command has no side effects (typically a query): it runs in a dry run too,
 #   so the caller gets real data.
-# @option --quiet Discards the command's stdout (not its stderr).
-# @option --is-transient <predicate> The name of a function that decides whether a failure is
-#   worth retrying. It receives three arguments:
+# @option -q|--quiet Discards the command's stdout (not its stderr).
+# @option -it|--is-transient <predicate name> The name of a function that decides whether a
+#   failure is worth retrying. It receives three arguments:
 #       - the failed command's exit code [1, 255]
 #       - the name of the file holding the command's stdout
 #       - the name of the file holding the command's stderr
+#       Hint: use 'are_transient_args_valid "$@"' in the predicates to validate its input.
 #   The predicate MUST return:
 #       positive=0 if the failure is transient, and the command can be retried
 #       negative=1 if the failure is persistent, and retrying would not help
-#   Without this option the predicate is `true`: every failure is treated as transient.
+#   Default `true` - every failure is treated as transient.
 # @arg $@ string The command to execute, and its arguments.
 #
 # @stdout The command's stdout; nothing with `--quiet`, or for a non-query in a dry run.
@@ -322,106 +323,135 @@ function execute()
 #
 # @exitcode success=0: The command succeeded, or it is a non-query in a dry run (only printed).
 # @exitcode err_io_failure=21: A temporary file for the command's output could not be created.
-# @exitcode N The command's own exit code, after the final failed attempt.
+# @exitcode err_tool_error=66 The command failed.
 #
 # @example
-#   execute_with_retry 3 5 --quiet dotnet nuget push "$package" --source "$source"
+#   execute_with_retry --delay 5 --quiet dotnet nuget push "$package" --source "$source"
 # @example
 #   # retry only on curl's network errors: 6 (resolve host), 7 (connect), 28 (timeout)
 #   function is_curl_transient() { [[ $1 == @(6|7|28) ]]; }
-#   status=$(execute_with_retry 3 2 --query --is-transient is_curl_transient curl -fsS https://example.com/status)
+#   status=$(execute_with_retry --query --is-transient is_curl_transient curl -fsS https://example.com/status)
 #-----------------------------------------------------------------------------------------------
 function execute_with_retry()
 {
-    (( $# >= 3 ))                                                               || bug "${FUNCNAME[0]}() requires at least three arguments (provided $#):" \
-                                                                                       "  - maximum number of attempts" \
-                                                                                       "  - delay between attempts, in seconds" \
-                                                                                       "  - the command to execute" \
-                                                                                       "  - [args...] Arguments for the command" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_natural "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1, the maximum attempt count, to be a natural number (provided '${1-<missing>}')." -ec "$err_argument_type"
-    [[ ! -v 2 ]] || is_non_negative "$2"                                        || bug "${FUNCNAME[0]}() requires argument 2, the retry delay in seconds, to be a non-negative integer (provided '${2-<missing>}')." -ec "$err_argument_type"
-                                                                                exit_if_has_bugs
-    local -i _rc="$success"
-
-    # get the attempts and the delay; the switches follow
-    local _max_attempts=$1
-    local _delay=$2
-    shift 2
-
+    local _max_attempts=3
+    local _delay=2 # seconds
     local _is_query=false
     local _is_quiet=false
     local _is_transient=true
+    local _option
 
-    while (( $# > 0 )) && [[ $1 == @(--query|--quiet|--is-transient) ]]; do
-        [[ $1 == --query ]] && _is_query=true
-        [[ $1 == --quiet ]] && _is_quiet=true
-        [[ $1 == --is-transient ]] && {
-            (( $# > 1 ))                                                        || bug "${FUNCNAME[0]}() option --is-transient MUST be followed by the name of a predicate function that can analyze the output from the command." -ec "$err_missing_argument"
-            [[ ! -v 2 ]] || is_function "$2"                                    || bug "${FUNCNAME[0]}() option --is-transient MUST be followed by the name of a predicate function that can analyze the output from the command (provided '${2-<missing>}')." -ec "$err_argument_type"
-                                                                                exit_if_has_bugs
-            _is_transient=$2
-            shift
-        }
-        shift
+    while (( $# > 0 )); do
+        _option=$1
+        case "$_option" in
+            -a|--attempts )
+                shift
+                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() option --attempts MUST be followed by a natural number - the maximum attempt count." -ec "$err_missing_argument"
+                [[ ! -v 1 ]] || is_natural "$1"                                 || bug "${FUNCNAME[0]}() option --attempts MUST be followed by a natural number - the maximum attempt count (provided '${1-<missing>}')." -ec "$err_argument_type"
+                has_bugs || _max_attempts=$1
+                (( $# > 0 )) && shift
+                ;;
+            -d|--delay )
+                shift
+                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() option --delay MUST be followed by a non-negative number - the delay in seconds between retries." -ec "$err_missing_argument"
+                [[ ! -v 1 ]] || is_non_negative "$1"                            || bug "${FUNCNAME[0]}() option --delay MUST be followed by a non-negative number - the delay in seconds between retries (provided '${1-<missing>}')." -ec "$err_argument_type"
+                has_bugs || _delay=$1
+                (( $# > 0 )) && shift
+                ;;
+            -it|--is-transient )
+                shift
+                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() option --is-transient MUST be followed by the name of a predicate function that can analyze the output from the command." -ec "$err_missing_argument"
+                [[ ! -v 1 ]] || is_function "$1"                                || bug "${FUNCNAME[0]}() option --is-transient MUST be followed by the name of a predicate function that can analyze the output from the command (provided '${1-<missing>}')." -ec "$err_argument_type"
+                has_bugs || _is_transient=$1
+                (( $# > 0 )) && shift
+                ;;
+            --query )
+                shift
+                _is_query=true
+                ;;
+            -q|--quiet )
+                shift
+                _is_quiet=true
+                ;;
+            * ) break
+                ;;
+        esac
     done
-    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires a command to execute, followed by 0 or more arguments." -ec "$err_invalid_arguments"
+
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires a command to execute, followed by 0 or more arguments." -ec "$err_missing_argument"
                                                                                 exit_if_has_bugs
+
+    # build the command line for display purposes
     local IFS=" "
     local _command_line
     printf -v _command_line '%q ' "$@"
     _command_line=${_command_line% }
 
+    # in --dry-run mode just print the command and return $success
     is_dry_run && ! $_is_query && {
         echo "dry-run\$ $_command_line"
         return "$success"
     } >&2
 
-    # stdout and stderr go to temp files to preserve output fidelity (especially newlines), yet still allow us to process them separately
+    local -i _rc="$success"
+
+    # stdout and stderr go to these temp. files to preserve output fidelity, yet still allow us to process them separately
     local _stderr_file=''
     local _stdout_file=''
-    _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
-    (( _rc != success ))   || _stdout_file=$(mktemp)                            || with_error _rc "$err_io_failure" "Failed to create a temporary file"
+    _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file (mktemp: $?)"
+    (( _rc != success )) || _stdout_file=$(mktemp)                              || with_error _rc "$err_io_failure" "Failed to create a temporary file (mktemp: $?)"
     (( _rc == success ))                                                        || {
                                                                                         rm -f "$_stderr_file" "$_stdout_file"
                                                                                         return "$_rc"
                                                                                    }
 
-    trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $_command_line"
-
+    local -i _ec=0   # inside the loop we have command's exit codes
     local -i _attempt=0
     local _transient_error
 
-    until "$@" >"$_stdout_file" 2>"$_stderr_file"; do
-        _rc=$? # the failed command's exit code
+    trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $_command_line"
+
+    # with every attempt we override _stdout_file _stderr_file -
+    # there was no prev. attempt or it failed and the content of these is no longer needed
+    until { "$@" >"$_stdout_file" 2>"$_stderr_file"; _ec=$?; (( _ec == 0 )); }; do
         (( ++_attempt ))
+        # the command failed - display the content of _stderr_file to the user
         cat "$_stderr_file" >&2
 
-        $_is_transient "$_rc" "$_stdout_file" "$_stderr_file" &&
+        # if this is a transient error, we can retry
+        $_is_transient "$_ec" "$_stdout_file" "$_stderr_file" &&
             _transient_error=true ||
             _transient_error=false
 
-        if (( _attempt < _max_attempts )) && $_transient_error; then
-            # retry and reset rc to success to avoid returning a failure code if the last attempt fails with a transient error
-            warning "Transient command failure (attempt $_attempt/$_max_attempts). Retrying in ${_delay}s: $_command_line"
-            sleep "$_delay"
-            _rc=$success
-        else
-            if $_transient_error; then
-                trace "After $_attempt attempts, the command is still failing: $_command_line"
+        if $_transient_error; then
+            if (( _attempt < _max_attempts )); then
+                # sleep and loop to retry
+                warning "Transient command failure after attempt $_attempt/$_max_attempts ($_ec). Retrying in ${_delay}s: $_command_line"
+                sleep "$_delay"
             else
-                trace "The command failed with the non-transient exit code $_rc: $_command_line"
+                # we can no longer sleep and retry
+                trace "After $_attempt attempts, the command is still failing ($_ec): $_command_line"
+                break
             fi
+        else
+            # no retry can fix this error
+            trace "The command failed with a non-transient exit code ($_ec): $_command_line"
             break
         fi
     done
 
-    (( _rc == success ))                                                        || _rc="$err_tool_error"
+    # convert the command's exit codes to vm2 return code err_tool_error
+    (( _ec == 0 ))                                                              || _rc="$err_tool_error"
+
+    # display the _stderr_file on stderr
     (( _rc == success )) && cat "$_stderr_file" >&2
+    # if not quiet, display _std_out on stdout
     $_is_quiet || cat "$_stdout_file"
 
+    # delete the temp. files
     rm -f "$_stderr_file" "$_stdout_file"
 
+    # always return vm2 return code
     return "$_rc"
 }
 

@@ -130,7 +130,7 @@ EOF
              compare_settings "repos/a" "jq" false false expected summary
              echo "RC=$?"' "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
-    assert_output --partial "Failed to fetch data from GitHub API"
+    assert_output --partial "Could not retrieve data from GitHub"
     assert_output --partial "RC=66"
 }
 
