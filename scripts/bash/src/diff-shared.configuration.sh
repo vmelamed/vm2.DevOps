@@ -273,7 +273,7 @@ function configure()
     trace "Configuration file '$_config_file' is valid."
     local _result
     _result=$(get_tools "$_config_file" true)                                   || {
-                                                                                        with_error _rc "$err_tool_error" "Getting diff and merge tools failed." -ec "$?"
+                                                                                        with_error _rc "$err_tool_error" "Getting diff and merge tools failed." -ec $?
                                                                                         return "$_rc"
                                                                                    }
     # get the configured tools and freeze them
@@ -416,7 +416,7 @@ function customize()
     trace "Configuration file '$_custom_config' is valid."
     local _result
     _result=$(get_tools "$_custom_config" false)                                || {
-                                                                                        with_error _rc "$err_tool_error" "Getting diff and merge tools failed." -ec "$?"
+                                                                                        with_error _rc "$err_tool_error" "Getting diff and merge tools failed." -ec $?
                                                                                         return "$_rc"
                                                                                    }
 

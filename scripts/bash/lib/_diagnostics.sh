@@ -288,6 +288,22 @@ declare -xi __last_bug=$success
 declare -xi __bugs_min_depth=0
 
 #-----------------------------------------------------------------------------------------------
+# @description Tests whether the global bug counter has recorded any bugs.
+#
+# @exitcode positive=0: At least one bug has been recorded.
+# @exitcode negative=1: No bugs have been recorded.
+#
+# @example
+#   if ! has_bugs; then
+#     echo "No bugs."
+#   fi
+#-----------------------------------------------------------------------------------------------
+function has_bugs()
+{
+    return $(( __bugs > 0 ? positive : negative ))
+}
+
+#-----------------------------------------------------------------------------------------------
 # @description Tests the global bug counter and exits the script if any bugs were recorded,
 #   unless the shallowest unflushed bug belongs to an ancestor's still-open validation block
 #   (see `$__bugs_min_depth`), in which case it defers to that ancestor's own
@@ -303,10 +319,10 @@ declare -xi __bugs_min_depth=0
 #-----------------------------------------------------------------------------------------------
 function exit_if_has_bugs()
 {
-    (( __bugs == 0 )) && return "$success"
+    has_bugs                                                                    || return "$success"
 
     local -i _depth=${#FUNCNAME[@]}
-    (( __bugs_min_depth >= _depth )) || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
+    (( __bugs_min_depth >= _depth ))                                            || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
 
     local -i _bugs=$__bugs
     local -i _ec
@@ -357,10 +373,10 @@ function usage()
 #-----------------------------------------------------------------------------------------------
 function exit_if_has_errors()
 {
-    ! has_errors && return "$success"
+    has_errors                                                                  || return "$success"
 
     local -i _depth=${#FUNCNAME[@]}
-    (( __errors_min_depth >= _depth )) || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
+    (( __errors_min_depth >= _depth ))                                          || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
 
     local _display_usage=true
     [[ -v 1 ]] && is_boolean "$1" && _display_usage="$1"
@@ -443,8 +459,6 @@ function __message()
     #   - the stack skip and depth to display, prefixed by the `-ss` `--stack-skip`, `-sd` or `--stack-depth` flag
     # If there are no remaining parameters, the message will be read from `stdin`.
 
-    local -i _error_code=$success
-
     local -i _skip=2
     # by default skips the frames of:
     #   2 show_stack()
@@ -462,7 +476,7 @@ function __message()
                 # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
                 if (( $# > 0 )); then
                     shift
-                    is_exit_code "$1" && _error_code="$1" && _message_parts+=("$(error_message "$_error_code")") ||
+                    is_exit_code "$1" && _message_parts+=("$(error_message "$1")") ||
                         printf "%s Expected an error code (0..255) after the '--error-code' flag, provided: '%s'.\n Ignoring both arguments." "$bug_prefix" "$1"
                 fi
                 ;;
@@ -471,7 +485,7 @@ function __message()
                 # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
                 if (( $# > 0 )); then
                     shift
-                    is_exit_code "$1" && _error_code="$1" && _message_parts+=("$(dotnet_error_message "$_error_code")") ||
+                    is_exit_code "$1" && _message_parts+=("$(dotnet_error_message "$1")") ||
                         printf "%s Expected an error code (0..255) after the '--dotnet-error-code' flag, provided: '%s'.\nIgnoring both arguments." "$bug_prefix" "$1"
                 fi
                 ;;
@@ -641,7 +655,9 @@ function exit_with_error()
     error "$@"
 
     local -i _ec
-    (( __last_error != success )) && _ec=$__last_error || _ec=$err_has_errors
+    (( __last_error != success )) &&
+        _ec=$__last_error ||
+        _ec=$err_has_errors
 
     exit "$_ec"
 }
@@ -726,7 +742,9 @@ function exit_with_bug()
     bug "$@"
 
     local -i _ec
-    (( __last_bug != success )) && _ec=$__last_bug || _ec=$err_has_bugs
+    (( __last_bug != success )) &&
+        _ec=$__last_bug ||
+        _ec=$err_has_bugs
 
     exit "$_ec"
 }

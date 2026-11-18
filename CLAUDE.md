@@ -195,7 +195,7 @@ All core library files live in `scripts/bash/lib/` and are sourced by scripts th
 | `_dump_vars.sh`        | Dumps the values of bash variables in a tabular format           |
 | `_user.sh`             | User interface primitives                                        |
 | `_git.sh`              | Git operations (plain git, no hosting service)                   |
-| `_git_gh.sh`           | GitHub: naming rules, repo state, `gh`/`gh api` retry wrappers   |
+| `_git_gh.sh`           | GitHub: naming rules, repo state, `gh` transient predicate       |
 | `_git_vm2.sh`          | Git operations with focus on vm2 repos                           |
 | `_dotnet_constants.sh` | `dotnet` exit codes and build-information keys                   |
 | `_dotnet_args.sh`      | Common `dotnet` argument parsing and validation                  |

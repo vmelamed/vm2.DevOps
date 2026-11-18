@@ -51,14 +51,16 @@ declare name
 for name in "${vm2_repositories[@]}"; do
     # Read-only remote probe for a benchmarks/ directory: a --query, so it runs in a dry run too, and --dry-run reports
     # an accurate target list.
-    if ! execute_gh_api_with_retry 3 2 --quiet --query "repos/$owner/$name/contents/benchmarks"; then
+    if ! execute_with_retry --quiet --query --is-transient is_transient_gh_error \
+             gh api "repos/$owner/$name/contents/benchmarks"; then
         info "'$owner/$name' has no 'benchmarks/' directory (or is unreachable); skipping."
         no_bench=$(( no_bench + 1 ))
         continue
     fi
 
     info "▶ Dispatching '$workflow' for '$owner/$name' (repeat=$repeat)..."
-    if execute_gh_with_retry 3 5 workflow run "$workflow" --repo "$owner/$name" -f repeat="$repeat"; then
+    if execute_with_retry --delay 5 --is-transient is_transient_gh_error \
+           gh workflow run "$workflow" --repo "$owner/$name" -f repeat="$repeat"; then
         dispatched=$(( dispatched + 1 ))
         dispatched_repos+=("$owner/$name")
     else

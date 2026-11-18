@@ -104,10 +104,10 @@ function is_gh_present()
         is_tool_present gh                                                      || with_error _rc "$err_tool_not_found" "'gh' is not installed. Please install it: https://cli.github.com/"
         (( _rc != success )) || {
                                     _ver=$(gh --version | grep -Eo "$semverReleaseRex" | head -n1) &&
-                                    semver_gte "$_ver" "$gh_min_version"; 
+                                    semver_gte "$_ver" "$gh_min_version";
                                 }                                               || with_error _rc "$err_tool_version" "'gh' version $gh_min_version or greater is required. Please upgrade 'gh': https://cli.github.com/"
-        (( _rc != success )) || execute_gh_with_retry 3 2 --query auth status &> "$_ignore" \
-                                                                                || with_error _rc "$err_tool_unauthenticated" "'gh' is not authenticated. Please run: 'gh auth login'"
+        (( _rc != success )) || execute_with_retry --query --is-transient is_transient_gh_error \
+                                    gh auth status &> "$_ignore"                || with_error _rc "$err_tool_unauthenticated" "'gh' is not authenticated. Please run: 'gh auth login'"
         (( _rc == success )) && gh_present=true || gh_present=false
         readonly gh_present
     fi
