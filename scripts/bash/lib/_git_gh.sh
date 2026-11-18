@@ -302,6 +302,8 @@ function validate_gh_repo_description()
 #     `502`/`503`/`504`, `connection refused`, `network error`.
 #   - Non-transient errors (invalid args, not found, permissions, etc.) fail immediately
 #     without retrying.
+#   - A failure is not reported as an error: the caller decides what it means (e.g. a 404 from a
+#     probe can be the expected answer). With `--verbose`, a trace says why it stopped retrying.
 #   - The switches come before the `gh` command, in any order: everything after the first
 #     argument that is not a switch is passed to `gh` unchanged.
 #
@@ -315,8 +317,7 @@ function validate_gh_repo_description()
 # @stderr The command's stderr; in a dry run, `dry-run$ gh <command>` for a non-query.
 #
 # @exitcode success=0: If the command eventually succeeds, or it is a non-query in a dry run.
-# @exitcode N Otherwise, the last exit code returned by `gh`, or `err_logic_error` if all
-#   retry attempts are exhausted.
+# @exitcode N Otherwise, the last exit code returned by `gh`.
 #
 # @example
 #   execute_gh_with_retry 3 5 --quiet repo create my-repo --public
@@ -333,7 +334,6 @@ function execute_gh_with_retry()
     [[ ! -v 1 ]]  || is_natural "$1"                                            || bug "${FUNCNAME[0]}() requires the first argument to be a natural number: <max_attempts>" -ec "$err_argument_type"
     [[ ! -v 2 ]]  || is_non_negative "$2"                                       || bug "${FUNCNAME[0]}() requires the second argument, the delay in seconds, to be a non-negative integer" -ec "$err_argument_type"
                                                                                 exit_if_has_bugs
-
     local -i _rc="$success"
 
     # get the attempts and the delay; the switches follow
@@ -349,15 +349,17 @@ function execute_gh_with_retry()
         [[ $1 == --quiet ]] && _is_quiet=true
         shift
     done
-
     (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires a gh command to execute, followed by 0 or more arguments." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
+    local IFS=" "
+    local _command_line
+    printf -v _command_line '%q ' "$@"
+    _command_line="gh ${_command_line% }"
 
-    # in a dry run, queries run; everything else is only printed
     is_dry_run && ! $_is_query && {
-        { printf 'dry-run$'; printf ' %q' "$@"; echo; } >&2
+        echo "dry-run\$ $_command_line"
         return "$success"
-    }
+    } >&2
 
     # stdout and stderr go to temp files to preserve output fidelity (especially newlines), yet still allow us to process them separately
     local _stderr_file=''
@@ -369,37 +371,37 @@ function execute_gh_with_retry()
                                                                                         return "$_rc"
                                                                                    }
 
-    local _attempt=0
-    local _message=""
+    trace "Executing with retry from (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $_command_line"
 
-    trace "Executing with retry from (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): 'gh $*'"
+    local _attempt=0
+    local _transient_error
 
     until gh "$@" >"$_stdout_file" 2>"$_stderr_file"; do
         _rc=$?
         (( ++_attempt ))
-
         cat "$_stderr_file" >&2
-        _message=$(cat "$_stderr_file") || true
 
-        # Check if error is transient - retry
-        if [[ ! "$_message" =~ (rate.limit|server.error|timeout|temporarily.unavailable|try.again|502|503|504|connection.refused|network.error) ]]; then
-            error "'gh' command unrecoverable error during attempt: $_attempt/$_max_attempts." -ec "$_rc"
-            break # Permanent error (invalid args, not found, permissions, etc.) - don't retry
-        fi
+        is_tr_gh_error "$_rc" "$_stdout_file" "$_stderr_file" &&
+            _transient_error=true ||
+            _transient_error=false
 
         # transient error - retry or give up
-        if (( _attempt < _max_attempts )); then
+        if (( _attempt < _max_attempts )) && $_transient_error; then
             # retry and reset rc to success to avoid returning a failure code if the last attempt fails with a transient error
-            warning "'gh' command failed. Attempt: $_attempt/$_max_attempts. Retrying in ${_delay}s."
+            warning "Transient command failure (attempt $_attempt/$_max_attempts). Retrying in ${_delay}s: $_command_line"
             sleep "$_delay"
             _rc=$success
         else
-            # give up and return the last error
-            error "After $_attempt attempts, the 'gh' command is still failing." -ec "$err_logic_error"
+            if $_transient_error; then
+                trace "After $_attempt attempts, the command is still failing: $_command_line"
+            else
+                trace "The command failed with the non-transient exit code $_rc: $_command_line"
+            fi
             break
         fi
     done
 
+    (( _rc == success ))                                                        || _rc="$err_tool_error"
     (( _rc == success )) && cat "$_stderr_file" >&2
     $_is_quiet || cat "$_stdout_file"
 
@@ -408,6 +410,25 @@ function execute_gh_with_retry()
     return "$_rc"
 }
 
+function is_tr_gh_error()
+{
+    are_transient_args_valid "$@"
+
+    local _rc=$1
+    local _stderr=$3
+
+    local _message
+    _message=$(cat "$_stderr")                                                  || true
+
+    # If it is not a transient HTTP status code - return NO
+    if [[ ! $_message =~ HTTP\ (425|429|5[0-9]{2})([^0-9]|$)|rate.limit|server.error|timeout|temporarily.unavailable|try.again|connection.refused|network.error ]]; then
+        trace "Unrecoverable 'gh' error ($_rc)." \
+              "Error message: $_message"
+        return "$negative" # Permanent error (invalid args, not found, permissions, etc.) - don't retry
+    fi
+
+    return "$positive"
+}
 #-----------------------------------------------------------------------------------------------
 # @description Executes a `gh api` command with retry logic for transient failures. In a dry
 #   run, a query (specified by the option `--query`) runs as usual; any other request is only
@@ -417,11 +438,12 @@ function execute_gh_with_retry()
 #   - The response (stdout) is written to the caller's stdout (unless `--quiet`); stderr always
 #     goes to the caller's stderr.
 #   - Prefers the JSON `.status` field from the response body to decide whether an error is
-#     transient: `425`, `429`, `500`, `502`, `503`, `504` are retried; `1xx`/`2xx`/`3xx` are
-#     treated as success; anything else fails immediately.
+#     transient: `425`, `429`, `500`, `502`, `503`, `504` are retried.
 #   - If the response has no usable JSON `.status`, falls back to a pattern match against
 #     stderr (`authentication`, `network`, `timeout`, `dns`, `connection`) to decide whether
 #     to retry.
+#   - A failure is not reported as an error: the caller decides what it means (e.g. a 404 from a
+#     probe can be the expected answer). With `--verbose`, a trace says why it stopped retrying.
 #   - The switches '--query' and '--quiet' come before the route, in any order: everything after
 #     the first argument that is not a switch is passed to `gh api` unchanged.
 #
@@ -435,8 +457,7 @@ function execute_gh_with_retry()
 # @stderr The command's stderr; in a dry run, `dry-run$ gh api <route>` for a non-query.
 #
 # @exitcode success=0: If the request eventually succeeds, or it is a non-query in a dry run.
-# @exitcode N Otherwise, the last exit code returned by `gh api`, or `err_logic_error` if all
-#   retry attempts are exhausted.
+# @exitcode N Otherwise, the last exit code returned by `gh api`.
 #
 # @example
 #   repo_id=$(execute_gh_api_with_retry 3 2 --query "repos/vmelamed/vm2.Ulid" --jq .id)
@@ -471,78 +492,99 @@ function execute_gh_api_with_retry()
     done
     (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires an API route to request, followed by 0 or more arguments." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
+    local IFS=" "
+    local _command_line
+    printf -v _command_line '%q ' "$@"
+    _command_line="gh api ${_command_line% }"
 
-    # in a dry run, queries run; everything else is only printed
-    if is_dry_run && ! $_is_query; then
-        { printf 'dry-run$'; printf ' %q' "$@"; echo; } >&2
+    is_dry_run && ! $_is_query && {
+        echo "dry-run\$ $_command_line"
         return "$success"
-    fi
+    } >&2
 
     # stdout and stderr go to temp files to preserve output fidelity (especially newlines), yet still allow us to process them separately
     local _stderr_file=''
     local _stdout_file=''
     _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file"
-    (( _rc != success ))   || _stdout_file=$(mktemp)                            || with_error _rc "$err_io_failure" "Failed to create a temporary file"
+    (( _rc != success )) || _stdout_file=$(mktemp)                              || with_error _rc "$err_io_failure" "Failed to create a temporary file";
     (( _rc == success ))                                                        || {
                                                                                         rm -f "$_stderr_file" "$_stdout_file"
                                                                                         return "$_rc"
                                                                                    }
 
-    local _attempt=0
-    local _response="" message="" status=""
+    trace "Executing with retry from (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $_command_line"
 
-    trace "Executing with retry @ (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): gh api $*"
+    local _attempt=0
+    local _transient_error
 
     until gh api "$@" >"$_stdout_file" 2>"$_stderr_file"; do
         _rc=$?
         (( ++_attempt ))
-
         cat "$_stderr_file" >&2
-        _response=$(cat "$_stdout_file")           || true
-        status=$(jq -r '.status' <<< "$_response") || true
 
-        # If no JSON status, check stderr for network/auth errors
-        if [[ -z "$status" || "$status" == "null" ]]; then
-            message=$(cat "$_stderr_file") || true
-            # If it's a not a transient error in stderr - break(return), otherwise - retry
-            if [[ ! "$message" =~ (authentication|network|timeout|dns|connection) ]]; then
-                error "'gh api' command unrecoverable error during attempt: $_attempt/$_max_attempts." -ec "$_rc"
-                break
-            fi
-        else
-            # Normal JSON error/HTTP status handling
-            case $status in
-                425|429|500|502|503|504 )           # transient error HTTP status codes from 'gh api' - retry may fix it
-                    ;;
-
-                1*|2*|3* )
-                    _rc=0                            # 1xx, 2xx, and 3xx HTTP status codes are considered successful
-                    break
-                    ;;
-
-                * ) break                           # everything else is a bad outcome that will not be fixed by retrying
-                    ;;
-            esac
-        fi
+        is_tr_gh_api_error "$_rc" "$_stdout_file" "$_stderr_file" &&
+            _transient_error=true ||
+            _transient_error=false
 
         # transient error - retry or give up
-        if (( _attempt < _max_attempts )); then
+        if (( _attempt < _max_attempts )) && $_transient_error; then
             # retry and reset rc to success to avoid returning a failure code if the last attempt fails with a transient error
-            warning "'gh api' command failed. Attempt $_attempt/$_max_attempts. Retrying in ${_delay}s."
+            warning "Transient command failure (attempt $_attempt/$_max_attempts). Retrying in ${_delay}s: $_command_line"
             sleep "$_delay"
             _rc=$success
         else
-            error "After $_attempt attempts, the 'gh api' command is still failing." -ec "$err_logic_error"
+            if $_transient_error; then
+                trace "After $_attempt attempts, the command is still failing: $_command_line"
+            else
+                trace "The command failed with the non-transient exit code $_rc: $_command_line"
+            fi
             break
         fi
     done
 
+    (( _rc == success ))                                                        || _rc="$err_tool_error"
     (( _rc == success )) && cat "$_stderr_file" >&2
     $_is_quiet || cat "$_stdout_file"
 
     rm -f "$_stderr_file" "$_stdout_file"
 
     return "$_rc"
+}
+
+function is_tr_gh_api_error()
+{
+    are_transient_args_valid "$@"
+
+    local _rc=$1
+    local _stdout=$2
+    local _stderr=$3
+
+    local _status
+    _status=$(jq -r '.status' "$_stdout" 2>"$_ignore")                          || true
+
+    if [[ -n "$_status" && "$_status" != "null" ]]; then
+        # Normal JSON error -> HTTP status handling
+        # If it is not a transient HTTP status code - return NO
+        if [[ ! $_status =~ (425|429|5[0-9]{2})$ ]]; then
+            trace "Unrecoverable 'gh api' error ($_rc)." \
+                  "HTTP status code: $_status."
+            return "$negative"
+        fi
+    else
+        # If no JSON status, check stderr for network/auth errors
+        local _message
+
+        _message=$(cat "$_stderr")                                              || true
+
+        # If it's not a transient error in stderr - return NO
+        if [[ ! "$_message" =~ (authentication|network|timeout|dns|connection) ]]; then
+            trace "Unrecoverable 'gh api' error ($_rc)." \
+                  "Error message: $_message."
+            return "$negative"
+        fi
+    fi
+
+    return "$positive"
 }
 
 #-----------------------------------------------------------------------------------------------

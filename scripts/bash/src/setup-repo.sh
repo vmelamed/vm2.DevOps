@@ -376,7 +376,8 @@ if ! has_remote_repo repo_state; then
     (( rc != success )) || undos+=("git -C '$repo_path' remote remove origin")
 
     (( rc != success )) || info "  ...pushing the default branch '$branch' to GitHub;"
-    (( rc != success )) || execute_with_retry 3 2 --quiet git -C "$repo_path" push -u origin "$branch"
+    (( rc != success )) || execute_with_retry 3 2 --quiet \
+                                git -C "$repo_path" push -u origin "$branch"
     (( rc != success )) || undos+=("git -C '$repo_path' push -u origin --delete '$branch'")
 
     (( rc != success )) || info "...GitHub repository '$repo' created and linked to the local repository in '$repo_path'."

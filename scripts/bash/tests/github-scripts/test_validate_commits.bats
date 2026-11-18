@@ -21,6 +21,7 @@ load '../libs/bats-assert/load'
 load '../helpers/setup'
 
 declare -gx git_remotes_ns
+declare -gx err_tool_error
 
 _gh_scripts_dir="$(cd "$lib_dir/../../../.github/scripts" && pwd)"
 _validate_commits="$_gh_scripts_dir/validate-commits.sh"
@@ -55,6 +56,26 @@ _run_validate_commits() {
     run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
     assert_success
     assert_output --partial "All commit messages follow Conventional Commits format"
+}
+
+@test "validate-commits: succeeds on an empty range (no commits after the base)" {
+    # regression: the commits are read from a here-string, which adds a newline -- an empty range must run no iteration,
+    # not one with an empty subject that is reported as a bad commit message
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo"
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref base --quiet
+    assert_success
+    refute_output --partial "Bad commit message"
+    assert_output --partial "All commit messages follow Conventional Commits format"
+}
+
+@test "validate-commits: fails when the commits cannot be listed (an unknown base ref)" {
+    # regression: 'git log' ran in a process substitution, which loses its exit status -- the range looked empty, and the
+    # gate passed
+    _make_repo_with_commits "$BATS_TEST_TMPDIR/repo" "not a conventional commit"
+    run _run_validate_commits "$BATS_TEST_TMPDIR/repo" --base-ref no-such-ref --quiet
+    assert_failure "$err_tool_error"
+    assert_output --partial "Failed to list the commits in 'no-such-ref..HEAD'."
+    refute_output --partial "All commit messages follow Conventional Commits format"
 }
 
 @test "validate-commits: succeeds when every commit follows Conventional Commits and short option form -b" {

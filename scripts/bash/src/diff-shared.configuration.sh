@@ -266,18 +266,23 @@ function configure()
     # validate the config file and load the diff and merge tools from it:
     [[ -s "$_config_file" ]]                                                    || with_error _rc "$err_argument_value" "The configuration file '$_config_file' was not found or is empty."
     (( _rc != success )) || jq empty "$_config_file" 2>"$_ignore"               || with_error _rc "$err_argument_value" "The configuration file '$_config_file' contains invalid JSON."
-    (( _rc != success )) || validate_json_schema "$_config_file" "$_schema_config" || with_error _rc "$err_argument_value" "The configuration file '$_config_file' does not conform to the schema '$_schema_config'."
+    (( _rc != success )) || validate_json_schema "$_config_file" "$_schema_config" \
+                                                                                || with_error _rc "$err_argument_value" "The configuration file '$_config_file' does not conform to the schema '$_schema_config'."
     (( _rc == success )) || exit_if_has_errors
 
     trace "Configuration file '$_config_file' is valid."
-
+    local _result
+    _result=$(get_tools "$_config_file" true)                                   || {
+                                                                                        with_error _rc "$err_tool_error" "Getting diff and merge tools failed." -ec "$?"
+                                                                                        return "$_rc"
+                                                                                   }
     # get the configured tools and freeze them
     {
         read -r config_diff_tool;
         read -r config_diff_command;
         read -r config_merge_tool;
         read -r config_merge_command;
-    } < <(get_tools "$_config_file" true)   # if not provided - use the defaults
+    } <<< "$_result"   # if not provided - use the defaults
 
     readonly config_diff_tool
     readonly config_diff_command
@@ -291,7 +296,14 @@ function configure()
     # shellcheck disable=SC2034 # Variable was used as an array but is now assigned a string.
     local vm2_sot_shared="$vm2_sot_repo_name/templates/$sot/content"
     local _source_file _target_file _file_action
+    local _result
+    _result=$(jq -r '.files[] | (.sourceFile // "") + "=" + (.targetFile // "") + "=" + (.action // "")' "$_config_file") \
+                                                                                || {
+                                                                                        with_error _rc "$err_tool_error" "Parsing configuration file $_config_file failed."
+                                                                                        return "$_rc"
+                                                                                   }
 
+    [[ -z $_result ]] ||                                                        # ignore empty results
     while IFS='=' read -r _source_file _target_file _file_action; do
         [[ -n "$_source_file" ]]                                                || with_error _rc "$err_argument_value" "Empty source file path found in '$_config_file'."
         [[ -n "$_target_file" ]]                                                || with_error _rc "$err_argument_value" "Empty target file path found in '$_config_file'."
@@ -311,7 +323,8 @@ function configure()
         config_file_actions[_index]=$_file_action
 
         ((++_index)) || true
-    done < <(jq -r '.files[] | (.sourceFile // "") + "=" + (.targetFile // "") + "=" + (.action // "")' "$_config_file")
+    done <<< "$_result"
+    exit_if_has_errors
 
     readonly config_source_files
     readonly config_target_files
@@ -323,8 +336,7 @@ function configure()
 
     # validate the configuration
     (( ${#config_source_files[@]} == ${#config_target_files[@]} && ${#config_source_files[@]} == ${#config_file_actions[@]} )) \
-                                                                                || with_error _rc "$err_logic_error" "The data in the config tables does not match."
-    exit_if_has_errors
+                                                                                || exit_with_error "The data in the config tables does not match." -ec "$err_logic_error"
 
     trace "$script_name was configured successfully with ${#config_source_files[@]} files and actions."
 }
@@ -391,6 +403,7 @@ function customize()
     local _target_root=$2
     local _custom_config="$_target_root/diff-shared.custom.json"
     local _schema_custom="$_sot_path/diff-shared.custom.schema.json"
+    local -i _rc=$success
 
     [[ -s "$_custom_config" ]] || {
          trace "The customization file '$_custom_config' does not exist or is empty. Continuing with the default configuration."
@@ -401,6 +414,11 @@ function customize()
     exit_if_has_errors
 
     trace "Configuration file '$_custom_config' is valid."
+    local _result
+    _result=$(get_tools "$_custom_config" false)                                || {
+                                                                                        with_error _rc "$err_tool_error" "Getting diff and merge tools failed." -ec "$?"
+                                                                                        return "$_rc"
+                                                                                   }
 
     # customize the tools based on the customization configuration file
     {
@@ -408,7 +426,7 @@ function customize()
         read -r custom_diff_command;
         read -r custom_merge_tool;
         read -r custom_merge_command;
-    } < <(get_tools "$_custom_config" false)    # do not use the defaults - if not customized, leave empty and we'll use the main configuration below
+    } <<< "$_result"    # do not use the defaults - if not customized, leave empty and we'll use the main configuration below
 
     [[ -n $custom_diff_tool && -n $custom_diff_command ]] && {
         diff_tool="$custom_diff_tool"
@@ -424,12 +442,20 @@ function customize()
 
     if [[ -s "$_custom_config" ]]; then
         # Read each key-value pair from JSON
+        _result=$(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$_custom_config" 2>"$_ignore") \
+                                                                                ||  {
+                                                                                        with_error _rc "$err_tool_error" "Getting file and action customization failed."
+                                                                                        return "$_rc"
+                                                                                    }
         local  _file_name _action
         while IFS='=' read -r _file_name _action; do
-            # Validate action
-            is_in "$_action" "${valid_actions[@]}"                              || { warning "Invalid action '$_action' for '$_file_name' in $_custom_config - must be one of: $all_actions_str."; continue; }
             # Validate the path
-            [[ -n "$_file_name" ]]                                              || { warning "Empty relative path in $_custom_config."; continue; }
+            [[ -n "$_file_name" ]]                                              || continue
+            # Validate action
+            is_in "$_action" "${valid_actions[@]}"                              ||  {
+                                                                                        warning "Invalid action '$_action' for '$_file_name' in $_custom_config - must be one of: $all_actions_str."
+                                                                                        continue
+                                                                                    }
 
             # Find corresponding target file and source file
             local _found=false
@@ -450,7 +476,7 @@ function customize()
                 [[ $_action != "ignore" ]] && trace "Path '$_file_name' from $_custom_config ${clr_bold}does not match${clr_reset} any known target relative path."
                 continue
             }
-        done < <(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$_custom_config" 2>"$_ignore") # convert JSON object to key=value pairs
+        done <<< "$_result" # convert JSON object to key=value pairs
 
         $diff_only || info "$script_name was customized successfully with $_changed_actions modified actions."
     fi

@@ -20,6 +20,7 @@ declare -gx err_missing_argument
 declare -gx err_argument_value
 declare -gx err_invalid_nameref
 declare -gx err_not_found
+declare -gx err_tool_error
 
 # --- trap setup, on_err, on_exit, and controlled exits ------------------------------------------
 
@@ -426,15 +427,23 @@ SCRIPT
     _flaky="$(_flaky_command "$_counter")"
     _ewr "execute_with_retry 3 0 '$_flaky' '$_counter'"
     assert_success
-    assert_output --partial "Transient command failure (attempt 1/3). Retrying in 0s."
+    assert_output --partial "Transient command failure (attempt 1/3). Retrying in 0s: $_flaky $_counter"
     [[ "$(cat "$_counter")" == 2 ]]
 }
 
-@test "execute_with_retry: returns the command's own exit code after exhausting all attempts" {
-    _ewr "execute_with_retry 2 0 bash -c 'exit 7'"
-    assert_failure 7
-    assert_output --partial "Transient command failure (attempt 1/2)."
-    assert_output --partial "After 2 attempts, the command is still failing."
+@test "execute_with_retry: returns err_tool_error after exhausting all attempts" {
+    _ewr "execute_with_retry 2 0 bash -c 'exit 7'; _rc=\$?; echo \"errors=\$(get_errors)\"; exit \$_rc"
+    assert_failure "$err_tool_error"
+    assert_output --partial "Transient command failure (attempt 1/2). Retrying in 0s: bash -c exit\\ 7"
+    # the failure is the caller's to report: no error, and the error counter is untouched
+    refute_output --partial "ERROR"
+    assert_output --partial "errors=0"
+}
+
+@test "execute_with_retry: with --verbose, traces that the retries are exhausted" {
+    _ewr "set_verbose; execute_with_retry 2 0 bash -c 'exit 7'"
+    assert_failure "$err_tool_error"
+    assert_output --partial "After 2 attempts, the command is still failing: bash -c exit\\ 7"
 }
 
 @test "execute_with_retry: --quiet discards the command's stdout, not its stderr" {
@@ -478,17 +487,27 @@ SCRIPT
 @test "execute_with_retry: --is-transient stops retrying when the predicate says the failure is persistent" {
     local _counter="$BATS_TEST_TMPDIR/counter" _flaky
     _flaky="$(_flaky_command "$_counter")"
-    _ewr "is_never_transient() { return 1; }; execute_with_retry 3 0 --is-transient is_never_transient '$_flaky' '$_counter'"
-    assert_failure
-    assert_output --partial "The command failed with the non-transient exit code 1."
+    _ewr "is_never_transient() { return 1; }; execute_with_retry 3 0 --is-transient is_never_transient '$_flaky' '$_counter'; _rc=\$?; echo \"errors=\$(get_errors)\"; exit \$_rc"
+    assert_failure "$err_tool_error"
+    # an expected "no" (e.g. a 404 probe) is the caller's to judge: no error, and the error counter is untouched
+    refute_output --partial "ERROR"
+    assert_output --partial "errors=0"
     [[ "$(cat "$_counter")" == 1 ]]
+}
+
+@test "execute_with_retry: with --verbose, traces a non-transient failure" {
+    local _counter="$BATS_TEST_TMPDIR/counter" _flaky
+    _flaky="$(_flaky_command "$_counter")"
+    _ewr "set_verbose; is_never_transient() { return 1; }; execute_with_retry 3 0 --is-transient is_never_transient '$_flaky' '$_counter'"
+    assert_failure "$err_tool_error"
+    assert_output --partial "The command failed with the non-transient exit code 1: $_flaky $_counter"
 }
 
 @test "execute_with_retry: --is-transient receives the exit code and the files with the command's stdout and stderr" {
     local _log="$BATS_TEST_TMPDIR/predicate.log"
     _ewr "inspect() { echo \"\$1|\$(<\"\$2\")|\$(<\"\$3\")\" > '$_log'; return 1; }
           execute_with_retry 3 0 --is-transient inspect bash -c 'echo out; echo err >&2; exit 5'"
-    assert_failure 5
+    assert_failure "$err_tool_error"
     [[ "$(cat "$_log")" == "5|out|err" ]]
 }
 

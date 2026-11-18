@@ -342,6 +342,7 @@ function initialize_main_protection_rs_id()
 #
 # @exitcode success=0: Always (a failure to retrieve the moniker is logged as a
 #   warning, not surfaced as a non-zero exit code).
+# @exitcode err_tool_error=66: Retrieving the current nuget server failed.
 #-----------------------------------------------------------------------------------------------
 function get_current_nuget_server()
 {
@@ -351,9 +352,16 @@ function get_current_nuget_server()
     fi
 
     local _repo_owner=${repo_owner:-$default_repo_owner}
-
-    read -r nuget_server < <(execute_gh_api_with_retry 3 2 --query "repos/$_repo_owner/$repo_name/actions/variables/NUGET_SERVER" --jq .value 2> "$_ignore") ||
-        nuget_server=$default_nuget_server
+    local -i _rc=$success
+    local _result
+    _result=$(execute_gh_api_with_retry 3 2 --query \
+                "repos/$_repo_owner/$repo_name/actions/variables/NUGET_SERVER" --jq .value 2> "$_ignore") \
+                                                                                || {
+                                                                                        with_error _rc "$err_tool_error" "Retrieving the current nuget server failed." \
+                                                                                                                         -ec "$?"
+                                                                                        return "$_rc"
+                                                                                   }
+    read -r nuget_server <<< "$_result" || nuget_server=$default_nuget_server
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -364,6 +372,7 @@ function get_current_nuget_server()
 #
 # @exitcode success=0: Always (a failed PATCH call is logged as a warning, not
 #   surfaced as a non-zero exit code).
+# @exitcode err_tool_error=66: Retrieving the current repo settings failed.
 #
 # @stdout Progress/status messages via `info` ("Configuring repository settings...",
 #   "...repository settings configured.").
@@ -375,10 +384,19 @@ function configure_default_repo_settings()
     # get existing repository settings
     local -A _existing
     local _key _value
+    local -i _rc=$success
+
+    local _result
+    _result=$(execute_gh_api_with_retry 3 2 --query "$path_repo" -q "$jq_entries") \
+                                                                                || {
+                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo settings failed." \
+                                                                                                                         -ec "$?"
+                                                                                        return "$_rc"
+                                                                                   }
 
     while IFS='=' read -r _key _value; do
         _existing["$_key"]="$_value"
-    done < <(execute_gh_api_with_retry 3 2 --query "$path_repo" -q "$jq_entries")
+    done <<< "$_result"
 
     local -a _rs=()
     local _actual
@@ -429,10 +447,16 @@ function configure_actions_permissions()
     # get existing repository permissions
     local -A _existing
     local _key _value
+    local _result
+    _result=$(execute_gh_api_with_retry 3 2 --query "$path_permissions" -q "$jq_entries") \
+                                                                                || {
+                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo permissions failed." \
+                                                                                        return "$_rc"
+                                                                                    }
 
     while IFS='=' read -r _key _value; do
         _existing["$_key"]="$_value"
-    done < <(execute_gh_api_with_retry 3 2 --query "$path_permissions" -q "$jq_entries")
+    done <<< "$_result"
 
     local -a _rs=()
     local _actual
@@ -516,10 +540,17 @@ function configure_variables()
     # get the currently existing variables from the GitHub repository
     local _var _value
     local -A _current=()
+    local _result
+    _result=$(execute_gh_api_with_retry 3 2 --query --paginate "$path_repo/$_app/variables" -q "$jq_vars") \
+                                                                                || {
+                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo variables failed." \
+                                                                                                                         -ec "$?"
+                                                                                        return "$_rc"
+                                                                                    }
 
     while IFS='=' read -r _var _value; do
         _current["$_var"]="$_value"
-    done < <(execute_gh_api_with_retry 3 2 --query --paginate "$path_repo/$_app/variables" -q "$jq_vars")
+    done <<< "$_result"
 
     local _exists _default
     local _new_value=''
