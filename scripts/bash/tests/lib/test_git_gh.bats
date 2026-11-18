@@ -299,6 +299,145 @@ _run_get_repo_state_url() {
     assert_output --partial "dry-run"
 }
 
+# --- execute_gh_with_retry / execute_gh_api_with_retry against a scripted fake 'gh' -----------------------------------
+# The fake logs every call's arguments to $BATS_TEST_TMPDIR/gh.log and plays one scripted response per call: for the
+# N-th call, the exit code, stdout, and stderr come from the files $BATS_TEST_TMPDIR/gh.N.{rc,out,err} (missing files:
+# exit 0, no output). The delay is 0, so a retry costs no time.
+
+_scripted_gh() {
+    local _bin="$BATS_TEST_TMPDIR/bin"
+    mkdir -p "$_bin"
+    cat > "$_bin/gh" <<EOF
+#!/usr/bin/env bash
+_dir='$BATS_TEST_TMPDIR'
+echo "\$*" >> "\$_dir/gh.log"
+_n=\$(wc -l < "\$_dir/gh.log")
+[[ -f "\$_dir/gh.\$_n.out" ]] && cat "\$_dir/gh.\$_n.out"
+[[ -f "\$_dir/gh.\$_n.err" ]] && cat "\$_dir/gh.\$_n.err" >&2
+exit "\$(cat "\$_dir/gh.\$_n.rc" 2>/dev/null || echo 0)"
+EOF
+    chmod +x "$_bin/gh"
+    echo "$_bin"
+}
+
+# $1 = the call number, $2 = its exit code, $3 = its stdout, $4 = its stderr
+_gh_response() {
+    echo "$2" > "$BATS_TEST_TMPDIR/gh.$1.rc"
+    printf '%s' "$3" > "$BATS_TEST_TMPDIR/gh.$1.out"
+    printf '%s\n' "$4" > "$BATS_TEST_TMPDIR/gh.$1.err"
+}
+
+# Runs $1 (bash code) with the scripted 'gh' first on the PATH, then prints the exit code, the error count, and the
+# number of 'gh' calls.
+_run_scripted_gh() {
+    local _bin
+    _bin="$(_scripted_gh)"
+    run bash -c "export PATH='$_bin':\"\$PATH\"; source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 $1; _rc=\$?
+                 echo \"rc=[\$_rc] errors=[\$(get_errors)] calls=[\$(cat '$BATS_TEST_TMPDIR/gh.log' 2>/dev/null | wc -l)]\""
+}
+
+@test "execute_gh_with_retry: in a dry run, a --query runs, so the caller gets real data" {
+    _gh_response 1 0 'real-data' ''
+    _run_scripted_gh "set_dry_run; x=\$(execute_gh_with_retry 3 0 --query repo view); echo \"captured=[\$x]\""
+    assert_output --partial "captured=[real-data]"
+    assert_output --partial "calls=[1]"
+}
+
+@test "execute_gh_with_retry: in a dry run, a command that is not a --query is only printed, quoted with %q" {
+    _run_scripted_gh "set_dry_run; execute_gh_with_retry 3 0 repo create 'my repo' --public"
+    assert_output --partial 'dry-run$ gh repo create my\ repo --public'
+    assert_output --partial "rc=[0] errors=[0] calls=[0]"
+}
+
+@test "execute_gh_with_retry: --quiet discards the command's stdout, not its stderr" {
+    _gh_response 1 0 'to-stdout' 'to-stderr'
+    _run_scripted_gh "execute_gh_with_retry 3 0 --quiet repo view"
+    refute_output --partial "to-stdout"
+    assert_output --partial "to-stderr"
+    assert_output --partial "rc=[0]"
+}
+
+@test "execute_gh_with_retry: takes the switches in any order, and passes everything after them to gh unchanged" {
+    _run_scripted_gh "set_dry_run; execute_gh_with_retry 3 0 --quiet --query repo view --json name; execute_gh_with_retry 3 0 --query --quiet pr list"
+    assert_output --partial "calls=[2]"
+    run cat "$BATS_TEST_TMPDIR/gh.log"
+    assert_output $'repo view --json name\npr list'
+}
+
+@test "execute_gh_with_retry: retries a transient failure (HTTP 503), and succeeds" {
+    _gh_response 1 1 '' 'gh: Service Unavailable (HTTP 503)'
+    _gh_response 2 0 'ok' ''
+    _run_scripted_gh "execute_gh_with_retry 3 0 repo view"
+    assert_output --partial "Transient command failure (attempt 1/3)"
+    assert_output --partial "rc=[0] errors=[0] calls=[2]"
+}
+
+@test "execute_gh_with_retry: returns err_tool_error after exhausting the attempts, without reporting an error" {
+    _gh_response 1 1 '' 'gh: Service Unavailable (HTTP 503)'
+    _gh_response 2 1 '' 'gh: Service Unavailable (HTTP 503)'
+    _run_scripted_gh "execute_gh_with_retry 2 0 repo view"
+    refute_output --partial "ERROR"
+    assert_output --partial "rc=[$err_tool_error] errors=[0] calls=[2]"
+}
+
+@test "execute_gh_with_retry: does not retry a non-transient failure (HTTP 404); returns err_tool_error, without an error" {
+    _gh_response 1 1 '' 'gh: Not Found (HTTP 404)'
+    _run_scripted_gh "execute_gh_with_retry 3 0 run view 42"
+    assert_output --partial "gh: Not Found (HTTP 404)"
+    refute_output --partial "ERROR"
+    assert_output --partial "rc=[$err_tool_error] errors=[0] calls=[1]"
+}
+
+@test "execute_gh_with_retry: a number like 500 inside a non-transient message (a run ID) is not mistaken for HTTP 500" {
+    _gh_response 1 1 '' 'gh: Not Found (HTTP 404): https://api.github.com/repos/o/n/actions/runs/15004291234/artifacts'
+    _run_scripted_gh "execute_gh_with_retry 3 0 run download 15004291234"
+    assert_output --partial "calls=[1]"
+}
+
+@test "execute_gh_api_with_retry: calls 'gh api' with the route and its arguments" {
+    _gh_response 1 0 '42' ''
+    _run_scripted_gh "x=\$(execute_gh_api_with_retry 3 0 --query repos/acme/x --jq .id); echo \"captured=[\$x]\""
+    assert_output --partial "captured=[42]"
+    run cat "$BATS_TEST_TMPDIR/gh.log"
+    assert_output "api repos/acme/x --jq .id"
+}
+
+@test "execute_gh_api_with_retry: in a dry run, a request that is not a --query is only printed" {
+    _run_scripted_gh "set_dry_run; execute_gh_api_with_retry 3 0 -X PATCH repos/acme/x -F delete_branch_on_merge=true"
+    assert_output --partial 'dry-run$ gh api -X PATCH repos/acme/x -F delete_branch_on_merge=true'
+    assert_output --partial "rc=[0] errors=[0] calls=[0]"
+}
+
+@test "execute_gh_api_with_retry: retries on a transient JSON status (503), and succeeds" {
+    _gh_response 1 1 '{"message":"Service Unavailable","status":"503"}' 'gh: Service Unavailable (HTTP 503)'
+    _gh_response 2 0 '{"id":42}' ''
+    _run_scripted_gh "execute_gh_api_with_retry 3 0 --query repos/acme/x"
+    assert_output --partial '{"id":42}'
+    assert_output --partial "rc=[0] errors=[0] calls=[2]"
+}
+
+@test "execute_gh_api_with_retry: does not retry a non-transient JSON status (404); returns err_tool_error, without an error" {
+    _gh_response 1 1 '{"message":"Not Found","status":"404"}' 'gh: Not Found (HTTP 404)'
+    _run_scripted_gh "execute_gh_api_with_retry 3 0 --query repos/acme/x/contents/benchmarks"
+    refute_output --partial "ERROR"
+    assert_output --partial "rc=[$err_tool_error] errors=[0] calls=[1]"
+}
+
+@test "execute_gh_api_with_retry: the JSON status decides, not numbers in stderr" {
+    # the JSON body says 404 (not transient); a stderr that mentions '500' (e.g. in a URL) must not make it a retry
+    _gh_response 1 1 '{"message":"Not Found","status":"404"}' 'gh: Not Found (HTTP 404): repos/o/n/actions/runs/15004291234'
+    _run_scripted_gh "execute_gh_api_with_retry 3 0 --query repos/o/n/actions/runs/15004291234"
+    assert_output --partial "calls=[1]"
+}
+
+@test "execute_gh_api_with_retry: without a JSON body, a network error in stderr is retried" {
+    _gh_response 1 1 'not json' 'error connecting to api.github.com: network is unreachable'
+    _gh_response 2 0 '{"id":42}' ''
+    _run_scripted_gh "execute_gh_api_with_retry 3 0 --query repos/acme/x"
+    assert_output --partial "rc=[0] errors=[0] calls=[2]"
+}
+
 
 # --- get_repo_state: the forms of a GitHub remote URL ----------------------------------------------------------------
 # Only owner and name matter: everything before 'github.com' and the optional port, '.git', and trailing '/' are

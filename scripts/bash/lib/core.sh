@@ -63,6 +63,10 @@ declare -x err_argument_type
 declare -x err_not_git_directory
 declare -x err_argument_value
 declare -x err_not_found
+declare -x err_io_failure
+declare -x err_missing_argument
+declare -x err_tool_error
+
 
 declare -x error_em
 
@@ -291,6 +295,8 @@ function execute()
 # Notes:
 #   - The command's stdout is written to the caller's stdout (unless `--quiet`); its stderr
 #     always goes to the caller's stderr.
+#   - A failure is not reported as an error: the caller decides what it means (e.g. a 404 from a
+#     probe can be the expected answer). With `--verbose`, a trace says why it stopped retrying.
 #   - The switches `--query`, `--quiet`, and `--is-transient <predicate>` come before the
 #     command, in any order: the first argument that is neither a switch nor a switch's value
 #     starts the command, which runs with its arguments unchanged.
@@ -302,7 +308,7 @@ function execute()
 # @option --quiet Discards the command's stdout (not its stderr).
 # @option --is-transient <predicate> The name of a function that decides whether a failure is
 #   worth retrying. It receives three arguments:
-#       - the command's exit code
+#       - the failed command's exit code [1, 255]
 #       - the name of the file holding the command's stdout
 #       - the name of the file holding the command's stderr
 #   The predicate MUST return:
@@ -361,9 +367,13 @@ function execute_with_retry()
     done
     (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires a command to execute, followed by 0 or more arguments." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
+    local IFS=" "
+    local _command_line
+    printf -v _command_line '%q ' "$@"
+    _command_line=${_command_line% }
 
     is_dry_run && ! $_is_query && {
-        printf 'dry-run$'; printf ' %q' "$@"; echo;
+        echo "dry-run\$ $_command_line"
         return "$success"
     } >&2
 
@@ -377,17 +387,15 @@ function execute_with_retry()
                                                                                         return "$_rc"
                                                                                    }
 
-    local IFS=" "
-    trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $*"
+    trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $_command_line"
 
     local -i _attempt=0
     local _transient_error
 
     until "$@" >"$_stdout_file" 2>"$_stderr_file"; do
-        _rc=$?
-
-        cat "$_stderr_file" >&2
+        _rc=$? # the failed command's exit code
         (( ++_attempt ))
+        cat "$_stderr_file" >&2
 
         $_is_transient "$_rc" "$_stdout_file" "$_stderr_file" &&
             _transient_error=true ||
@@ -395,25 +403,63 @@ function execute_with_retry()
 
         if (( _attempt < _max_attempts )) && $_transient_error; then
             # retry and reset rc to success to avoid returning a failure code if the last attempt fails with a transient error
-            warning "Transient command failure (attempt $_attempt/$_max_attempts). Retrying in ${_delay}s."
+            warning "Transient command failure (attempt $_attempt/$_max_attempts). Retrying in ${_delay}s: $_command_line"
             sleep "$_delay"
             _rc=$success
         else
             if $_transient_error; then
-                error "After $_attempt attempts, the command is still failing." -ec "$err_logic_error"
+                trace "After $_attempt attempts, the command is still failing: $_command_line"
             else
-                error "The command failed with the non-transient exit code $_rc." -ec "$err_logic_error"
+                trace "The command failed with the non-transient exit code $_rc: $_command_line"
             fi
             break
         fi
     done
 
+    (( _rc == success ))                                                        || _rc="$err_tool_error"
     (( _rc == success )) && cat "$_stderr_file" >&2
     $_is_quiet || cat "$_stdout_file"
 
     rm -f "$_stderr_file" "$_stdout_file"
 
     return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Validates the arguments of an `--is-transient` predicate (see
+#   `execute_with_retry`). Call it first thing in the predicate, with the predicate's own
+#   arguments.
+#
+# @arg $1 int The failed command's exit code [1, 255].
+# @arg $2 string The name of the file holding the command's stdout.
+# @arg $3 string The name of the file holding the command's stderr.
+#
+# @exitcode success=0: Always. If an argument is invalid, it reports a bug, in the
+#   predicate's name, and exits the script.
+#
+# @example
+#   function is_transient_example_command()
+#   {
+#       are_transient_args_valid "$@"
+#
+#       local _rc=$1
+#       local _stdout=$2
+#       local _stderr=$3
+#       ...
+#       # analyze _rc, _stdout, and _stderr to decide whether the failure is transient
+#   }
+#-----------------------------------------------------------------------------------------------
+function are_transient_args_valid()
+{
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[1]}() requires 3 arguments (provided $#):" \
+                                                                                       "  - return code: the return code of the command" \
+                                                                                       "  - the name of the file where 'stdout' was redirected to" \
+                                                                                       "  - the name of the file where 'stderr' was redirected to"
+    [[ ! -v 1 ]] || { is_exit_code "$1" && (( $1 > 0 )); }                      || bug "${FUNCNAME[1]}() \$arg1 must be a valid failure return code [1, 255] from the failed command"
+    [[ ! -v 2 || -f $2 ]]                                                       || bug "${FUNCNAME[1]}() \$arg2 must be the name of the file where 'stdout' was redirected to."
+    [[ ! -v 3 || -f $3 ]]                                                       || bug "${FUNCNAME[1]}() \$arg3 must be the name of the file where 'stderr' was redirected to."
+                                                                                exit_if_has_bugs
+    return "$success"
 }
 
 #-----------------------------------------------------------------------------------------------

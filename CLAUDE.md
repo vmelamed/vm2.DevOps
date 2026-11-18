@@ -334,8 +334,16 @@ results_text=$(get_results)                                   || with_error rc "
   failed.
 - Capture a command's output with `x=$(cmd) || with_error …`, which keeps `cmd`'s exit status. A temporary file is needed
   only when the step really writes one (a tool's `--output` file), or when `stdout` and `stderr` must be captured
-  separately. Never `readarray < <(cmd)`: process substitution loses `cmd`'s exit status. Never `local x=$(cmd)`: `local`
-  masks it with its own.
+  separately. Never `local x=$(cmd)`: `local` masks it with its own.
+- **Process substitution (`readarray … < <(cmd)`, `done < <(cmd)`) loses `cmd`'s exit status: use it only for in-memory
+  transforms** -- `jq`, `sed`, `awk`, `printf … | sort` over a variable that is already in memory, which fail only on a
+  bug upstream. Anything that reads a remote (`gh`, `git ls-remote`), a git ref (`git log "$base..HEAD"`), a file of user
+  input (a JSON config), or one of our own functions is captured first, then read from the variable:
+  `x=$(cmd) || with_error …`, then `readarray -t arr <<< "$x"`. Otherwise a failure reads as a valid empty answer: no
+  commits to validate, no settings configured, no files to compare. Our own functions lose more than the exit status:
+  the `error`s they record increment `__errors` in the subshell, and the count is lost. (`find` and `grep` over a local
+  tree are acceptable: a failure shows on `stderr` and leaves at most a partial list, and `grep`'s "no match" is a
+  correct empty answer.)
 - A library function ends the chain with `return "$rc"`; only a top-level script may end it with `exit_if_has_errors` (see
   above).
 

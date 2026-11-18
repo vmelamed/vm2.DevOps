@@ -322,12 +322,12 @@ EOF
     assert_output "variable set FOO --body bar -R acme/myrepo"
 }
 
-@test "set_var: warns and returns failure when the gh call fails" {
+@test "set_var: warns and returns err_tool_error when the gh call fails" {
     _install_fake_gh_logger "$BATS_TEST_TMPDIR/bin"
     run _sr "repo='acme/myrepo'; FAKE_GH_EXIT=1 set_var FOO bar; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "Failed to create or assign a value to the variable FOO"
-    assert_output --partial "RC=1"
+    assert_output --partial "RC=$err_tool_error"
 }
 
 @test "set_secret: bug-exits when the app is not a recognized value" {
@@ -358,12 +358,12 @@ EOF
     assert_output "secret delete NUGET_API_KEY --app actions --repo acme/myrepo"
 }
 
-@test "delete_secret: propagates the underlying failure code when the gh call fails" {
+@test "delete_secret: returns err_tool_error when the gh call fails" {
     _install_fake_gh_logger "$BATS_TEST_TMPDIR/bin"
     run _sr "repo='acme/myrepo'; FAKE_GH_EXIT=1 delete_secret NUGET_API_KEY actions; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "Failed to delete secret NUGET_API_KEY"
-    assert_output --partial "RC=1"
+    assert_output --partial "RC=$err_tool_error"
 }
 
 # =====================================================================================
@@ -523,7 +523,7 @@ EOF
              nuget_server=nuget
              configure_secrets actions; echo RC=\$?" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_output --partial "Failed to retrieve the list of secrets"
-    assert_output --partial "RC=7"
+    assert_output --partial "RC=$err_tool_error"
     refute_output --partial "Create secret:"
     run cat "$BATS_TEST_TMPDIR/calls.log"
     refute_output --partial "secret delete"

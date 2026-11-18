@@ -112,6 +112,19 @@ EOF
     assert_output --partial "does not exist or is empty"
 }
 
+@test "configure: fails on a file entry with no fields (an empty object)" {
+    # jq renders '{}' as '==', not as an empty line: only the empty here-string of an empty 'files' array may be skipped
+    # (regression: a guard that skipped lines with three empty fields silently skipped '{}' too)
+    mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot"
+    echo '{"files":[{}]}' > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json"
+    run _ds "declare -a source_files=() target_files=() file_actions=(); configure '$BATS_TEST_TMPDIR/sot'"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Empty source file path"
+    assert_output --partial "Empty target file path"
+    assert_output --partial "Empty action"
+}
+
 @test "configure: succeeds with an empty 'files' array" {
     mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
     _stub_config_schema "$BATS_TEST_TMPDIR/sot"
