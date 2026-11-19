@@ -368,7 +368,7 @@ if ! has_remote_repo repo_state; then
     fi
 
     info "  ...creating repository '$repo' with $visibility visibility and default branch '$branch'. Description: '$description'. parameters;"
-    execute_with_retry --quiet --is-transient is_transient_gh_error \
+    execute_with_retry --quiet --classify gh_failure \
         gh repo create "${create_repo_params[@]}"                               || rc=$?
     (( rc != success )) || undos+=("gh repo delete '$repo' --yes")
 

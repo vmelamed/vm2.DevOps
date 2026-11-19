@@ -158,7 +158,7 @@ function compare_settings()
     # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
     local _json
 
-    _json=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    _json=$(execute_with_retry --query --classify gh_failure \
                 gh api --paginate "$_gh_endpoint")                              ||  {
                                                                                         with_error _rc $? "Could not retrieve data from GitHub's endpoint $_gh_endpoint."
                                                                                         return "$_rc"
@@ -253,7 +253,7 @@ function audit_branch_ruleset()
     local _rulesets_json
     local _ruleset_id
 
-    _rulesets_json=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    _rulesets_json=$(execute_with_retry --query --classify gh_failure \
                         gh api --paginate "$path_rulesets")                     || true
     [[ -n "${_rulesets_json:-}" ]]                                              || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$branch' is missing"
     (( _rc != success )) || _ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$_rulesets_json" 2>"$_ignore")
@@ -272,8 +272,11 @@ function audit_required_status_checks()
     echo "      $info_em  Required status checks list:"
 
     local _json
-    _json=$(execute_with_retry --query --is-transient is_transient_gh_error \
-                gh api --paginate "$path_main_protection_ruleset")              || return $?
+    _json=$(execute_with_retry --query --classify gh_failure \
+                gh api --paginate "$path_main_protection_ruleset")              ||  {
+                                                                                        with_error _rc $? "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
+                                                                                        return "$_rc"
+                                                                                    }
 
     local -a _present_checks=()
     local _check

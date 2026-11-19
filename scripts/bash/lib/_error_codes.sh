@@ -60,6 +60,7 @@ declare -xri err_tool_error=66          # An error occurred while executing an e
 declare -xri err_tool_unauthenticated=67 # An external tool is not authenticated (e.g., gh).
 declare -xri err_logic_error=68         # An error occurred in the logic of the script (most likely a bug, invalid state, unexpected condition, etc.)
 declare -xri err_tool_version=69        # The version of a tool is incompatible.
+declare -xri err_access_denied=70       # Access to a resource was denied (e.g., HTTP 403: the token lacks a scope or a permission).
 
 declare -xri err_not_git_directory=80   # The specified directory is not a directory from a Git repository working tree
 declare -xri err_not_git_root=81        # The specified directory is not a root directory of a Git repository working tree
@@ -116,6 +117,7 @@ declare -rA __error_messages=(
     [$err_tool_unauthenticated]="An external tool is not authenticated."
     [$err_logic_error]="An error occurred in the logic of the script (e.g., bug, invalid state, unexpected condition, etc.)"
     [$err_tool_version]="The version of a tool is not compatible."
+    [$err_access_denied]="Access to a resource was denied (e.g., the token lacks a scope or a permission)."
 
     [$err_not_git_directory]="The specified directory is not in a Git working tree."
     [$err_not_git_root]="The specified directory is not the root directory of a Git working tree."
@@ -169,6 +171,7 @@ declare -rA __error_names=(
     [$err_tool_unauthenticated]="\$err_tool_unauthenticated"
     [$err_logic_error]="\$err_logic_error"
     [$err_tool_version]="\$err_tool_version"
+    [$err_access_denied]="\$err_access_denied"
 
     [$err_not_git_directory]="\$err_not_git_directory"
     [$err_not_git_root]="\$err_not_git_root"
@@ -283,4 +286,51 @@ function error_name()
 
     [[ -v __error_names[$1] ]] && _rc=$1 || _rc=$err_unknown
     printf "%s" "${__error_names[$_rc]}"
+}
+
+#-----------------------------------------------------------------------------------------------
+# HTTP status codes -> vm2 codes, for the classifiers of `execute_with_retry --classify` (e.g.
+# `gh_failure` in `_git_gh.sh`). Only the statuses a caller may want to tell apart have
+# a row; any other status maps to $err_tool_error. `0` (`$positive`) means "transient": the
+# request may succeed if it is retried.
+#-----------------------------------------------------------------------------------------------
+declare -rA __http_status_error_codes=(
+    [401]=$err_tool_unauthenticated     # Unauthorized: no or bad credentials
+    [403]=$err_access_denied            # Forbidden: the credentials lack a scope or a permission
+    [404]=$err_not_found                # Not Found (GitHub also answers 404 for a resource the token may not see)
+    [425]=0                             # Too Early
+    [429]=0                             # Too Many Requests: rate limited
+    [500]=0                             # Internal Server Error: on GitHub, mostly a transient hiccup
+    [502]=0                             # Bad Gateway
+    [503]=0                             # Service Unavailable
+    [504]=0                             # Gateway Timeout
+)
+
+#-----------------------------------------------------------------------------------------------
+# @description Translates an HTTP status code into a vm2 code: a plain table lookup, the
+#   mechanism under a classifier's policy.
+#
+# @arg $1 int The HTTP status code [100, 599].
+# @arg $2 string The name of the variable that receives the vm2 code: `0` for a transient
+#   failure, the vm2 code of a status with a row in the table, or `$err_tool_error`.
+#
+# @exitcode success=0: Always, once past the argument validation.
+#
+# @example
+#   http_status_to_error_code 404 code      # code=$err_not_found
+#   http_status_to_error_code 503 code      # code=0: transient
+#   http_status_to_error_code 422 code      # code=$err_tool_error
+#-----------------------------------------------------------------------------------------------
+function http_status_to_error_code()
+{
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                       "  - the HTTP status code" \
+                                                                                       "  - the name of the variable that receives the vm2 code" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 || $1 =~ ^[1-5][0-9]{2}$ ]]                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an HTTP status code [100, 599] (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a declared variable (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+                                                                                exit_if_has_bugs
+
+    local -n __http_error_code=$2
+    __http_error_code=${__http_status_error_codes[$1]:-$err_tool_error}
 }

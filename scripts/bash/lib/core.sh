@@ -306,16 +306,17 @@ function execute()
 # @option --query The command has no side effects (typically a query): it runs in a dry run too,
 #   so the caller gets real data.
 # @option -q|--quiet Discards the command's stdout (not its stderr).
-# @option -it|--is-transient <predicate name> The name of a function that decides whether a
-#   failure is worth retrying. It receives three arguments:
+# @option -c|--classify <function name> The name of a function that classifies a failure. It
+#   receives three arguments (validate them with `validate_classifier_args "$@"`):
 #       - the failed command's exit code [1, 255]
 #       - the name of the file holding the command's stdout
 #       - the name of the file holding the command's stderr
-#       Hint: use 'are_transient_args_valid "$@"' in the predicates to validate its input.
-#   The predicate MUST return:
-#       positive=0 if the failure is transient, and the command can be retried
-#       negative=1 if the failure is persistent, and retrying would not help
-#   Default `true` - every failure is treated as transient.
+#   It MUST return:
+#       0 if the failure is transient: the command can be retried
+#       1 if the failure is persistent: execute_with_retry returns $err_tool_error
+#       any other vm2 code if the failure is persistent: execute_with_retry returns that code,
+#         e.g. $err_not_found, so the caller can tell an expected "no" from a failure
+#   Default `true`: every failure is transient. For `gh`, use `gh_failure` (_git_gh.sh).
 # @arg $@ string The command to execute, and its arguments.
 #
 # @stdout The command's stdout; nothing with `--quiet`, or for a non-query in a dry run.
@@ -323,14 +324,17 @@ function execute()
 #
 # @exitcode success=0: The command succeeded, or it is a non-query in a dry run (only printed).
 # @exitcode err_io_failure=21: A temporary file for the command's output could not be created.
-# @exitcode err_tool_error=66 The command failed.
+# @exitcode err_tool_error=66: The command failed: the attempts were exhausted, or the classifier
+#   returned 1.
+# @exitcode err_*: The command failed persistently, and the classifier returned this vm2 code.
 #
 # @example
 #   execute_with_retry --delay 5 --quiet dotnet nuget push "$package" --source "$source"
 # @example
-#   # retry only on curl's network errors: 6 (resolve host), 7 (connect), 28 (timeout)
-#   function is_curl_transient() { [[ $1 == @(6|7|28) ]]; }
-#   status=$(execute_with_retry --query --is-transient is_curl_transient curl -fsS https://example.com/status)
+#   # retry only on curl's network errors: 6 (resolve host), 7 (connect), 28 (timeout); 22 (an
+#   # HTTP error, with --fail) is $err_tool_error
+#   function curl_failure() { [[ $1 == @(6|7|28) ]]; }
+#   status=$(execute_with_retry --query --classify curl_failure curl -fsS https://example.com/status)
 #-----------------------------------------------------------------------------------------------
 function execute_with_retry()
 {
@@ -338,7 +342,7 @@ function execute_with_retry()
     local _delay=2 # seconds
     local _is_query=false
     local _is_quiet=false
-    local _is_transient=true
+    local _classify=true
     local _option
 
     while (( $# > 0 )); do
@@ -358,11 +362,11 @@ function execute_with_retry()
                 has_bugs || _delay=$1
                 (( $# > 0 )) && shift
                 ;;
-            -it|--is-transient )
+            -c|--classify )
                 shift
-                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() option --is-transient MUST be followed by the name of a predicate function that can analyze the output from the command." -ec "$err_missing_argument"
-                [[ ! -v 1 ]] || is_function "$1"                                || bug "${FUNCNAME[0]}() option --is-transient MUST be followed by the name of a predicate function that can analyze the output from the command (provided '${1-<missing>}')." -ec "$err_argument_type"
-                has_bugs || _is_transient=$1
+                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() option --classify MUST be followed by the name of a predicate function that can analyze the output from the command." -ec "$err_missing_argument"
+                [[ ! -v 1 ]] || is_function "$1"                                || bug "${FUNCNAME[0]}() option --classify MUST be followed by the name of a predicate function that can analyze the output from the command (provided '${1-<missing>}')." -ec "$err_argument_type"
+                has_bugs || _classify=$1
                 (( $# > 0 )) && shift
                 ;;
             --query )
@@ -384,14 +388,20 @@ function execute_with_retry()
     # build the command line for display purposes
     local IFS=" "
     local _command_line
-    printf -v _command_line '%q ' "$@"
-    _command_line=${_command_line% }
 
     # in --dry-run mode just print the command and return $success
-    is_dry_run && ! $_is_query && {
-        echo "dry-run\$ $_command_line"
+    if is_dry_run && ! $_is_query; then
+        printf -v _command_line '%q ' "$@"
+        _command_line=${_command_line% }
+        echo "dry-run\$ $_command_line" >&2
         return "$success"
-    } >&2
+    fi
+
+    local _word
+    for _word in "$@"; do
+        [[ $_word != -* ]] || { _command_line+='...'; break; }
+        _command_line+="${_command_line:+ }$_word"
+    done
 
     local -i _rc="$success"
 
@@ -407,7 +417,7 @@ function execute_with_retry()
 
     local -i _ec=0   # inside the loop we have command's exit codes
     local -i _attempt=0
-    local _transient_error
+    local -i _class=0   # the classifier's verdict: 0 = transient, 1 = $err_tool_error, else a vm2 code
 
     trace "Executing with retry (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $_command_line"
 
@@ -418,12 +428,11 @@ function execute_with_retry()
         # the command failed - display the content of _stderr_file to the user
         cat "$_stderr_file" >&2
 
-        # if this is a transient error, we can retry
-        $_is_transient "$_ec" "$_stdout_file" "$_stderr_file" &&
-            _transient_error=true ||
-            _transient_error=false
+        # classify the failure: transient (0), or persistent (1, or the vm2 code to return)
+        _class=0
+        $_classify "$_ec" "$_stdout_file" "$_stderr_file" || _class=$?
 
-        if $_transient_error; then
+        if (( _class == 0 )); then
             if (( _attempt < _max_attempts )); then
                 # sleep and loop to retry
                 warning "Transient command failure after attempt $_attempt/$_max_attempts ($_ec). Retrying in ${_delay}s: $_command_line"
@@ -440,8 +449,10 @@ function execute_with_retry()
         fi
     done
 
-    # convert the command's exit codes to vm2 return code err_tool_error
-    (( _ec == 0 ))                                                              || _rc="$err_tool_error"
+    # convert the command's exit code to a vm2 code: the classifier's, or else $err_tool_error
+    if (( _ec != 0 )); then
+        (( _class > 1 )) && _rc=$_class || _rc=$err_tool_error
+    fi
 
     # display the _stderr_file on stderr
     (( _rc == success )) && cat "$_stderr_file" >&2
@@ -456,38 +467,38 @@ function execute_with_retry()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates the arguments of an `--is-transient` predicate (see
-#   `execute_with_retry`). Call it first thing in the predicate, with the predicate's own
-#   arguments.
+# @description Validates the arguments of a classifier (`execute_with_retry --classify`). Call
+#   it first thing in the classifier, with the classifier's own arguments.
 #
 # @arg $1 int The failed command's exit code [1, 255].
 # @arg $2 string The name of the file holding the command's stdout.
 # @arg $3 string The name of the file holding the command's stderr.
 #
 # @exitcode success=0: Always. If an argument is invalid, it reports a bug, in the
-#   predicate's name, and exits the script.
+#   classifier's name, and exits the script.
 #
 # @example
-#   function is_transient_example_command()
+#   function example_failure()
 #   {
-#       are_transient_args_valid "$@"
+#       validate_classifier_args "$@"
 #
-#       local _rc=$1
-#       local _stdout=$2
-#       local _stderr=$3
+#       local _exit_code=$1
+#       local _stdout_file=$2
+#       local _stderr_file=$3
 #       ...
-#       # analyze _rc, _stdout, and _stderr to decide whether the failure is transient
+#       # 0: transient; 1: $err_tool_error; or another vm2 code, e.g. $err_not_found
 #   }
 #-----------------------------------------------------------------------------------------------
-function are_transient_args_valid()
+function validate_classifier_args()
 {
     (( $# == 3 ))                                                               || bug "${FUNCNAME[1]}() requires 3 arguments (provided $#):" \
-                                                                                       "  - return code: the return code of the command" \
-                                                                                       "  - the name of the file where 'stdout' was redirected to" \
-                                                                                       "  - the name of the file where 'stderr' was redirected to"
-    [[ ! -v 1 ]] || { is_exit_code "$1" && (( $1 > 0 )); }                      || bug "${FUNCNAME[1]}() \$arg1 must be a valid failure return code [1, 255] from the failed command"
-    [[ ! -v 2 || -f $2 ]]                                                       || bug "${FUNCNAME[1]}() \$arg2 must be the name of the file where 'stdout' was redirected to."
-    [[ ! -v 3 || -f $3 ]]                                                       || bug "${FUNCNAME[1]}() \$arg3 must be the name of the file where 'stderr' was redirected to."
+                                                                                       "  - the failed command's exit code" \
+                                                                                       "  - the name of the file holding the command's stdout" \
+                                                                                       "  - the name of the file holding the command's stderr" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || { is_exit_code "$1" && (( $1 > 0 )); }                      || bug "${FUNCNAME[1]}() requires argument 1 to be the failed command's exit code [1, 255] (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 || -f $2 ]]                                                       || bug "${FUNCNAME[1]}() requires argument 2 to be the file holding the command's stdout (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 3 || -f $3 ]]                                                       || bug "${FUNCNAME[1]}() requires argument 3 to be the file holding the command's stderr (provided '${3-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
     return "$success"
 }

@@ -256,16 +256,18 @@ Executes a command, or (in dry-run mode) prints what would have been executed wi
 Executes a command, retrying on failure until it succeeds or a maximum attempt count is reached, with a fixed delay between
 attempts. A prefix of the real command, written on its own line:
 
-    execute_with_retry 3 2 --query --is-transient is_transient_gh_error \
+    execute_with_retry --query --classify gh_failure \
         gh api "repos/$repo" --jq .id
 
-`--query` marks a read-only command, which runs in a dry run too; any other command is only printed. `--quiet` discards its
-stdout. `--is-transient <predicate>` decides from the exit code, stdout, and stderr whether a failure is worth retrying
-(default: every failure is). A failure returns `$err_tool_error`; it is not reported as an error: the caller decides.
+`--attempts` (default 3) and `--delay` (default 2 seconds) shape the retry. `--query` marks a read-only command, which runs
+in a dry run too; any other command is only printed. `--quiet` discards its stdout. `--classify <function>` classifies a
+failure from the exit code, stdout, and stderr: `0` transient (retry), `1` persistent (`$err_tool_error`), or another vm2
+code to return, e.g. `$err_not_found` (default: every failure is transient). A failure is not reported as an error: the
+caller decides.
 
-### are_transient_args_valid()
+### validate_classifier_args()
 
-Validates the arguments of an `--is-transient` predicate (exit code, stdout file, stderr file); bug-exits when invalid.
+Validates the arguments of a `--classify` function (exit code, stdout file, stderr file); bug-exits when invalid.
 
 ### list_of_files()
 
@@ -381,6 +383,12 @@ Looks up an error code and prints `"<code>: <message>"`. Exits the process direc
 
 Looks up an error code and prints its symbolic name (e.g. `$err_not_found`). Exits the process directly, for the same reason as
 `error_message`.
+
+### http_status_to_error_code()
+
+Translates an HTTP status code into a vm2 code through a small table: `0` for a transient status (`425`, `429`, `500`,
+`502`-`504`), `$err_tool_unauthenticated` (`401`), `$err_access_denied` (`403`), `$err_not_found` (`404`); any other
+status is `$err_tool_error`. The mechanism under the `--classify` functions of `execute_with_retry()`.
 
 ---
 
@@ -920,11 +928,11 @@ Test a GitHub repository owner / name / full name (`<owner>/<name>`) / descripti
 
 Validate a GitHub repository owner / name / description, reporting an error when invalid.
 
-### is_transient_gh_error()
+### gh_failure()
 
-The `--is-transient` predicate of `execute_with_retry()` for every `gh` command, `gh api` included: the HTTP status of a
-`gh api` JSON error body decides (`425`, `429`, `5xx` are transient); failing that, the stderr message (an `HTTP 5xx`, a
-rate limit, a timeout, the connection, the network, ...).
+The `--classify` function of `execute_with_retry()` for every `gh` command, `gh api` included: the HTTP status (from a
+`gh api` JSON error body, or an `HTTP <status>` in the message) decides through `http_status_to_error_code()`; failing
+that, the message (a rate limit, a timeout, the connection, the network, ...) marks a transient failure.
 
 ### get_gh_repo_property()
 

@@ -26,6 +26,8 @@ declare -gx err_invalid_nameref
 declare -gx err_logic_error
 declare -gx err_missing_argument
 declare -gx err_tool_error
+declare -gx err_access_denied
+declare -gx err_not_found
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 
@@ -523,7 +525,7 @@ EOF
              nuget_server=nuget
              configure_secrets actions; echo RC=\$?" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_output --partial "Failed to retrieve the list of secrets"
-    assert_output --partial "RC=$err_tool_error"
+    assert_output --partial "RC=$err_access_denied"     # the fake answers HTTP 403
     refute_output --partial "Create secret:"
     run cat "$BATS_TEST_TMPDIR/calls.log"
     refute_output --partial "secret delete"
@@ -618,3 +620,45 @@ EOF
     assert_output --partial "-X PUT repos/acme/myrepo/rulesets/99"
     refute_output --partial "-X POST"
 }
+# --- get_current_nuget_server --------------------------------------------------------------------------------------
+# A fake 'gh' that answers every call with $FAKE_GH_OUT on stdout, $FAKE_GH_ERR on stderr, and the exit code $FAKE_GH_RC.
+_install_fake_gh_answer() {
+    mkdir -p "$1"
+    cat > "$1/gh" <<'GH'
+#!/usr/bin/env bash
+echo "$*" >> "$GH_CALL_LOG"
+[[ -z ${FAKE_GH_OUT:-} ]] || printf '%s\n' "$FAKE_GH_OUT"
+[[ -z ${FAKE_GH_ERR:-} ]] || printf '%s\n' "$FAKE_GH_ERR" >&2
+exit "${FAKE_GH_RC:-0}"
+GH
+    chmod +x "$1/gh"
+}
+
+@test "get_current_nuget_server: takes the value of the repository's NUGET_SERVER variable" {
+    _install_fake_gh_answer "$BATS_TEST_TMPDIR/bin"
+    run _sr "repo_owner=acme; repo_name=myrepo; export FAKE_GH_OUT=github
+             get_current_nuget_server; echo \"RC=\$? nuget_server=[\$nuget_server]\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+    assert_output --partial "RC=0 nuget_server=[github]"
+    run cat "$BATS_TEST_TMPDIR/calls.log"
+    assert_output "api repos/acme/myrepo/actions/variables/NUGET_SERVER --jq .value"
+}
+
+@test "get_current_nuget_server: takes the default, without an error, when the variable does not exist (HTTP 404)" {
+    # regression (Copilot): the capture-first rewrite treated the 404 of a missing variable as a failure
+    _install_fake_gh_answer "$BATS_TEST_TMPDIR/bin"
+    run _sr "repo_owner=acme; repo_name=myrepo
+             export FAKE_GH_OUT='{\"message\":\"Not Found\",\"status\":\"404\"}' FAKE_GH_ERR='gh: Not Found (HTTP 404)' FAKE_GH_RC=1
+             get_current_nuget_server; echo \"RC=\$? nuget_server=[\$nuget_server] default=[\$default_nuget_server] errors=\$(get_errors)\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+    refute_output --partial "ERROR"
+    assert_output --regexp 'RC=0 nuget_server=\[([^]]+)\] default=\[\1\] errors=0'
+}
+
+@test "get_current_nuget_server: reports and returns any other failure (e.g. HTTP 403)" {
+    _install_fake_gh_answer "$BATS_TEST_TMPDIR/bin"
+    run _sr "repo_owner=acme; repo_name=myrepo
+             export FAKE_GH_OUT='{\"message\":\"Resource not accessible by integration\",\"status\":\"403\"}' FAKE_GH_RC=1
+             get_current_nuget_server; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
+    assert_output --partial "Could not read the variable NUGET_SERVER of the repository 'acme/myrepo'"
+    assert_output --partial "RC=$err_access_denied"
+}
+

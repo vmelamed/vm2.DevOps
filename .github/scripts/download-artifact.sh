@@ -46,7 +46,7 @@ declare -x workflow_id
 declare -x workflow_name
 declare -x workflow_path
 
-[[ -n $repository ]] || repository=$(execute_with_retry --query --is-transient is_transient_gh_error \
+[[ -n $repository ]] || repository=$(execute_with_retry --query --classify gh_failure \
                                         gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") \
                                                                                 || exit_with_error "The current directory is not in a GitHub repository; use '--repository <owner/repo>'." -ec "$err_not_found"
 
@@ -78,14 +78,14 @@ if [[ -z "$workflow_id" ]]; then
     declare -a workflow_ids=()
     declare what=''
 
-    _workflows=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    _workflows=$(execute_with_retry --query --classify gh_failure \
                     gh workflow list --repo "$repository" --json "id,name,path") \
                                                                                 || exit_with_error "Could not list the workflows of '$repository'." -ec $?
 
     declare _workflows_ids_result
     _workflows_ids_result=$(jq -r --arg n "$workflow_name" --arg p "$workflow_path" "$query" <<< "$_workflows")
 
-    readarray -t workflow_ids <<< "$_workflows_ids_result"
+    [[ -n $_workflows_ids_result ]] && readarray -t workflow_ids <<< "$_workflows_ids_result"
 
     case "${#workflow_ids[@]}" in
         0)  [[ -n "$workflow_name" ]] &&
@@ -141,7 +141,7 @@ declare artifact_present=false
 rc=$success
 
 # get the IDs of the last 100 successful runs of the specified workflow
-runs_text=$(execute_with_retry --query --is-transient is_transient_gh_error \
+runs_text=$(execute_with_retry --query --classify gh_failure \
                 gh run list \
                 --repo "$repository" \
                 --workflow "$workflow_id" \
@@ -161,7 +161,7 @@ for run in "${runs[@]}"; do
     trace "Checking run $run for the artifact '$artifact_name'..."
     rc=$success
     artifact_present=false
-    artifacts_list=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    artifacts_list=$(execute_with_retry --query --classify gh_failure \
                         gh api "repos/$repository/actions/runs/$run/artifacts") || with_error rc "$err_tool_error" "Could not list the artifacts of run $run."
     (( rc != success )) || artifact_present=$(jq -r --arg n "$artifact_name" 'any (.artifacts[]; .name==$n)' <<< "$artifacts_list")
     (( rc == success ))                                                         || continue
@@ -176,7 +176,7 @@ for run in "${runs[@]}"; do
                 "You may want to refresh the artifact."
     fi
 
-    download_result=$(execute_with_retry --is-transient is_transient_gh_error \
+    download_result=$(execute_with_retry --classify gh_failure \
                             gh run download "$run" \
                             --repo "$repository" \
                             --name "$artifact_name" \

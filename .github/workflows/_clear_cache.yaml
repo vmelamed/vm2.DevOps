@@ -58,7 +58,7 @@ jobs:
 
           # List all caches
           echo "📋 Current caches before cleanup:"
-          cache_list=$(execute_with_retry --query --is-transient is_transient_gh_error \
+          cache_list=$(execute_with_retry --query --classify gh_failure \
                           gh cache list --limit 100 2>&1)                       || true
           if [[ -n "$cache_list" ]]; then
               echo "$cache_list"
@@ -71,7 +71,7 @@ jobs:
           echo "🗑️ Searching for caches matching pattern '$CACHE_PATTERN*'..."
 
           deleted_count=0
-          matched_caches=$(execute_with_retry --query --is-transient is_transient_gh_error \
+          matched_caches=$(execute_with_retry --query --classify gh_failure \
                               gh cache list --limit 1000 2>&1 | grep "^$CACHE_PATTERN" || true)
 
           if [[ -z "$matched_caches" ]]; then
@@ -81,7 +81,7 @@ jobs:
               while IFS=$'\t' read -r cache_id cache_key rest; do
                   if [[ -n "$cache_id" ]]; then
                       echo "  🗑️  Deleting: $cache_key (ID: $cache_id)"
-                      if execute_with_retry --is-transient is_transient_gh_error \
+                      if execute_with_retry --classify gh_failure \
                              gh cache delete "$cache_id" --confirm 2>"$_ignore"; then
                           ((deleted_count++)) || true
                           echo "      ✅ Deleted successfully"
@@ -101,6 +101,6 @@ jobs:
               echo "**Pattern:** \`$CACHE_PATTERN*\`"
               echo "**Reason:** $REASON"
               echo "### Remaining Caches"
-              execute_with_retry --query --is-transient is_transient_gh_error \
+              execute_with_retry --query --classify gh_failure \
                   gh cache list --limit 20 || echo "No caches remaining"
           } | to_summary

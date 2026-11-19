@@ -123,11 +123,11 @@ function resolve_arguments()
                                                                                 exit_if_has_errors # circuit breaker: resolving the values below needs valid environment and arguments above
 
     # resolve what was omitted: the current directory's repository, the current branch's pull request
-    [[ -n $repo ]] || repo=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    [[ -n $repo ]] || repo=$(execute_with_retry --query --classify gh_failure \
                                 gh repo view \
                                 --json nameWithOwner \
                                 --jq .nameWithOwner 2>"$_ignore")               || error "The current directory is not in a GitHub repository; use '--repo <owner/repo>'." -ec "$err_not_found"
-    [[ -n $pr_number || -z $repo ]] || pr_number=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    [[ -n $pr_number || -z $repo ]] || pr_number=$(execute_with_retry --query --classify gh_failure \
                                                         gh pr view \
                                                         --json number \
                                                         --jq .number 2>"$_ignore") \

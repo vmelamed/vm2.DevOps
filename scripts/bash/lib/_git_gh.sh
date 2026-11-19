@@ -294,62 +294,66 @@ function validate_gh_repo_description()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description The `--is-transient` predicate of `execute_with_retry` for every `gh` command,
-#   `gh api` included: decides whether a failure is worth retrying. One rule: the HTTP status
-#   decides; failing that, the message.
+# @description The `--classify` function of `execute_with_retry` for every `gh` command, `gh api`
+#   included: classifies a failure as transient (retry), or as persistent, with the vm2 code the
+#   caller gets. One rule: the HTTP status decides; failing that, the message.
 #
 # Notes:
-#   - `gh api` writes the error's JSON body to stdout. If it has a `.status`, only that status
-#     decides: `425`, `429`, and `5xx` are transient, anything else is not.
-#   - Otherwise (any other `gh` command, or a failure without a JSON body), stderr decides: an
-#     `HTTP 425`/`HTTP 429`/`HTTP 5xx` status in the message, or a message about a rate limit, a
-#     server error, a timeout, an unavailable service, "try again", the connection, the network,
-#     or DNS.
+#   - The HTTP status comes from the `.status` of the JSON error body that `gh api` writes to
+#     stdout, or else from an `HTTP <status>` in the message (any `gh` command). It is translated
+#     by `http_status_to_error_code` (`_error_codes.sh`): `425`, `429`, `500`, and `502`-`504`
+#     are transient; `401` -> `$err_tool_unauthenticated`, `403` -> `$err_access_denied`, `404`
+#     -> `$err_not_found`; any other status -> `$err_tool_error`.
+#   - A failure without a status is transient when the message is about a rate limit, a server
+#     error, a timeout, an unavailable service, "try again", the connection, the network, or
+#     DNS; anything else is `$err_tool_error`.
 #   - A number elsewhere in the message (e.g. a run ID with `500` in it) is not taken for a status.
-#   - An authentication failure is not transient: a bad token does not fix itself in seconds.
 #
 # @arg $1 int The failed command's exit code [1, 255].
 # @arg $2 string The name of the file holding the command's stdout.
 # @arg $3 string The name of the file holding the command's stderr.
 #
-# @exitcode positive=0: The failure is transient: the command can be retried.
-# @exitcode negative=1: The failure is persistent: retrying would not help.
+# @exitcode 0: The failure is transient: the command can be retried.
+# @exitcode err_*: The failure is persistent: the vm2 code `execute_with_retry` returns, e.g.
+#   `$err_not_found` (HTTP 404) or `$err_tool_error`.
 #
 # @example
-#   execute_with_retry --delay 3 --quiet --is-transient is_transient_gh_error \
+#   execute_with_retry --quiet --classify gh_failure \
 #       gh repo create my-repo --public
 # @example
-#   repo_id=$(execute_with_retry --query --is-transient is_transient_gh_error \
-#                 gh api "repos/vmelamed/vm2.Ulid" --jq .id)
+#   value=$(execute_with_retry --query --classify gh_failure \
+#               gh api "repos/$repo/actions/variables/NUGET_SERVER" --jq .value)        || rc=$?
+#   (( rc == success || rc == err_not_found ))                                         || …   # absent: a default
 #-----------------------------------------------------------------------------------------------
-function is_transient_gh_error()
+function gh_failure()
 {
-    are_transient_args_valid "$@"
+    validate_classifier_args "$@"
 
     local _exit_code=$1
     local _stdout_file=$2
     local _stderr_file=$3
 
-    # 'gh api' writes the error's JSON body to stdout: its HTTP status decides ('?' tolerates a non-object, e.g. the
-    # array of a partially paginated response)
-    local _status
-    _status=$(jq -r '.status? // empty' "$_stdout_file" 2>"$_ignore")           || true
-
-    if [[ -n $_status ]]; then
-        [[ $_status =~ ^(425|429|5[0-9]{2})$ ]] && return "$positive"
-        trace "Non-transient 'gh' failure (exit code $_exit_code): HTTP status $_status."
-        return "$negative"
-    fi
-
-    # otherwise (any other 'gh' command, or no JSON body): the message decides
     local _message
     _message=$(< "$_stderr_file")                                               || true
 
-    [[ $_message =~ HTTP\ (425|429|5[0-9]{2})([^0-9]|$)|rate.limit|server.error|timeout|temporarily.unavailable|try.again|connection|network|dns ]] &&
-        return "$positive"
+    # the HTTP status: from the JSON error body of 'gh api' ('?' tolerates a non-object, e.g. the array of a partially
+    # paginated response), or else from the message of any 'gh' command
+    local _status
+    _status=$(jq -r '.status? // empty' "$_stdout_file" 2>"$_ignore")           || true
+    [[ $_status =~ ^[1-5][0-9]{2}$ ]]                                           || _status=''
+    [[ -n $_status || ! $_message =~ HTTP\ ([1-5][0-9]{2})([^0-9]|$) ]]         || _status=${BASH_REMATCH[1]}
 
-    trace "Non-transient 'gh' failure (exit code $_exit_code): $_message"
-    return "$negative"
+    local -i _code
+    if [[ -n $_status ]]; then
+        http_status_to_error_code "$_status" _code
+    elif [[ $_message =~ rate.limit|server.error|timeout|temporarily.unavailable|try.again|connection|network|dns ]]; then
+        _code=0
+    else
+        _code=$err_tool_error
+    fi
+
+    (( _code == 0 )) || trace "Persistent 'gh' failure (exit code $_exit_code${_status:+, HTTP $_status}): $(error_name "$_code")"
+    return "$_code"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -381,7 +385,7 @@ function get_gh_repo_property()
     local _property_name=$2
     local -i _rc=$success
 
-    execute_with_retry --query --is-transient is_transient_gh_error \
+    execute_with_retry --query --classify gh_failure \
         gh api --paginate "repos/$_repo_full_name" -q ".$_property_name"        || with_error _rc "$err_tool_error" "Could not get the property '$_property_name' of the repository '$_repo_full_name' from GitHub"
 
     return "$_rc"
@@ -464,7 +468,7 @@ function get_gh_repo_state()
     local -i _rc=$success
 
     local _query_result
-    _query_result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    _query_result=$(execute_with_retry --query --classify gh_failure \
                         gh api --paginate "repos/$_repo_full_name" -q "$jq_gh_repo_state") \
                                                                                 || with_error _rc "$err_tool_error" "Could not get the status of the repository '$_repo_full_name' from GitHub"
 

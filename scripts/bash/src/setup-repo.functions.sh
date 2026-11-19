@@ -13,6 +13,7 @@ declare -x err_invalid_arguments
 declare -x err_argument_value
 declare -x err_missing_argument
 declare -x err_tool_error
+declare -x err_not_found
 declare -x err_logic_error
 declare -x err_io_failure
 
@@ -86,19 +87,19 @@ function resolve_github_app_ids()
     # Resolve the GitHub Actions app ID dynamically via the API.
     # Used to pin required status checks to GitHub Actions specifically.
     # this function cannot be called before initialize_gh_paths() because the latter relies on the actions_app_id variable being set - circular dependency
-    actions_app_id=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    actions_app_id=$(execute_with_retry --query --classify gh_failure \
                             gh api --paginate apps/github-actions \
                             --jq '.id' 2>"$_ignore")                            || error "${FUNCNAME[0]}() Failed to resolve GitHub Actions app ID from the API." -ec "$err_tool_error"
     trace "GitHub Actions app ID: $actions_app_id"
     [[ "$actions_app_id" == "15368" ]]                                          || warning "Unexpected GitHub Actions app ID: $actions_app_id (expected 15368). Required status check matching may not work correctly."
 
-    dependabot_app_id=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    dependabot_app_id=$(execute_with_retry --query --classify gh_failure \
                             gh api --paginate apps/dependabot \
                             --jq '.id' 2>"$_ignore")                            || error "${FUNCNAME[0]}() Failed to resolve Dependabot app ID from the API." -ec "$err_tool_error"
     trace "Dependabot app ID: $dependabot_app_id"
     [[ "$dependabot_app_id" == "29110" ]]                                       || warning "Unexpected Dependabot app ID: $dependabot_app_id (expected 29110). Required status check matching may not work correctly for Dependabot."
 
-    codespaces_app_id=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    codespaces_app_id=$(execute_with_retry --query --classify gh_failure \
                             gh api --paginate apps/codespaces \
                             --jq '.id' 2>"$_ignore")                            || error "${FUNCNAME[0]}() Failed to resolve Codespaces app ID from the API." -ec "$err_tool_error"
     trace "Codespaces app ID: $codespaces_app_id"
@@ -316,7 +317,7 @@ function initialize_main_protection_rs_id()
     (( main_protection_rs_id <= 0 ))                                            || return "$success"
 
     # try to get the main_protection_rs_id
-    main_protection_rs_id=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    main_protection_rs_id=$(execute_with_retry --query --classify gh_failure \
                                 gh api --paginate "$path_rulesets" -q "$jq_ruleset_id") \
                                                                                 || return "$failure"
 
@@ -338,12 +339,13 @@ function initialize_main_protection_rs_id()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Retrieves the current NuGet server moniker for the repository and stores it in
-#   the global variable $nuget_server.
+# @description Retrieves the repository's `NUGET_SERVER` variable into the global variable
+#   $nuget_server, or $default_nuget_server when the repository is not known yet, or the variable
+#   does not exist (HTTP 404: the repository itself is known to exist and to be readable here).
 #
-# @exitcode success=0: Always (a failure to retrieve the moniker is logged as a
-#   warning, not surfaced as a non-zero exit code).
-# @exitcode err_tool_error=66: Retrieving the current nuget server failed.
+# @exitcode success=0: $nuget_server is set.
+# @exitcode err_*: The variable could not be read (the vm2 code from `gh_failure`);
+#   reported as an error.
 #-----------------------------------------------------------------------------------------------
 function get_current_nuget_server()
 {
@@ -354,15 +356,18 @@ function get_current_nuget_server()
 
     local _repo_owner=${repo_owner:-$default_repo_owner}
     local -i _rc=$success
-    local _result
-    _result=$(execute_with_retry --query --is-transient is_transient_gh_error \
-                gh api "repos/$_repo_owner/$repo_name/actions/variables/NUGET_SERVER" --jq .value 2> "$_ignore") \
-                                                                                || {
-                                                                                        with_error _rc "$err_tool_error" "Retrieving the current nuget server failed." \
-                                                                                                                         -ec $?
+    local _result=''
+
+    # stderr is discarded: an absent variable is an expected 404, and 'gh' would print it (--trace shows it)
+    _result=$(execute_with_retry --query --classify gh_failure \
+                  gh api "repos/$_repo_owner/$repo_name/actions/variables/NUGET_SERVER" --jq .value 2>"$_ignore") \
+                                                                                || _rc=$?
+    (( _rc == success || _rc == err_not_found ))                                ||  {
+                                                                                        with_error _rc "$_rc" "Could not read the variable NUGET_SERVER of the repository '$_repo_owner/$repo_name'."
                                                                                         return "$_rc"
-                                                                                   }
-    read -r nuget_server <<< "$_result" || nuget_server=$default_nuget_server
+                                                                                    }
+    (( _rc == success )) && nuget_server=$_result || nuget_server=$default_nuget_server
+    return "$success"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -388,7 +393,7 @@ function configure_default_repo_settings()
     local -i _rc=$success
 
     local _result
-    _result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    _result=$(execute_with_retry --query --classify gh_failure \
                   gh api "$path_repo" -q "$jq_entries") \
                                                                                 || {
                                                                                         with_error _rc "$err_tool_error" "Retrieving the current repo settings failed." \
@@ -422,7 +427,7 @@ function configure_default_repo_settings()
 
     if [[ ${#_rs[@]} -gt 0 ]]; then
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-        execute_with_retry --quiet --is-transient is_transient_gh_error \
+        execute_with_retry --quiet --classify gh_failure \
             gh api -X PATCH "$path_repo" "${_rs[@]}" &&
             info "...repository settings configured." ||
             warning "Could not configure repository settings. Run the script with '--verbose' to see more details and troubleshoot."
@@ -451,10 +456,11 @@ function configure_actions_permissions()
     local -A _existing
     local _key _value
     local _result
-    _result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    local -i _rc=$success
+    _result=$(execute_with_retry --query --classify gh_failure \
                   gh api "$path_permissions" -q "$jq_entries") \
                                                                                 || {
-                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo permissions failed." \
+                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo permissions failed."
                                                                                         return "$_rc"
                                                                                     }
 
@@ -481,7 +487,7 @@ function configure_actions_permissions()
 
     if [[ ${#_rs[@]} -gt 0 ]]; then
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-        execute_with_retry --quiet --is-transient is_transient_gh_error \
+        execute_with_retry --quiet --classify gh_failure \
             gh api -X PUT "$path_permissions" -H "Accept: application/vnd.github+json" "${_rs[@]}" &&
             info "...actions workflow permissions configured." ||
             warning "Could not configure Actions workflow permissions. Run the script with '--verbose' to see more details and troubleshoot."
@@ -528,6 +534,7 @@ function configure_variables()
     exit_if_has_bugs
 
     local _app=${1,,}
+    local -i _rc=$success
 
     local -A _vars_defaults
     local -a _vars_order
@@ -546,7 +553,7 @@ function configure_variables()
     local _var _value
     local -A _current=()
     local _result
-    _result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    _result=$(execute_with_retry --query --classify gh_failure \
                   gh api --paginate "$path_repo/$_app/variables" -q "$jq_vars") \
                                                                                 || {
                                                                                         with_error _rc "$err_tool_error" "Retrieving the current repo variables failed." \
@@ -554,6 +561,7 @@ function configure_variables()
                                                                                         return "$_rc"
                                                                                     }
 
+    [[ -z $_result ]] ||
     while IFS='=' read -r _var _value; do
         _current["$_var"]="$_value"
     done <<< "$_result"
@@ -702,7 +710,7 @@ function set_var()
     local -i _rc=$success
 
     # create and/or set the secret value on GitHub
-    execute_with_retry --quiet --is-transient is_transient_gh_error \
+    execute_with_retry --quiet --classify gh_failure \
         gh variable set "$_name" --body "$_value" -R "$repo" || {
         _rc=$?
         warning "Failed to create or assign a value to the variable $_name. Run the script with '--verbose' to see more details and troubleshoot."
@@ -734,7 +742,7 @@ function delete_var()
     local -i _rc=$success
 
     # delete the variable on GitHub
-    execute_with_retry --quiet --is-transient is_transient_gh_error \
+    execute_with_retry --quiet --classify gh_failure \
         gh variable delete "$_name" --repo "$repo" || {
         _rc=$?
         warning "Failed to delete variable $_name. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
@@ -801,7 +809,7 @@ function configure_secrets()
                                                                                      return "$_rc"
                                                                                 }
 
-    execute_with_retry --query --is-transient is_transient_gh_error \
+    execute_with_retry --query --classify gh_failure \
         gh api --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names" > "$_temp" \
                                                                                 || _rc=$?
 
@@ -954,7 +962,7 @@ function set_secret()
 
 
     # create and/or set the secret value on GitHub
-    execute_with_retry --quiet --is-transient is_transient_gh_error \
+    execute_with_retry --quiet --classify gh_failure \
         gh secret set "$_name" --body "$__value" --app "$_app" --repo "$repo" || _rc=$?
 
     restore_state _core_state
@@ -999,7 +1007,7 @@ function delete_secret()
     local -i _rc=$success
 
     # delete the secret value on GitHub
-    execute_with_retry --quiet --is-transient is_transient_gh_error \
+    execute_with_retry --quiet --classify gh_failure \
         gh secret delete "$_name" --app "$_app" --repo "$repo" || {
         _rc=$?
         warning "Failed to delete secret $_name for ${_app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$_rc"
@@ -1053,7 +1061,7 @@ function configure_branch_protection()
         _status_checks_json="[${_entries[*]}]"
     fi
 
-    execute_with_retry --quiet --is-transient is_transient_gh_error \
+    execute_with_retry --quiet --classify gh_failure \
         gh api -X "$_method" "$_endpoint" -H "Accept: application/vnd.github+json" \
         --input - >"$_ignore" << JSON
 {

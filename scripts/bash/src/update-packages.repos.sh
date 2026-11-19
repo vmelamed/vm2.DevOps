@@ -318,7 +318,7 @@ function open_pull_request()
     local -n _url_ref=$3
     _url_ref=''
 
-    _url_ref=$(cd "$_repo" && execute_with_retry --query --is-transient is_transient_gh_error \
+    _url_ref=$(cd "$_repo" && execute_with_retry --query --classify gh_failure \
                                     gh pr list \
                                     --head "$_branch" \
                                     --state open \
@@ -327,7 +327,7 @@ function open_pull_request()
     [[ -n $_url_ref ]] && return "$success"
 
     _url_ref=$(cd "$_repo" &&
-               execute_with_retry --is-transient is_transient_gh_error \
+               execute_with_retry --classify gh_failure \
                     gh pr create --head "$_branch" \
                     --title "chore(deps): update NuGet package versions in Directory.Packages.props" \
                     --body "Automated dependency upgrade (stable versions only, never a downgrade) by 'update-packages.sh'." 2>/dev/null) || true

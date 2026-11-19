@@ -181,7 +181,7 @@ runs:
 
             # how many open PRs exist for this branch?
 
-            open_pr_count=$(execute_with_retry --query --is-transient is_transient_gh_error \
+            open_pr_count=$(execute_with_retry --query --classify gh_failure \
                               gh pr list \
                               --repo '${{ github.repository }}' \
                               --state open \
