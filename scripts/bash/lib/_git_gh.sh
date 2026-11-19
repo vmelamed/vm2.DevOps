@@ -344,8 +344,11 @@ function gh_failure()
     [[ -n $_status || ! $_message =~ HTTP\ ([1-5][0-9]{2})([^0-9]|$) ]]         || _status=${BASH_REMATCH[1]}
 
     local -i _code
-    if [[ -n $_status ]]; then
-        http_status_to_error_code "$_status" _code
+
+    if [[ $_status == 403 && $_message =~ rate.limit ]]; then
+         _code=0
+    elif [[ -n $_status ]]; then
+         http_status_to_error_code "$_status" _code
     elif [[ $_message =~ rate.limit|server.error|timeout|temporarily.unavailable|try.again|connection|network|dns ]]; then
         _code=0
     else
