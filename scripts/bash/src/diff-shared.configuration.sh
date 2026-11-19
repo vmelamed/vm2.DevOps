@@ -279,10 +279,10 @@ function configure()
 
     # customize the tools based on the customization configuration file
     {
-        read -r custom_diff_tool     || true;
-        read -r custom_diff_command  || true;
-        read -r custom_merge_tool    || true;
-        read -r custom_merge_command || true;
+        read -r config_diff_tool     || true;
+        read -r config_diff_command  || true;
+        read -r config_merge_tool    || true;
+        read -r config_merge_command || true;
     } <<< "$_result"   # if not provided - use the defaults
 
     readonly config_diff_tool
