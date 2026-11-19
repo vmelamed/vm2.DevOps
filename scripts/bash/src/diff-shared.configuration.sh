@@ -276,12 +276,13 @@ function configure()
                                                                                         with_error _rc "$err_tool_error" "Getting diff and merge tools failed." -ec $?
                                                                                         return "$_rc"
                                                                                    }
-    # get the configured tools and freeze them
+
+    # customize the tools based on the customization configuration file
     {
-        read -r config_diff_tool;
-        read -r config_diff_command;
-        read -r config_merge_tool;
-        read -r config_merge_command;
+        read -r custom_diff_tool     || true;
+        read -r custom_diff_command  || true;
+        read -r custom_merge_tool    || true;
+        read -r custom_merge_command || true;
     } <<< "$_result"   # if not provided - use the defaults
 
     readonly config_diff_tool
@@ -422,10 +423,10 @@ function customize()
 
     # customize the tools based on the customization configuration file
     {
-        read -r custom_diff_tool;
-        read -r custom_diff_command;
-        read -r custom_merge_tool;
-        read -r custom_merge_command;
+        read -r custom_diff_tool     || true;
+        read -r custom_diff_command  || true;
+        read -r custom_merge_tool    || true;
+        read -r custom_merge_command || true;
     } <<< "$_result"    # do not use the defaults - if not customized, leave empty and we'll use the main configuration below
 
     [[ -n $custom_diff_tool && -n $custom_diff_command ]] && {
@@ -442,7 +443,7 @@ function customize()
 
     if [[ -s "$_custom_config" ]]; then
         # Read each key-value pair from JSON
-        _result=$(jq -r '.action_overrides | to_entries | .[] | .key+"="+.value' "$_custom_config" 2>"$_ignore") \
+        _result=$(jq -r '(.action_overrides // {}) | to_entries | .[] | .key+"="+.value' "$_custom_config" 2>"$_ignore") \
                                                                                 ||  {
                                                                                         with_error _rc "$err_tool_error" "Getting file and action customization failed."
                                                                                         return "$_rc"

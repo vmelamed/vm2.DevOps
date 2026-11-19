@@ -106,7 +106,7 @@ function is_gh_present()
                                     _ver=$(gh --version | grep -Eo "$semverReleaseRex" | head -n1) &&
                                     semver_gte "$_ver" "$gh_min_version";
                                 }                                               || with_error _rc "$err_tool_version" "'gh' version $gh_min_version or greater is required. Please upgrade 'gh': https://cli.github.com/"
-        (( _rc != success )) || execute_with_retry --query --is-transient is_transient_gh_error \
+        (( _rc != success )) || execute_with_retry --query --classify gh_failure \
                                     gh auth status &> "$_ignore"                || with_error _rc "$err_tool_unauthenticated" "'gh' is not authenticated. Please run: 'gh auth login'"
         (( _rc == success )) && gh_present=true || gh_present=false
         readonly gh_present

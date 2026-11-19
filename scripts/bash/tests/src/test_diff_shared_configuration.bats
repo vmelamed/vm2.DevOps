@@ -133,6 +133,21 @@ EOF
     assert_success
 }
 
+@test "configure: survives 'set -e' when no merge tool is available (the empty merge fields)" {
+    # regression (Copilot): get_tools prints four lines, and the command substitution strips the trailing empty ones, so
+    # the reads of the merge tool and command reach EOF -- under 'set -e' (as in diff-shared.sh) that ended the script
+    mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_config_schema "$BATS_TEST_TMPDIR/sot"
+    echo '{"files":[]}' > "$BATS_TEST_TMPDIR/sot/diff-shared.config.json"
+    run _ds "export GIT_CONFIG_GLOBAL=/dev/null; set -e
+             declare -a source_files=() target_files=() file_actions=()
+             configure '$BATS_TEST_TMPDIR/sot'
+             echo SURVIVED"
+    assert_success
+    assert_output --partial "No 'merge' tool was configured or none is available"
+    assert_output --partial "SURVIVED"
+}
+
 @test "configure: populates the model arrays, expanding \$1 as a macro for the SoT dir but leaving the target file as an unexpanded template" {
     # configure() writes into 'config_source_files'/'config_target_files'/'config_file_actions'
     # (the SoT-loaded defaults) -- not the plain 'source_files'/'target_files'/'file_actions'
@@ -338,6 +353,58 @@ EOF
     assert_output --partial 'merge_tool="oldmerge"'
     assert_output --partial 'file_actions=([0]="ignore" [1]="merge")'
     assert_output --partial "does not match any known target relative path"
+}
+
+@test "customize: survives 'set -e' with a diff-only customization (the empty merge fields)" {
+    # regression (Copilot): see the configure test above -- a custom config without a 'merge' section leaves the last two
+    # of get_tools' four lines empty, and the command substitution strips them
+    mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_custom_schema "$BATS_TEST_TMPDIR/sot"
+    cat > "$BATS_TEST_TMPDIR/target/diff-shared.custom.json" <<'EOF'
+{
+  "diff": {"tool": "diff", "command": "diff -q \"$LOCAL\" \"$REMOTE\""},
+  "action_overrides": {"a.txt": "ignore"}
+}
+EOF
+    run _ds "export GIT_CONFIG_GLOBAL=/dev/null; set -e
+             diff_tool='olddiff'; diff_command='old --cmd'
+             merge_tool='oldmerge'; merge_command='old --merge'
+             declare -a target_files=('$BATS_TEST_TMPDIR/target/a.txt')
+             declare -a file_actions=('merge')
+             diff_only=false
+             customize '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'
+             echo SURVIVED
+             declare -p diff_tool merge_tool file_actions"
+    assert_success
+    assert_output --partial "SURVIVED"
+    assert_output --partial 'diff_tool="diff"'
+    assert_output --partial 'merge_tool="oldmerge"'
+    assert_output --partial 'file_actions=([0]="ignore")'
+}
+
+@test "customize: accepts a tools-only customization, without 'action_overrides' (it is optional)" {
+    # regression (Copilot): 'null | to_entries' is a jq error, so a custom config without 'action_overrides' failed
+    mkdir -p "$BATS_TEST_TMPDIR/sot" "$BATS_TEST_TMPDIR/target"
+    _stub_custom_schema "$BATS_TEST_TMPDIR/sot"
+    cat > "$BATS_TEST_TMPDIR/target/diff-shared.custom.json" <<'EOF'
+{
+  "diff": {"tool": "diff", "command": "diff -q \"$LOCAL\" \"$REMOTE\""}
+}
+EOF
+    run _ds "export GIT_CONFIG_GLOBAL=/dev/null; set -e
+             diff_tool='olddiff'; diff_command='old --cmd'
+             merge_tool='oldmerge'; merge_command='old --merge'
+             declare -a target_files=('$BATS_TEST_TMPDIR/target/a.txt')
+             declare -a file_actions=('merge')
+             diff_only=false
+             customize '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'
+             echo \"RC=\$?\"
+             declare -p diff_tool file_actions"
+    assert_success
+    assert_output --partial "RC=0"
+    assert_output --partial 'diff_tool="diff"'
+    assert_output --partial 'file_actions=([0]="merge")'
+    refute_output --partial "ERROR"
 }
 
 # =====================================================================================

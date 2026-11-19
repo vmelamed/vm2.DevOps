@@ -3,7 +3,7 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # Tests for scripts/bash/lib/_git_gh.sh: GitHub naming rules, the repo state, get_repo_state, and the transient-failure
-# predicate for 'gh' (on its own, and as execute_with_retry's --is-transient).
+# predicate for 'gh' (on its own, and as execute_with_retry's --classify).
 #
 # No test calls GitHub: get_repo_state runs either with full_info=false, or against a fake 'gh' on the PATH (see
 # _fake_gh). Repositories are throw-away 'git init's under $BATS_TEST_TMPDIR, except for a few read-only checks
@@ -27,6 +27,9 @@ declare -gx err_not_directory
 declare -gx err_root_not_repo_name
 declare -gx err_logic_error
 declare -gx err_tool_error
+declare -gx err_not_found
+declare -gx err_access_denied
+declare -gx err_tool_unauthenticated
 
 setup() {
     _repo_root="$(cd "$lib_dir/../../.." && pwd)"
@@ -268,26 +271,63 @@ _run_get_repo_state_url() {
     assert_failure "$err_invalid_nameref"
 }
 
-# --- is_transient_gh_error: the predicate on its own ------------------------------------------------------------------
+# --- gh_failure: the predicate on its own ------------------------------------------------------------------
 # $1 = exit code, $2 = the command's stdout, $3 = its stderr. Prints "transient" or "persistent".
 _is_transient_gh() {
     printf '%s' "$2" > "$BATS_TEST_TMPDIR/out"
     printf '%s\n' "$3" > "$BATS_TEST_TMPDIR/err"
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
-                 is_transient_gh_error $1 '$BATS_TEST_TMPDIR/out' '$BATS_TEST_TMPDIR/err' && echo transient || echo persistent"
+                 gh_failure $1 '$BATS_TEST_TMPDIR/out' '$BATS_TEST_TMPDIR/err' && echo transient || echo persistent"
 }
 
-@test "is_transient_gh_error: bug-exits with the wrong argument count, or on an exit code that is not a failure" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; is_transient_gh_error 1 '$BATS_TEST_TMPDIR'"
+@test "gh_failure: bug-exits with the wrong argument count, or on an exit code that is not a failure" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; gh_failure 1 '$BATS_TEST_TMPDIR'"
     assert_failure
-    assert_output --partial "is_transient_gh_error() requires 3 arguments"
+    assert_output --partial "gh_failure() requires 3 arguments"
     : > "$BATS_TEST_TMPDIR/f"
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; is_transient_gh_error 0 '$BATS_TEST_TMPDIR/f' '$BATS_TEST_TMPDIR/f'"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; gh_failure 0 '$BATS_TEST_TMPDIR/f' '$BATS_TEST_TMPDIR/f'"
     assert_failure
-    assert_output --partial "is_transient_gh_error()"
+    assert_output --partial "gh_failure()"
 }
 
-@test "is_transient_gh_error: a JSON body's HTTP status decides: 425, 429, and 5xx are transient, anything else is not" {
+# $1 = exit code, $2 = the command's stdout, $3 = its stderr. Prints "code=<the classifier's return value>".
+_classify_gh() {
+    printf '%s' "$2" > "$BATS_TEST_TMPDIR/out"
+    printf '%s\n' "$3" > "$BATS_TEST_TMPDIR/err"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 gh_failure $1 '$BATS_TEST_TMPDIR/out' '$BATS_TEST_TMPDIR/err'; echo \"code=\$?\""
+}
+
+@test "gh_failure: an HTTP 401, 403, or 404 (JSON body or message) returns the code a caller can branch on" {
+    _classify_gh 1 '{"message":"Bad credentials","status":"401"}' 'gh: Bad credentials (HTTP 401)'
+    assert_output "code=$err_tool_unauthenticated"
+    _classify_gh 1 '{"message":"Resource not accessible by integration","status":"403"}' 'gh: Resource not accessible by integration (HTTP 403)'
+    assert_output "code=$err_access_denied"
+    _classify_gh 1 '{"message":"Not Found","status":"404"}' 'gh: Not Found (HTTP 404)'
+    assert_output "code=$err_not_found"
+    _classify_gh 1 '' 'gh: Not Found (HTTP 404)'                         # a plain 'gh' command: the status is in the message
+    assert_output "code=$err_not_found"
+    _classify_gh 1 '' 'HTTP 403: Resource not accessible by integration'
+    assert_output "code=$err_access_denied"
+}
+
+@test "gh_failure: any other persistent failure, 501 included, returns err_tool_error" {
+    _classify_gh 1 '{"message":"Validation Failed","status":"422"}' 'gh: Validation Failed (HTTP 422)'
+    assert_output "code=$err_tool_error"
+    _classify_gh 1 '{"message":"Not Implemented","status":"501"}' 'gh: Not Implemented (HTTP 501)'
+    assert_output "code=$err_tool_error"
+    _classify_gh 1 '' 'unknown command "frobnicate" for "gh"'
+    assert_output "code=$err_tool_error"
+}
+
+@test "gh_failure: a transient failure returns 0" {
+    _classify_gh 1 '{"message":"Service Unavailable","status":"503"}' 'gh: Service Unavailable (HTTP 503)'
+    assert_output "code=0"
+    _classify_gh 1 '' 'error connecting to api.github.com: network is unreachable'
+    assert_output "code=0"
+}
+
+@test "gh_failure: a JSON body's HTTP status decides: 425, 429, and 5xx are transient, anything else is not" {
     local _status
     for _status in 425 429 500 502 503 504; do
         _is_transient_gh 1 "{\"message\":\"x\",\"status\":\"$_status\"}" 'gh: x'
@@ -299,7 +339,7 @@ _is_transient_gh() {
     done
 }
 
-@test "is_transient_gh_error: without a JSON body, an HTTP 5xx, 425, or 429 in stderr is transient, a 4xx is not" {
+@test "gh_failure: without a JSON body, an HTTP 5xx, 425, or 429 in stderr is transient, a 4xx is not" {
     _is_transient_gh 1 '' 'gh: Bad Gateway (HTTP 502)'
     assert_output "transient"
     _is_transient_gh 1 '' 'gh: Too Many Requests (HTTP 429)'
@@ -308,12 +348,12 @@ _is_transient_gh() {
     assert_output "persistent"
 }
 
-@test "is_transient_gh_error: a number like 500 elsewhere in stderr (a run ID) is not taken for an HTTP status" {
+@test "gh_failure: a number like 500 elsewhere in stderr (a run ID) is not taken for an HTTP status" {
     _is_transient_gh 1 '' 'gh: Not Found (HTTP 404): https://api.github.com/repos/o/n/actions/runs/15004291234/artifacts'
     assert_output "persistent"
 }
 
-@test "is_transient_gh_error: messages about a rate limit, a timeout, the connection, the network, or DNS are transient" {
+@test "gh_failure: messages about a rate limit, a timeout, the connection, the network, or DNS are transient" {
     local _message
     for _message in 'API rate limit exceeded' 'i/o timeout' 'connection refused' 'network is unreachable' \
                     'dns lookup failed' 'server error' 'service temporarily unavailable' 'please try again'; do
@@ -322,12 +362,12 @@ _is_transient_gh() {
     done
 }
 
-@test "is_transient_gh_error: an authentication failure is not transient" {
+@test "gh_failure: an authentication failure is not transient" {
     _is_transient_gh 4 '' 'gh: authentication required: run gh auth login'
     assert_output "persistent"
 }
 
-@test "is_transient_gh_error: stdout that is not a JSON object (plain text, an array) falls back to stderr, silently" {
+@test "gh_failure: stdout that is not a JSON object (plain text, an array) falls back to stderr, silently" {
     _is_transient_gh 1 'not json' 'gh: network is unreachable'
     assert_output "transient"
     _is_transient_gh 1 '[{"id":1}]' 'gh: Not Found (HTTP 404)'
@@ -335,7 +375,7 @@ _is_transient_gh() {
     refute_output --partial "jq:"
 }
 
-# --- execute_with_retry --is-transient is_transient_gh_error, against a scripted fake 'gh' ----------------------------
+# --- execute_with_retry --classify gh_failure, against a scripted fake 'gh' ----------------------------
 # The fake logs every call's arguments to $BATS_TEST_TMPDIR/gh.log and plays one scripted response per call: for the
 # N-th call, the exit code, stdout, and stderr come from the files $BATS_TEST_TMPDIR/gh.N.{rc,out,err} (missing files:
 # exit 0, no output). The delay is 0, so a retry costs no time.
@@ -375,27 +415,27 @@ _run_scripted_gh() {
 
 @test "execute_with_retry, gh: in a dry run, a --query runs, so the caller gets real data" {
     _gh_response 1 0 'real-data' ''
-    _run_scripted_gh "set_dry_run; x=\$(execute_with_retry --delay 0 --query --is-transient is_transient_gh_error gh repo view); echo \"captured=[\$x]\""
+    _run_scripted_gh "set_dry_run; x=\$(execute_with_retry --delay 0 --query --classify gh_failure gh repo view); echo \"captured=[\$x]\""
     assert_output --partial "captured=[real-data]"
     assert_output --partial "calls=[1]"
 }
 
 @test "execute_with_retry, gh: in a dry run, a command that is not a --query is only printed, quoted with %q" {
-    _run_scripted_gh "set_dry_run; execute_with_retry --delay 0 --is-transient is_transient_gh_error gh repo create 'my repo' --public"
+    _run_scripted_gh "set_dry_run; execute_with_retry --delay 0 --classify gh_failure gh repo create 'my repo' --public"
     assert_output --partial 'dry-run$ gh repo create my\ repo --public'
     assert_output --partial "rc=[0] errors=[0] calls=[0]"
 }
 
 @test "execute_with_retry, gh: --quiet discards the command's stdout, not its stderr" {
     _gh_response 1 0 'to-stdout' 'to-stderr'
-    _run_scripted_gh "execute_with_retry --delay 0 --quiet --is-transient is_transient_gh_error gh repo view"
+    _run_scripted_gh "execute_with_retry --delay 0 --quiet --classify gh_failure gh repo view"
     refute_output --partial "to-stdout"
     assert_output --partial "to-stderr"
     assert_output --partial "rc=[0]"
 }
 
 @test "execute_with_retry, gh: takes the switches in any order, and passes everything after them to gh unchanged" {
-    _run_scripted_gh "set_dry_run; execute_with_retry --delay 0 --quiet --query --is-transient is_transient_gh_error gh repo view --json name; execute_with_retry --delay 0 --query --quiet --is-transient is_transient_gh_error gh pr list"
+    _run_scripted_gh "set_dry_run; execute_with_retry --delay 0 --quiet --query --classify gh_failure gh repo view --json name; execute_with_retry --delay 0 --query --quiet --classify gh_failure gh pr list"
     assert_output --partial "calls=[2]"
     run cat "$BATS_TEST_TMPDIR/gh.log"
     assert_output $'repo view --json name\npr list'
@@ -404,7 +444,7 @@ _run_scripted_gh() {
 @test "execute_with_retry, gh: retries a transient failure (HTTP 503), and succeeds" {
     _gh_response 1 1 '' 'gh: Service Unavailable (HTTP 503)'
     _gh_response 2 0 'ok' ''
-    _run_scripted_gh "execute_with_retry --delay 0 --is-transient is_transient_gh_error gh repo view"
+    _run_scripted_gh "execute_with_retry --delay 0 --classify gh_failure gh repo view"
     assert_output --partial "Transient command failure after attempt 1/3 (1). Retrying in 0s:"
     assert_output --partial "rc=[0] errors=[0] calls=[2]"
 }
@@ -412,35 +452,35 @@ _run_scripted_gh() {
 @test "execute_with_retry, gh: returns err_tool_error after exhausting the attempts, without reporting an error" {
     _gh_response 1 1 '' 'gh: Service Unavailable (HTTP 503)'
     _gh_response 2 1 '' 'gh: Service Unavailable (HTTP 503)'
-    _run_scripted_gh "execute_with_retry --attempts 2 --delay 0 --is-transient is_transient_gh_error gh repo view"
+    _run_scripted_gh "execute_with_retry --attempts 2 --delay 0 --classify gh_failure gh repo view"
     refute_output --partial "ERROR"
     assert_output --partial "rc=[$err_tool_error] errors=[0] calls=[2]"
 }
 
-@test "execute_with_retry, gh: does not retry a non-transient failure (HTTP 404); returns err_tool_error, without an error" {
+@test "execute_with_retry, gh: does not retry a non-transient failure (HTTP 404); returns err_not_found, without an error" {
     _gh_response 1 1 '' 'gh: Not Found (HTTP 404)'
-    _run_scripted_gh "execute_with_retry --delay 0 --is-transient is_transient_gh_error gh run view 42"
+    _run_scripted_gh "execute_with_retry --delay 0 --classify gh_failure gh run view 42"
     assert_output --partial "gh: Not Found (HTTP 404)"
     refute_output --partial "ERROR"
-    assert_output --partial "rc=[$err_tool_error] errors=[0] calls=[1]"
+    assert_output --partial "rc=[$err_not_found] errors=[0] calls=[1]"
 }
 
 @test "execute_with_retry, gh: a number like 500 inside a non-transient message (a run ID) is not mistaken for HTTP 500" {
     _gh_response 1 1 '' 'gh: Not Found (HTTP 404): https://api.github.com/repos/o/n/actions/runs/15004291234/artifacts'
-    _run_scripted_gh "execute_with_retry --delay 0 --is-transient is_transient_gh_error gh run download 15004291234"
+    _run_scripted_gh "execute_with_retry --delay 0 --classify gh_failure gh run download 15004291234"
     assert_output --partial "calls=[1]"
 }
 
 @test "execute_with_retry, gh api: calls 'gh api' with the route and its arguments" {
     _gh_response 1 0 '42' ''
-    _run_scripted_gh "x=\$(execute_with_retry --delay 0 --query --is-transient is_transient_gh_error gh api repos/acme/x --jq .id); echo \"captured=[\$x]\""
+    _run_scripted_gh "x=\$(execute_with_retry --delay 0 --query --classify gh_failure gh api repos/acme/x --jq .id); echo \"captured=[\$x]\""
     assert_output --partial "captured=[42]"
     run cat "$BATS_TEST_TMPDIR/gh.log"
     assert_output "api repos/acme/x --jq .id"
 }
 
 @test "execute_with_retry, gh api: in a dry run, a request that is not a --query is only printed" {
-    _run_scripted_gh "set_dry_run; execute_with_retry --delay 0 --is-transient is_transient_gh_error gh api -X PATCH repos/acme/x -F delete_branch_on_merge=true"
+    _run_scripted_gh "set_dry_run; execute_with_retry --delay 0 --classify gh_failure gh api -X PATCH repos/acme/x -F delete_branch_on_merge=true"
     assert_output --partial 'dry-run$ gh api -X PATCH repos/acme/x -F delete_branch_on_merge=true'
     assert_output --partial "rc=[0] errors=[0] calls=[0]"
 }
@@ -448,29 +488,29 @@ _run_scripted_gh() {
 @test "execute_with_retry, gh api: retries on a transient JSON status (503), and succeeds" {
     _gh_response 1 1 '{"message":"Service Unavailable","status":"503"}' 'gh: Service Unavailable (HTTP 503)'
     _gh_response 2 0 '{"id":42}' ''
-    _run_scripted_gh "execute_with_retry --delay 0 --query --is-transient is_transient_gh_error gh api repos/acme/x"
+    _run_scripted_gh "execute_with_retry --delay 0 --query --classify gh_failure gh api repos/acme/x"
     assert_output --partial '{"id":42}'
     assert_output --partial "rc=[0] errors=[0] calls=[2]"
 }
 
-@test "execute_with_retry, gh api: does not retry a non-transient JSON status (404); returns err_tool_error, without an error" {
+@test "execute_with_retry, gh api: does not retry a non-transient JSON status (404); returns err_not_found, without an error" {
     _gh_response 1 1 '{"message":"Not Found","status":"404"}' 'gh: Not Found (HTTP 404)'
-    _run_scripted_gh "execute_with_retry --delay 0 --query --is-transient is_transient_gh_error gh api repos/acme/x/contents/benchmarks"
+    _run_scripted_gh "execute_with_retry --delay 0 --query --classify gh_failure gh api repos/acme/x/contents/benchmarks"
     refute_output --partial "ERROR"
-    assert_output --partial "rc=[$err_tool_error] errors=[0] calls=[1]"
+    assert_output --partial "rc=[$err_not_found] errors=[0] calls=[1]"
 }
 
 @test "execute_with_retry, gh api: the JSON status decides, not numbers in stderr" {
     # the JSON body says 404 (not transient); a stderr that mentions '500' (e.g. in a URL) must not make it a retry
     _gh_response 1 1 '{"message":"Not Found","status":"404"}' 'gh: Not Found (HTTP 404): repos/o/n/actions/runs/15004291234'
-    _run_scripted_gh "execute_with_retry --delay 0 --query --is-transient is_transient_gh_error gh api repos/o/n/actions/runs/15004291234"
+    _run_scripted_gh "execute_with_retry --delay 0 --query --classify gh_failure gh api repos/o/n/actions/runs/15004291234"
     assert_output --partial "calls=[1]"
 }
 
 @test "execute_with_retry, gh api: without a JSON body, a network error in stderr is retried" {
     _gh_response 1 1 'not json' 'error connecting to api.github.com: network is unreachable'
     _gh_response 2 0 '{"id":42}' ''
-    _run_scripted_gh "execute_with_retry --delay 0 --query --is-transient is_transient_gh_error gh api repos/acme/x"
+    _run_scripted_gh "execute_with_retry --delay 0 --query --classify gh_failure gh api repos/acme/x"
     assert_output --partial "rc=[0] errors=[0] calls=[2]"
 }
 

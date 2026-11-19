@@ -227,7 +227,7 @@ jobs:
           declare -x err_tool_error
 
           declare ids
-          ids=$(execute_with_retry --query --is-transient is_transient_gh_error \
+          ids=$(execute_with_retry --query --classify gh_failure \
                               gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" \
                               --paginate \
                               --jq '.artifacts[] | select(.name | startswith("nuget-packages-")) | .id') \

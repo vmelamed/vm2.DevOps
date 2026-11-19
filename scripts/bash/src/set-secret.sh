@@ -57,7 +57,7 @@ for repo in "${vm2_repositories[@]}"; do
     _temp=$(mktemp)                                                             || with_error _rc "$err_io_failure" "Failed to create a temporary file."
     (( _rc == success ))                                                        || continue
 
-    execute_with_retry --query --is-transient is_transient_gh_error \
+    execute_with_retry --query --classify gh_failure \
         gh api --paginate "repos/$repo_owner/$repo/$app/secrets" -q '.secrets[] | .name' > "$_temp" \
                                                                                 || with_error _rc $? "  Failed to retrieve the list of secrets. Moving on to the next repository."
     (( _rc != success ))  || readarray -t repo_secrets < "$_temp"               || with_error _rc "$err_tool_error" "  Failed to convert the GitHub response to a list of secrets. Moving on to the next repository."
@@ -87,7 +87,7 @@ for repo in "${vm2_repositories[@]}"; do
 
     # ! $secret_exists || {
     #     trace "  Deleting secret '$secret_name' from repository '$repo' if it exists."
-    #     execute_with_retry --quiet --is-transient is_transient_gh_error \
+    #     execute_with_retry --quiet --classify gh_failure \
     #         gh secret delete "$secret_name" --app "$app" --repo "$repo"
     # }
 
@@ -101,7 +101,7 @@ for repo in "${vm2_repositories[@]}"; do
     # --trace can also expand this call before the helper runs. Thus --verbose, --trace, and dry-run output can disclose the
     # secret. Suppress verbose/xtrace before expanding the command and restore the state afterward, as set_secret() in
     # setup-repo.functions.sh does, and log only a placeholder.
-    execute_with_retry --quiet --is-transient is_transient_gh_error \
+    execute_with_retry --quiet --classify gh_failure \
         gh secret \
         set "$secret_name" \
         --body "$__value" \

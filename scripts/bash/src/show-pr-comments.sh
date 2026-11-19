@@ -55,7 +55,7 @@ declare -x timeout
 declare pr_title pr_url pr_head
 declare result
 
-result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+result=$(execute_with_retry --query --classify gh_failure \
                 gh pr view "$pr_number" \
                 --repo "$repo" \
                 --json title,url,headRefOid \
@@ -69,7 +69,7 @@ IFS=$'\t' read -r pr_title pr_url pr_head <<< "$result"
 function count_head_reviews()
 {
     local _result
-    _result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+    _result=$(execute_with_retry --query --classify gh_failure \
             gh api --paginate "repos/$repo/pulls/$pr_number/reviews" \
             --jq ".[] | select(.commit_id == \"$pr_head\" and .state != \"PENDING\") | .id") \
                                                                                 || return $?
@@ -181,7 +181,7 @@ printf '#%s: %s\n%s\n' "$pr_number" "$pr_title" "$pr_url"
 # PENDING reviews (the authenticated user's draft, not yet submitted) are skipped: they have no 'submitted_at' yet, and the text
 # is not final. The '// ""' keeps the formatting safe even so.
 printf '\n== Reviews\n\n'
-result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+result=$(execute_with_retry --query --classify gh_failure \
             gh api --paginate "repos/$repo/pulls/$pr_number/reviews" \
             --jq '.[] | select(.state != "PENDING" and .body != "") | "-- \(.user.login) [\(.state)] \((.submitted_at // "")[:16] | sub("T"; " "))\n\(.body)\n"') \
                                                                                 || exit_with_error "Could not read the reviews of #$pr_number." -ec "$err_tool_error"
@@ -189,7 +189,7 @@ strip_html <<< "$result"
 
 
 printf '\n== Inline comments\n\n'
-result=$(execute_with_retry --query --is-transient is_transient_gh_error \
+result=$(execute_with_retry --query --classify gh_failure \
             gh api --paginate "repos/$repo/pulls/$pr_number/comments" \
             --jq '.[] | "-- \(.path):\(.line // .original_line)\(if .in_reply_to_id then " (reply)" else "" end) -- \(.user.login)\n\(.body)\n"') \
                                                                                 || exit_with_error "Could not read the inline comments of #$pr_number." -ec "$err_tool_error"
