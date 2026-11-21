@@ -290,7 +290,7 @@ function resolve_arguments()
     ci_yaml="$repo_path/.github/workflows/CI.yaml"
     trace "ci_yaml='$ci_yaml' from \$repo_path"
     [[ -s "$ci_yaml" ]]                                                         || with_error _rc "$err_logic_error" "The specified path '$repo_path' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
-                                                                                                                     "Please specify a valid path to the root of the project/repository as a positional parameter or use 'dotnet new vm2pkg <name>' to create a valid directory."
+                                                                                                                     "Specify a valid path to the root of the project/repository as a positional parameter or use 'dotnet new vm2pkg <name>' to create a valid directory."
 
     [[ -z $description ]] || validate_gh_repo_description "$description"        || true
 
@@ -302,10 +302,10 @@ function resolve_arguments()
     # shellcheck disable=SC2015 # Info: Note that A && B || C is not if-then-else. C may run when A is true.
     if $audit; then
         ! $interactive_secrets && ! $interactive_vars                           || error "Secrets and variables cannot be interactively set during audit." \
-                                                                                         "Please remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'." \
+                                                                                         "Remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'." \
                                                                                          -ec "$err_logic_error"
         ! $purge_secrets && ! $purge_vars                                       || error "Secrets and variables cannot be purged during audit." \
-                                                                                         "Please remove the '--purge-secrets' and '--purge-vars' options when running the script with '--audit'." \
+                                                                                         "Remove the '--purge-secrets' and '--purge-vars' options when running the script with '--audit'." \
                                                                                          -ec "$err_logic_error"
     fi
 

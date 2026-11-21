@@ -53,14 +53,14 @@ load '../helpers/setup'
 @test "error_message: returns the code and message for a known error code" {
     run error_message "$err_not_found"
     assert_success
-    assert_output "vm2 \$err_not_found ($err_not_found): Could not find an item matching the criteria."
+    assert_output "vm2 \$err_not_found ($err_not_found): No item matches the criteria."
 }
 
 @test "error_message/error_name: know \$err_io_failure (21)" {
     [[ $err_io_failure == 21 ]]
     run error_message "$err_io_failure"
     assert_success
-    assert_output "vm2 \$err_io_failure ($err_io_failure): An I/O operation (e.g. mktemp, read, write, mv, chmod) failed."
+    assert_output "vm2 \$err_io_failure ($err_io_failure): An I/O operation failed."
     run error_name "$err_io_failure"
     assert_success
     assert_output "\$err_io_failure"

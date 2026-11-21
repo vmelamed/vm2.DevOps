@@ -217,9 +217,9 @@ NO_ERRORS"
              resolve_arguments
              echo \"errors=\$(get_errors)\""
     assert_success
-    assert_output --partial "The input 'a;rm -rf' contains one or more of the unsafe characters"
+    assert_output --partial "Invalid input 'a;rm -rf': it contains one or more of the unsafe characters"
     assert_output --partial "The path '../out' contains directory traversal sequences"
-    assert_output --partial "The input 'acme/repo\$(id)' contains one or more of the unsafe characters"
+    assert_output --partial "Invalid input 'acme/repo\$(id)': it contains one or more of the unsafe characters"
     assert_output --partial "errors=3"
 }
 

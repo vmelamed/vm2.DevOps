@@ -167,7 +167,7 @@ NO_ERRORS"
              echo REACHED
              echo \"errors=\$(get_errors)\""
     assert_success
-    assert_output --partial "The input 'yes' is not a valid boolean."
+    assert_output --partial "Invalid boolean 'yes': it must be 'true' or 'false'."
     assert_output --partial "The reason '-rf /' appears to be a command or contains unsafe characters."
     assert_output --partial "REACHED"
     assert_output --partial "errors=2"
@@ -211,7 +211,7 @@ NO_ERRORS"
              get_arguments App.slnx --build yes; echo AFTER"
     assert_failure
     assert_output --partial "accepts only project files (*.csproj)"
-    assert_output --partial "The input 'yes' is not a valid boolean."
+    assert_output --partial "Invalid boolean 'yes': it must be 'true' or 'false'."
     assert_output --partial "Usage:"
     refute_output --partial "AFTER"
 }

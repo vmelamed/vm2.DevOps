@@ -76,8 +76,8 @@ EOF
 @test "initialize_gh_paths: bug-exits (accumulating both) when repo and main_protection_rs_name are unset" {
     run _sr "initialize_gh_paths"
     assert_failure "$err_logic_error"
-    assert_output --partial "'repo' variable is not set"
-    assert_output --partial "'main_protection_rs_name' variable is not set"
+    assert_output --partial "requires the variable 'repo' to be set"
+    assert_output --partial "requires the variable 'main_protection_rs_name' to be set"
 }
 
 @test "initialize_gh_paths: derives and freezes all path_* variables from repo" {
@@ -101,13 +101,13 @@ EOF
 @test "initialize_jq_queries: bug-exits when main_protection_rs_name is unset" {
     run _sr "initialize_jq_queries"
     assert_failure "$err_logic_error"
-    assert_output --partial "'main_protection_rs_name' variable is not set"
+    assert_output --partial "requires the variable 'main_protection_rs_name' to be set"
 }
 
 @test "initialize_jq_queries: bug-exits when actions_app_id is not positive" {
     run _sr "main_protection_rs_name='x'; actions_app_id=0; initialize_jq_queries"
     assert_failure "$err_logic_error"
-    assert_output --partial "'actions_app_id' variable is not set or is invalid"
+    assert_output --partial "requires the variable 'actions_app_id' to be set to a valid ID"
 }
 
 @test "initialize_jq_queries: embeds the ruleset name and app IDs into the generated jq query strings" {
@@ -146,9 +146,9 @@ EOF
     chmod +x "$BATS_TEST_TMPDIR/bin/gh"
     run _sr "resolve_github_app_ids" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_failure "$err_tool_error"
-    assert_output --partial "Failed to resolve GitHub Actions app ID"
-    assert_output --partial "Failed to resolve Dependabot app ID"
-    assert_output --partial "Failed to resolve Codespaces app ID"
+    assert_output --partial "Failed to resolve the app ID of GitHub Actions"
+    assert_output --partial "Failed to resolve the app ID of Dependabot"
+    assert_output --partial "Failed to resolve the app ID of Codespaces"
 }
 
 # =====================================================================================
@@ -248,7 +248,7 @@ EOF
     chmod +x "$BATS_TEST_TMPDIR/bin/yq"
     run _sr "set -o pipefail; ci_yaml='$BATS_TEST_TMPDIR/ci.yaml'; list_required_checks" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_failure "$err_tool_error"
-    assert_output --partial "Failed to parse gate job from CI.yaml"
+    assert_output --partial "Failed to parse the gate job from"
 }
 
 # =====================================================================================

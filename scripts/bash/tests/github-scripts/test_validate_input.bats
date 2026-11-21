@@ -159,7 +159,7 @@ _run_validate_input() {
     run _run_validate_input "$BATS_TEST_TMPDIR/repo" \
         'TEST_PROJECTS="[\"src/App.csproj\"]" SKIP_TESTS=maybe' --quiet
     assert_failure
-    assert_output --partial "is not a valid boolean"
+    assert_output --partial "Invalid boolean"
 }
 
 @test "validate-input: rejects a negative max-gen2-collects value" {

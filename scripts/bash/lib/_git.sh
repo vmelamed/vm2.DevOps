@@ -50,7 +50,7 @@ declare -x _ignore
 #-----------------------------------------------------------------------------------------------
 function is_valid_branch_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument - a branch name (provided $#)" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a branch name." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _branch=${1#"$git_heads_ns"}
@@ -73,7 +73,7 @@ function is_valid_branch_name()
 #-----------------------------------------------------------------------------------------------
 function is_valid_tag_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument - a tag name (provided $#)" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a tag name." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _tag=${1#"$git_tags_ns"}
@@ -98,7 +98,7 @@ function is_valid_tag_name()
 #-----------------------------------------------------------------------------------------------
 function is_valid_commit_sha()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument - a SHA string (provided $#)" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a SHA string." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     [[ $1 =~ ^[0-9a-fA-F]{4,64}$ ]]                                             || return "$negative"
@@ -124,7 +124,7 @@ function is_valid_commit_sha()
 #-----------------------------------------------------------------------------------------------
 function validate_branch_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument - a branch name (provided $#)" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a branch name." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -150,7 +150,7 @@ function validate_branch_name()
 #-----------------------------------------------------------------------------------------------
 function is_inside_work_tree()
 {
-    (( $# == 0 || $# == 1 ))                                                    || bug "${FUNCNAME[0]}() requires 0 or 1 arguments - path to a directory (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 0 || $# == 1 ))                                                    || bug "${FUNCNAME[0]}() requires 0 or 1 arguments (provided $#): path to a directory." -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires optional argument 1 to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
                                                                                 exit_if_has_bugs
 
@@ -178,19 +178,19 @@ function is_inside_work_tree()
 #-----------------------------------------------------------------------------------------------
 function root_working_tree()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - a directory inside a Git working tree" \
                                                                                        "  - the name of the variable to store the absolute path of the root of the Git working tree containing the found directory" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of the variable to store the absolute path of the root of the Git repository containing the found directory." -ec "$err_invalid_nameref"
+    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a variable to receive the absolute path of the root of the Git working tree (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs # gate here: $2 must be validated before creating a nameref from it below
 
     local _path=$1
     local -n __repo_root_ref=$2
     local -i _rc=$success
 
-    is_inside_work_tree "$_path"                                                || with_error _rc "$err_not_git_directory" "${FUNCNAME[0]}() the parameter \$1 or the current directory must be a path to a directory inside a Git repository working tree."
+    is_inside_work_tree "$_path"                                                || with_error _rc "$err_not_git_directory" "The directory '$_path' is not in a Git working tree."
 
     (( _rc != success )) || __repo_root_ref=$(git -C "$_path" rev-parse --show-toplevel 2> "$_ignore")
     return "$_rc"
@@ -222,7 +222,7 @@ function should_fetch_for_latest_stable_tag()
 {
     local -i _rc="$success"
 
-    (( $# <= 2 ))                                                               || bug "${FUNCNAME[0]}() requires no more than 2 arguments (provided $#):" \
+    (( $# <= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at most 2 arguments (provided $#):" \
                                                                                        "  - path to an existing directory (Git repository) (optional if the remaining parameters are not provided, default: current working directory)" \
                                                                                        "  - the branch name to compare against (optional, default: main)" \
                                                                                        -ec "$err_invalid_arguments"
@@ -233,7 +233,7 @@ function should_fetch_for_latest_stable_tag()
     local _dir=${1:-$initial_cwd}
     local _branch=${2:-main}
 
-    is_inside_work_tree "$_dir"                                                 || bug "${FUNCNAME[0]}() the parameter \$1 or the current directory must be inside a Git work tree." -ec "$err_not_git_directory"
+    is_inside_work_tree "$_dir"                                                 || bug "${FUNCNAME[0]}() requires optional argument 1, or the current directory, to be in a Git working tree (provided '${1-<missing>}')." -ec "$err_not_git_directory"
                                                                                 exit_if_has_bugs
 
     # Shallow repositories can miss history or tags needed by release predicates - yes we need a fetch
@@ -330,7 +330,7 @@ function ensure_fresh_git_state()
 #-----------------------------------------------------------------------------------------------
 function get_latest_stable_tag_hash()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() takes 2 arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - a directory" \
                                                                                        "  - flag whether to fetch the latest changes in main from remote" \
                                                                                        -ec "$err_invalid_arguments"
@@ -343,7 +343,7 @@ function get_latest_stable_tag_hash()
 
     local -i _rc=$success
 
-    is_inside_work_tree "$_dir"                                                 || with_error _rc "$err_not_git_directory" "${FUNCNAME[0]}() requires the selected directory '$_dir' to be inside a Git working tree."
+    is_inside_work_tree "$_dir"                                                 || with_error _rc "$err_not_git_directory" "The directory '$_dir' is not in a Git working tree."
     (( _rc != success )) || ! $_should_fetch || ensure_fresh_git_state "$_dir"  || with_error _rc $? "Failed to ensure fresh Git state for '$_dir': $_rc"
     (( _rc == success )) ||                                                     return "$_rc"
 
@@ -380,7 +380,7 @@ function get_latest_stable_tag_hash()
 #-----------------------------------------------------------------------------------------------
 function is_after_latest_stable_tag()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() takes 2 arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - a directory" \
                                                                                        "  - flag whether to fetch the latest changes in main from remote" \
                                                                                        -ec "$err_invalid_arguments"
@@ -415,7 +415,7 @@ function is_after_latest_stable_tag()
 #-----------------------------------------------------------------------------------------------
 function is_on_or_after_latest_stable_tag()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() takes 2 arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - a directory" \
                                                                                        "  - flag whether to fetch the latest changes in main from remote" \
                                                                                        -ec "$err_invalid_arguments"

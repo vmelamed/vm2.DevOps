@@ -273,8 +273,8 @@ NO_ERRORS"
     assert_success
     assert_output --partial "max-gen1-collects must be a non-negative integer (got '-1')."
     assert_output --partial "max-gen2-collects must be a non-negative integer (got '-2')."
-    assert_output --partial "The input 'yes' is not a valid boolean."
-    assert_output --partial "The input '1' is not a valid boolean."
+    assert_output --partial "Invalid boolean 'yes': it must be 'true' or 'false'."
+    assert_output --partial "Invalid boolean '1': it must be 'true' or 'false'."
     assert_output --partial "errors=4"
 }
 
@@ -316,7 +316,7 @@ NO_ERRORS"
     run _vi "get_arguments --runners-os '[\"bogus-os\"]' --skip-tests maybe; echo AFTER"
     assert_failure
     assert_output --partial "The runner OS 'bogus-os' is not allowed."
-    assert_output --partial "The input 'maybe' is not a valid boolean."
+    assert_output --partial "Invalid boolean 'maybe': it must be 'true' or 'false'."
     assert_output --partial "Usage:"
     refute_output --partial "AFTER"
 }

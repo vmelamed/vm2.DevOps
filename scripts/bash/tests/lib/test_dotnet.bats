@@ -37,15 +37,15 @@ setup() {
 @test "dotnet_error_message: returns the message for a known dotnet exit code" {
     run dotnet_error_message 0
     assert_success
-    assert_output "Dotnet \$dotnet_success (0): Build succeeded; no errors or warnings were reported"
+    assert_output "Dotnet \$dotnet_success (0): The command succeeded."
     run dotnet_error_message 1
-    assert_output "Dotnet \$dotnet_failure (1): Unknown error or catch-all error; check the build output for details"
+    assert_output "Dotnet \$dotnet_failure (1): The command failed: see its output for details."
 }
 
 @test "dotnet_error_message: falls back to the unknown-code message" {
     run dotnet_error_message 99
     assert_success
-    assert_output "Dotnet \$dotnet_err_unknown (99): Unknown dotnet error code"
+    assert_output "Dotnet \$dotnet_err_unknown (99): The dotnet exit code is unknown."
 }
 
 @test "dotnet_error_message: bug-exits on a negative or missing argument" {
@@ -534,7 +534,7 @@ EOF
     _install_fake_dotnet_nuget 1
     run update_nuget_sources_with_github_vm2 "user" "pass"
     assert_failure 66
-    assert_output --partial "Failed to update the NuGet sources with GitHub packages from vm2"
+    assert_output --partial "Failed to update the NuGet sources with the vm2 GitHub packages"
 }
 
 # --- list_solution_projects / expand_solution_projects ---------------------------------------

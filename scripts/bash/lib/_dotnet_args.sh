@@ -115,7 +115,7 @@ declare -xra output_common_dotnet_args=(
 #-----------------------------------------------------------------------------------------------
 function get_common_dotnet_arg()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments ($# provided):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - the command-line option identifier" \
                                                                                        "  - the command-line option value" \
                                                                                        -ec "$err_invalid_arguments"
@@ -173,7 +173,7 @@ function sanitize_common_dotnet_args()
 {
     local -i _rc="$success"
 
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument ($# provided):" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                        "  - a path to a project file (build, test, etc.)" \
                                                                                        -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs

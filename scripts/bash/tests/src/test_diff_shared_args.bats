@@ -407,7 +407,7 @@ _make_vm2_repos() {
 @test "get_selector_action: bug-exits on the wrong argument count" {
     run _ds "get_selector_action 'x'"
     assert_failure "$err_invalid_arguments"
-    assert_output --partial "requires exactly 2 arguments"
+    assert_output --partial "requires 2 arguments"
 }
 
 @test "get_selector_action: fails with usage on an invalid action name" {

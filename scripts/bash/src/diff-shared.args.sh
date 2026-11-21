@@ -173,7 +173,7 @@ function resolve_arguments()
     local _target_path
     for _target in "${target_repos[@]}"; do
         _rc=$success
-        resolve_target "$vm2_repos" "$_target" _target_root _target_path        || with_error _rc $? "Could not resolve the Git working tree root of the target '$_target'. Please, ensure that it exists and is a valid directory."
+        resolve_target "$vm2_repos" "$_target" _target_root _target_path        || with_error _rc $? "Could not resolve the Git working tree root of the target '$_target'. Ensure that it exists and is a valid directory."
         (( _rc == success )) || continue
 
         target_roots+=("$_target_root")
@@ -240,7 +240,7 @@ declare -x action_ask_to_copy_shared
 
 function get_selector_action()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - option" \
                                                                                        "  - file selector" \
                                                                                        -ec "$err_invalid_arguments"

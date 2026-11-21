@@ -184,8 +184,8 @@ function has_errors()
 #-----------------------------------------------------------------------------------------------
 function get_last_error()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument ($# provided) - the name of a variable to receive the last error code." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a variable that will receive the last error code." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of a variable to receive the last error code." -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a variable to receive the last error code (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
     local -n __error=$1
@@ -223,7 +223,7 @@ function get_errors()
 #-----------------------------------------------------------------------------------------------
 function set_errors()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument ($# provided) - the new value for the global error counter" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the new value for the global error counter." \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_non_negative "$1"                                        || bug "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1-<missing>}')." -ec "$err_argument_type"
                                                                                 exit_if_has_bugs
@@ -335,7 +335,7 @@ function exit_if_has_bugs()
     __last_bug=0
     __bugs_min_depth=0
 
-                                                                                exit_with_error -ns "$_bugs bug(s) detected. Please fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
+                                                                                exit_with_error -ns "$_bugs bug(s) detected. Fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -393,10 +393,10 @@ function exit_if_has_errors()
     __errors_min_depth=0
 
     # exits with error message, code, and usage, if $_display_usage is true
-    ! $_display_usage                                                           || usage -ns "$_errors error(s) encountered. Please fix the above issues and try again." -ec "$_ec"
+    ! $_display_usage                                                           || usage -ns "$_errors error(s) encountered. Fix the above issues and try again." -ec "$_ec"
 
     # otherwise, report the error and exit immediately
-                                                                                exit_with_error -ns "$_errors error(s) encountered. Please fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
+                                                                                exit_with_error -ns "$_errors error(s) encountered. Fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
 }
 
 #===============================================================================================
@@ -445,8 +445,8 @@ function __message()
 {
     local -i _rc="$success"
 
-    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() called without any parameters. Provide at least a prefix as the first parameter." -ec "$err_missing_argument"
-    (( $# > 1 )) || [[ ! -t 0 ]]                                                || bug "${FUNCNAME[0]}() called without message parameters and there are none in the pipe. Provide message parameters or pipe them into the function." -ec "$err_missing_argument"
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#): the prefix, followed by the message parts." -ec "$err_missing_argument"
+    (( $# > 1 )) || [[ ! -t 0 ]]                                                || bug "${FUNCNAME[0]}() requires the message parts, as arguments or on stdin (provided none)." -ec "$err_missing_argument"
                                                                                 exit_if_has_bugs
 
     # The first parameter MUST be the prefix to prepend to each message line, e.g. "ERROR: ", "WARN: ", etc.
@@ -522,7 +522,7 @@ function __message()
 
     local -i _count=${#_message_parts[@]}
 
-    [[ $_count -gt 0 || ! -t 0 ]]                                               || bug "${FUNCNAME[0]}() called without message part(s) and there are none in the stdin pipe. Provide the message part(s) or pipe them into the function." -ec "$err_missing_argument"
+    [[ $_count -gt 0 || ! -t 0 ]]                                               || bug "${FUNCNAME[0]}() requires the message parts, as arguments or on stdin (provided none)." -ec "$err_missing_argument"
                                                                                 exit_if_has_bugs
 
     local _first_part=true
@@ -918,7 +918,7 @@ function trace()
 #-----------------------------------------------------------------------------------------------
 function warning_var()
 {
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires three arguments ($# provided):" \
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
                                                                                        "  - variable name" \
                                                                                        "  - warning message" \
                                                                                        "  - default value" \
@@ -1097,12 +1097,12 @@ function with_error()
 {
     local -i _prev_error=$? # capture the previous command's exit code immediately
 
-    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least two arguments ($# provided):" \
+    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
                                                                                        "  - the name of a variable to receive the error code" \
                                                                                        "  - the error code to record and report" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable  "$1"                                           || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')" -ec "$err_argument_value"
-    [[ ! -v 2 ]] || { is_exit_code "$2" && (( $2 > 0 )); }                      || bug "${FUNCNAME[0]}() requires argument 2 to be a valid return code in the range [1, 255] (provided '${2-<missing>}')" -ec "$err_argument_value"
+    [[ ! -v 1 ]] || is_variable  "$1"                                           || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || { is_exit_code "$2" && (( $2 > 0 )); }                      || bug "${FUNCNAME[0]}() requires argument 2 to be a valid return code in the range [1, 255] (provided '${2-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
     local -n __err_code_var=$1

@@ -85,14 +85,14 @@ declare -rA __dotnet_args_to_msbuild_args=(
     [-nologo]="-noLogo:true"
     [--no-logo]="-noLogo:true"
 
-    [--output]="-property:OutputPath=\"%s\"|@warning Please, use artifacts output layout: --artifacts-path <ARTIFACTS_PATH>"
-    [-o]="-property:OutputPath=\"%s\"|@warning Please, use artifacts output layout: --artifacts-path <ARTIFACTS_PATH>"
+    [--output]="-property:OutputPath=\"%s\"|@warning Use artifacts output layout: --artifacts-path <ARTIFACTS_PATH>"
+    [-o]="-property:OutputPath=\"%s\"|@warning Use artifacts output layout: --artifacts-path <ARTIFACTS_PATH>"
 
-    [--version-suffix]="-property:VersionSuffix=\"%s\"|@warning Please, use the MinVer features and properties."
-    [-vs]="-property:VersionSuffix=\"%s\"|@warning Please, use the MinVer features and properties."
+    [--version-suffix]="-property:VersionSuffix=\"%s\"|@warning Use the MinVer features and properties."
+    [-vs]="-property:VersionSuffix=\"%s\"|@warning Use the MinVer features and properties."
 
-    [--os]="@remove \"%s\"|@error Please, use '--runtime <RID>' instead of '--arch <ARCH> --os <OS>'."
-    [--arch]="@remove \"%s\"|@error Please, use '--runtime <RID> instead of '--arch <ARCH> --os <OS>'."
+    [--os]="@remove \"%s\"|@error Use '--runtime <RID>' instead of '--arch <ARCH> --os <OS>'."
+    [--arch]="@remove \"%s\"|@error Use '--runtime <RID> instead of '--arch <ARCH> --os <OS>'."
 
     [--no-build]="@remove"
     [--no-restore]="@remove"
@@ -186,7 +186,7 @@ function get_msbuild_properties()
                                                                                         "  - path to a .csproj file" \
                                                                                         "  - nameref to an associative-array variable to receive the property name/value pairs" \
                                                                                         "  - names of two or more properties whose values should be retrieved"  -ec "$err_invalid_arguments"
-    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug  "${FUNCNAME[0]}() requires argument 2, the name of an associative array variable to receive the property names and values (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug  "${FUNCNAME[0]}() requires argument 2 to be the name of an associative array variable to receive the property names and values (provided '${2-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -206,7 +206,7 @@ function get_msbuild_properties()
 
     shift 2
     for _property in "$@"; do
-        is_variable_name "$_property"                                           || error "${FUNCNAME[0]}() requires all property names to be valid variable names (provided '$_property')." -ec "$err_argument_value"
+        is_variable_name "$_property"                                           || error "Invalid property name '$_property': it must be a valid variable name." -ec "$err_argument_value"
         $_first && _first=false || _all_properties+=';'
         _all_properties+="$_property"
     done
@@ -320,7 +320,7 @@ function get_artifacts_path()
 
     local -i _rc=$success
 
-    [[ -n $__artifacts && $__artifacts == /* ]]                                 || with_error _rc "$err_not_found" "Failed to get correct artifacts path for '$1'. Please use artifacts output layout in your Directory.Build.props. See CONVENTIONS.md"
+    [[ -n $__artifacts && $__artifacts == /* ]]                                 || with_error _rc "$err_not_found" "Failed to get correct artifacts path for '$1'. Use artifacts output layout in your Directory.Build.props. See CONVENTIONS.md"
     return "$_rc"
 }
 
@@ -343,7 +343,7 @@ function get_artifacts_path()
 #-----------------------------------------------------------------------------------------------
 function convert_dotnet_args_to_msbuild_args()
 {
-    (( $# > 1 ))                                                                || bug "${FUNCNAME[0]}() requires more than one, arguments (provided $#):" \
+    (( $# > 1 ))                                                                || bug "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
                                                                                        "  - the name of the array variable to receive the MSBuild arguments" \
                                                                                        "  - the 'dotnet <command>' arguments to be converted" \
                                                                                        -ec "$err_invalid_arguments"
@@ -450,7 +450,7 @@ declare -r __count_errors_rex='^[[:space:]]*([0-9]+) (Error|Warning).*$'
 #-----------------------------------------------------------------------------------------------
 function extract_dotnet_build_info()
 {
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
                                                                                        "  - the project or solution file path for which the build information is being extracted" \
                                                                                        "  - the result code from 'dotnet build'" \
                                                                                        "  - the name of an associative array variable to receive the build information" \
@@ -533,7 +533,7 @@ function extract_dotnet_build_info()
 #-----------------------------------------------------------------------------------------------
 function display_dotnet_build_summary()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#):" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                        "  - the name of an associative array variable containing the build information" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing build information (provided '${1-<missing>}')." -ec "$err_invalid_nameref"

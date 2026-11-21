@@ -87,7 +87,7 @@ function verify_environment()
 {
     [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "GITHUB_REPOSITORY and/or RELEASE_PAT are not set." -ec "$err_argument_value"
     is_git_present                                                              || true
-    is_tool_present git-cliff                                                   || error "'git-cliff' is not installed. Please install it first." -ec "$err_tool_not_found"
+    is_tool_present git-cliff                                                   || error "'git-cliff' is not installed. Install it first." -ec "$err_tool_not_found"
     return "$success"
 }
 

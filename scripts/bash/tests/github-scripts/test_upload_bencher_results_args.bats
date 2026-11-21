@@ -246,7 +246,7 @@ NO_ERRORS"
     assert_output --partial "The max regression percentage '101' must be an integer number between 0 and 100."
     assert_output --partial "--max-gen1-collects must be a non-negative integer (got '-1')."
     assert_output --partial "--max-gen2-collects must be a non-negative integer (got 'x')."
-    assert_output --partial "The input 'yes' is not a valid boolean."
+    assert_output --partial "Invalid boolean 'yes': it must be 'true' or 'false'."
     assert_output --partial "REACHED"
     assert_output --partial "errors=4"
 }

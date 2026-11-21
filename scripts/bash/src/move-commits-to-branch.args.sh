@@ -113,7 +113,7 @@ function verify_environment()
                                                                                 || with_error _rc "$err_logic_error" "Local '$default_branch' is behind 'origin/$default_branch'. Pull first."
 
     # Verify we don't have uncommitted changes
-    (( _rc != success )) || git diff-index --quiet HEAD --                      || error "You have uncommitted changes. Please commit or stash them first." -ec "$err_logic_error"
+    (( _rc != success )) || git diff-index --quiet HEAD --                      || error "You have uncommitted changes. Commit or stash them first." -ec "$err_logic_error"
 
     return "$success"
 }

@@ -17,7 +17,8 @@ declare -x lib_dir
 # Sanity checks of the library in vm2.DevOps/scripts/bash/lib/*.sh, for the silly errors that the
 # tests would only report as a wall of failures with no message: stray characters, a new file that
 # is never sourced or never committed, a copy-pasted include guard, a function left behind in two
-# files, a forward declaration of a constant that does not exist, a syntax error in a script.
+# files, a forward declaration of a constant that does not exist, a syntax error in a script, a
+# message that departs from the message templates in vm2.DevOps/CLAUDE.md.
 #
 # It cannot catch a stray command inside a function body: sourcing only defines the function.
 # That is what ShellCheck and the tests that call the function are for.
@@ -105,11 +106,38 @@ for file in "$lib_dir"/*.sh "$script_dir"/*.sh "$lib_dir"/../../../.github/scrip
         error "Syntax error in '$(realpath "$file")'." -ec "$err_logic_error"
 done
 
+# 8) Messages follow the templates in vm2.DevOps/CLAUDE.md ("Message Templates"). Each rule is a common departure,
+#    found by a pattern; a deny list, not a grammar, so a correct message is never rejected. Comment lines are skipped.
+#    "Please" is allowed in the help texts (*.usage.sh), which are prose, not messages.
+declare -rA message_rules=(
+    ['\(\) (expects|takes|accepts) ']="the verb is 'requires', not 'expects', 'takes', or 'accepts'"
+    ['\(\) requires (exactly |either |from )?(a single|one|two|three|four|five|six|seven) ']="the argument count uses digits: 'requires 2 arguments'"
+    ['\(\) requires exactly ']="the argument count has no 'exactly': 'requires 2 arguments'"
+    ['\(\$# provided\)|\(provided: ']="the provided value reads '(provided \$#)' or '(provided '<value>')'"
+    ['\(provided \$\{?[0-9]']="the provided value is quoted: '(provided '\${1-<missing>}')'"
+    ['-ec "[^"]*" +"']="'-ec' comes after the message parts"
+)
+declare -r please_rule='"[^"]*\bPlease\b'
+declare -a message_files=()
+declare -r this_file="$script_dir/$script_name"
+for file in "$lib_dir"/*.sh "$script_dir"/*.sh "$lib_dir"/../../../.github/scripts/*.sh; do
+    [[ -f $file && $file != "$this_file" ]] && message_files+=("$(realpath "$file")") # not this file: its rules match themselves
+done
+declare rule='' hits=''
+for rule in "${!message_rules[@]}"; do
+    hits=$(grep -nHE -- "$rule" "${message_files[@]}" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#') || true # no match is the good outcome
+    [[ -z $hits ]] ||
+        error "Messages that depart from the templates: ${message_rules[$rule]}." "$hits" -ec "$err_logic_error"
+done
+hits=$(grep -nHE -- "$please_rule" "${message_files[@]}" | grep -vE '^[^:]+\.usage\.sh:|^[^:]+:[0-9]+:[[:space:]]*#') || true
+[[ -z $hits ]] ||
+    error "Messages that depart from the templates: a fix hint is an imperative, without 'Please'." "$hits" -ec "$err_logic_error"
+
 exit_if_has_errors false
 
 info "vm2.DevOps/scripts/bash/lib/*.sh loaded fine!"
 
-# 8) ShellCheck, last: it is the slowest check, and its findings matter only once the library loads.
+# 9) ShellCheck, last: it is the slowest check, and its findings matter only once the library loads.
 #    Each file picks up the repository's .shellcheckrc, as in the VSCode extension, so the results match.
 #    Report only, for now: the findings do not change the exit code, so the library checks above stay
 #    usable while older findings remain. Make it an error once ShellCheck is clean.

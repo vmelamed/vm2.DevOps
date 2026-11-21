@@ -44,8 +44,8 @@ declare -xi summary_shared_copied_count=0
 
 function add_summary_header()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): the path to the target directory." -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires the argument to be the path to the target directory (provided $#)." -ec "$err_not_directory"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the path to the target directory." -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be the path to the target directory (provided '${1-<missing>}')." -ec "$err_not_directory"
                                                                                 exit_if_has_bugs
 
     local target_path="$1"
@@ -83,7 +83,7 @@ function add_summary_header()
 
 function add_summary_line()
 {
-    (( $# == 5 ))                                                               || bug "${FUNCNAME[0]}() requires five arguments (provided $#):" \
+    (( $# == 5 ))                                                               || bug "${FUNCNAME[0]}() requires 5 arguments (provided $#):" \
                                                                                        "  - the source file" \
                                                                                        "  - the target file" \
                                                                                        "  - the actions associated with the file" \

@@ -18,8 +18,8 @@ declare -ri __VM2_LIB_ERROR_CODES_SH_LOADED=1
 #===============================================================================================
 
 # RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
-declare -xri success=0                  # The command completed successfully.
-declare -xri failure=1                  # A general, unspecified error occurred.
+declare -xri success=0                  # The command succeeded (as a predicate: true).
+declare -xri failure=1                  # The command failed with an unspecified error (as a predicate: false; or the input ended).
 
 # alternatively as boolean return codes:
 declare -xri positive=0                 # Boolean return codes (truthy), you cannot use `return true` in bash but you can `return $positive`;
@@ -33,110 +33,110 @@ declare -xri rc_greater_than=1          # akin to 1 in signed integer comparison
 declare -xri rc_less_than=255           # akin to -1 in signed integer comparison
 
 # RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
-declare -xri err_invalid_arguments=2    # The number of the arguments is invalid or the validation of one or more parameters failed
-declare -xri err_argument_type=3        # An argument is of the wrong type (integer, boolean, indexed or associative array, etc.)
-declare -xri err_argument_value=4       # An argument has an invalid value (out of range, not in allowed set, e.g., expected non-negative integer but got negative value)
-declare -xri err_invalid_nameref=5      # An argument is not a valid name of a variable
-declare -xri err_missing_argument=6     # A required argument is missing
-declare -xri err_too_many_arguments=7   # More arguments were provided than the function accepts
-declare -xri err_unknown_argument=8     # An unknown argument was provided
-declare -xri err_not_found=9            # Could not find an item matching the criteria
-declare -xri err_found_too_many=10      # Found too many items matching the criteria
-declare -xri err_unsafe_argument=11     # An argument value is unsafe to use (e.g., a file path that could lead to directory traversal, a string that could lead to command injection, etc.)
-declare -xri err_invalid_json=12        # The argument is not a valid JSON.
-declare -xri err_invalid_json_array=13  # The argument is not a valid JSON array.
-declare -xri err_invalid_item=14        # An item in a collection (e.g. JSON array) is not valid.
+declare -xri err_invalid_arguments=2    # The arguments are invalid: the wrong number of arguments, or values that failed validation.
+declare -xri err_argument_type=3        # An argument has the wrong type.
+declare -xri err_argument_value=4       # An argument has an invalid value.
+declare -xri err_invalid_nameref=5      # An argument is not a valid variable name.
+declare -xri err_missing_argument=6     # A required argument is missing.
+declare -xri err_too_many_arguments=7   # There are more arguments than allowed.
+declare -xri err_unknown_argument=8     # An argument is not recognized.
+declare -xri err_not_found=9            # No item matches the criteria.
+declare -xri err_found_too_many=10      # Too many items match the criteria.
+declare -xri err_unsafe_argument=11     # An argument is unsafe to use.
+declare -xri err_invalid_json=12        # An argument is not valid JSON.
+declare -xri err_invalid_json_array=13  # An argument is not a valid JSON array.
+declare -xri err_invalid_item=14        # An item of a collection is invalid.
 
-declare -xri err_not_file=16            # Parameter value is not a file
-declare -xri err_not_directory=17       # Parameter value is not a directory
-declare -xri err_invalid_file=18        # Parameter value is not a valid file or directory name (e.g., contains invalid characters, is too long, etc.)
-declare -xri err_invalid_path=19        # Parameter value is not a valid path (e.g., contains invalid characters, is too long, etc.)
-declare -xri err_non_existent_path=20   # Parameter value is a path that does not exist
-declare -xri err_io_failure=21          # An I/O operation (e.g. mktemp, read, write, mv, chmod) failed.
+declare -xri err_not_file=16            # An argument is not a file.
+declare -xri err_not_directory=17       # An argument is not a directory.
+declare -xri err_invalid_file=18        # An argument is not a valid file or directory name.
+declare -xri err_invalid_path=19        # An argument is not a valid path.
+declare -xri err_non_existent_path=20   # An argument is a path that does not exist.
+declare -xri err_io_failure=21          # An I/O operation failed.
 
-declare -xri err_not_overridden=64      # A function that should be overridden in the calling script (e.g. usage_text()) was not overridden
-declare -xri err_tool_not_found=65      # An external tool (e.g., jq, dotnet, etc.) that the script depends on was not found in the system
-declare -xri err_tool_error=66          # An error occurred while executing an external tool (e.g., git, dotnet, etc.).
-declare -xri err_tool_unauthenticated=67 # An external tool is not authenticated (e.g., gh).
-declare -xri err_logic_error=68         # An error occurred in the logic of the script (most likely a bug, invalid state, unexpected condition, etc.)
-declare -xri err_tool_version=69        # The version of a tool is incompatible.
-declare -xri err_access_denied=70       # Access to a resource was denied (e.g., HTTP 403: the token lacks a scope or a permission).
+declare -xri err_not_overridden=64      # A function that the calling script must override is not overridden.
+declare -xri err_tool_not_found=65      # A required external tool is not installed.
+declare -xri err_tool_error=66          # An external tool failed.
+declare -xri err_tool_unauthenticated=67 # An external tool is not authenticated.
+declare -xri err_logic_error=68         # The script reached an invalid state: a bug or an unexpected condition.
+declare -xri err_tool_version=69        # An external tool's version is not supported.
+declare -xri err_access_denied=70       # Access to a resource was denied.
 
-declare -xri err_not_git_directory=80   # The specified directory is not a directory from a Git repository working tree
-declare -xri err_not_git_root=81        # The specified directory is not a root directory of a Git repository working tree
-declare -xri err_behind_latest_stable_tag=82 # The current commit of the current branch of the repository is behind the latest stable tag
-declare -xri err_invalid_repo=83        # The specified repository is not valid
-declare -xri err_invalid_branch=84      # The specified directory is not on the expected branch
-declare -xri err_repo_with_no_ci=85     # The specified repository root does not have a CI configuration in repo/.github/workflows
-declare -xri err_dir_with_ci=86         # The specified directory is not a root directory but has a CI configuration
-declare -xri err_dir_with_no_ci=87      # The specified directory does not have a CI configuration in dir/.github/workflows (and is not in a Git repository)
-declare -xri err_not_repos_parent=88    # The specified vm2_repos directory is not the parent directory of the vm2 repositories. Please, ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable.
-declare -xri err_not_current_commit=89  # The specified repository is not on the current commit of the expected branch
-declare -xri err_root_not_repo_name=90  # The specified root directory is not the same as the repository name (the local clone's directory name must match the GitHub repository name)
-declare -xri err_repo_not_in_vm2_repos=91   # The specified repository root is not under the expected VM2 repositories directory
+declare -xri err_not_git_directory=80   # The directory is not in a Git working tree.
+declare -xri err_not_git_root=81        # The directory is not the root of a Git working tree.
+declare -xri err_behind_latest_stable_tag=82 # The repository is behind its latest stable tag.
+declare -xri err_invalid_repo=83        # The repository is not valid.
+declare -xri err_invalid_branch=84      # The repository is not on the expected branch.
+declare -xri err_repo_with_no_ci=85     # The repository has no CI configuration (.github/workflows).
+declare -xri err_dir_with_ci=86         # The directory is not in a Git repository yet, but it has a CI configuration (.github/workflows).
+declare -xri err_dir_with_no_ci=87      # The directory is not in a Git repository and has no CI configuration (.github/workflows).
+declare -xri err_not_repos_parent=88    # The directory is not the parent directory of the vm2 repositories.
+declare -xri err_not_current_commit=89  # The repository is not at the expected commit.
+declare -xri err_root_not_repo_name=90  # The repository's directory name is not its GitHub repository name.
+declare -xri err_repo_not_in_vm2_repos=91   # The repository is not in the vm2 repositories directory.
 
-declare -xri time_out=128               # The command timed out (e.g., when using the read command)
+declare -xri time_out=128               # The command timed out.
 
-declare -xri err_unexpected_error=252   # An unexpected error occurred
-declare -xri err_has_errors=253         # There are errors recorded in the global error counter.
-declare -xri err_has_bugs=254           # There are bugs recorded in the global bug counter. Please, fix the problems above and try again. Exiting the script immediately...
+declare -xri err_unexpected_error=252   # An unexpected error occurred.
+declare -xri err_has_errors=253         # Errors were reported above.
+declare -xri err_has_bugs=254           # Bugs (violations of a function's calling contract) were reported above.
 
-declare -xri err_unknown=255            # An unknown error occurred
+declare -xri err_unknown=255            # An unknown error occurred.
 
 # vm2 core lib constants
 declare -x bug_prefix
 
 declare -rA __error_messages=(
-    [$success]="The command completed successfully or positive outcome - 'true'."
-    [$failure]="A general, unspecified error occurred or negative outcome - 'false', or reached end of file."
+    [$success]="The command succeeded (as a predicate: true)."
+    [$failure]="The command failed with an unspecified error (as a predicate: false; or the input ended)."
 
-    [$err_invalid_arguments]="The number of the arguments is invalid or more than one type of parameter error code is present."
-    [$err_argument_type]="The argument is of the wrong type (types: string, integer, boolean, array, associative array, etc.)."
-    [$err_argument_value]="The argument has an invalid value."
-    [$err_invalid_nameref]="The argument is not a valid name of a variable."
+    [$err_invalid_arguments]="The arguments are invalid: the wrong number of arguments, or values that failed validation."
+    [$err_argument_type]="An argument has the wrong type."
+    [$err_argument_value]="An argument has an invalid value."
+    [$err_invalid_nameref]="An argument is not a valid variable name."
     [$err_missing_argument]="A required argument is missing."
-    [$err_too_many_arguments]="More than one argument was provided when only one is allowed."
-    [$err_unknown_argument]="An unknown argument was provided."
-    [$err_not_found]="Could not find an item matching the criteria."
-    [$err_found_too_many]="Found too many items matching the criteria."
-    [$err_unsafe_argument]="An argument value is unsafe to use (e.g., a file path that could lead to directory traversal, a string that could lead to command injection, etc.)"
-    [$err_invalid_json]="The argument is not a valid JSON."
-    [$err_invalid_json_array]="The argument is not a valid JSON array."
-    [$err_invalid_item]="An item in a collection (e.g. JSON array) is not valid."
+    [$err_too_many_arguments]="There are more arguments than allowed."
+    [$err_unknown_argument]="An argument is not recognized."
+    [$err_not_found]="No item matches the criteria."
+    [$err_found_too_many]="Too many items match the criteria."
+    [$err_unsafe_argument]="An argument is unsafe to use."
+    [$err_invalid_json]="An argument is not valid JSON."
+    [$err_invalid_json_array]="An argument is not a valid JSON array."
+    [$err_invalid_item]="An item of a collection is invalid."
 
-    [$err_not_file]="Parameter value is not a file."
-    [$err_not_directory]="Parameter value is not a directory."
-    [$err_invalid_file]="Parameter value is not a valid file or directory name (e.g., contains invalid characters, is too long, etc.)"
-    [$err_invalid_path]="Parameter value is not a valid path (e.g., contains invalid characters, is too long, etc.)"
-    [$err_non_existent_path]="Parameter value is a path that does not exist."
-    [$err_io_failure]="An I/O operation (e.g. mktemp, read, write, mv, chmod) failed."
+    [$err_not_file]="An argument is not a file."
+    [$err_not_directory]="An argument is not a directory."
+    [$err_invalid_file]="An argument is not a valid file or directory name."
+    [$err_invalid_path]="An argument is not a valid path."
+    [$err_non_existent_path]="An argument is a path that does not exist."
+    [$err_io_failure]="An I/O operation failed."
 
-    [$err_not_overridden]="A function that should be overridden in the calling script (e.g. usage_text()) was not overridden."
-    [$err_tool_not_found]="An external tool that the script depends on was not found in the system."
-    [$err_tool_error]="An error occurred while executing an external tool (e.g., git, dotnet, etc.)."
+    [$err_not_overridden]="A function that the calling script must override is not overridden."
+    [$err_tool_not_found]="A required external tool is not installed."
+    [$err_tool_error]="An external tool failed."
     [$err_tool_unauthenticated]="An external tool is not authenticated."
-    [$err_logic_error]="An error occurred in the logic of the script (e.g., bug, invalid state, unexpected condition, etc.)"
-    [$err_tool_version]="The version of a tool is not compatible."
-    [$err_access_denied]="Access to a resource was denied (e.g., the token lacks a scope or a permission)."
+    [$err_logic_error]="The script reached an invalid state: a bug or an unexpected condition."
+    [$err_tool_version]="An external tool's version is not supported."
+    [$err_access_denied]="Access to a resource was denied."
 
-    [$err_not_git_directory]="The specified directory is not in a Git working tree."
-    [$err_not_git_root]="The specified directory is not the root directory of a Git working tree."
-    [$err_behind_latest_stable_tag]="The repository is behind the latest stable tag."
-    [$err_invalid_repo]="The specified repository is not valid."
-    [$err_invalid_branch]="The specified directory is not on the expected branch."
-    [$err_repo_with_no_ci]="The specified repository root does not have a CI configuration in repo/.github/workflows."
-    [$err_dir_with_ci]="The specified directory is not a root directory but has a CI configuration."
-    [$err_dir_with_no_ci]="The specified directory does not have a CI configuration in dir/.github/workflows (and is not in a Git repository)."
-    [$err_not_repos_parent]="The specified \$vm2_repos directory is not the parent directory for the vm2 repositories. Please ensure that the vm2 repositories are cloned into this directory or correct the parameter/environment variable."
-    [$err_not_current_commit]="The specified repository is not on the current commit of the expected branch."
-    [$err_root_not_repo_name]="The specified root directory of the repository's working tree is not the same as the remote name of the repository (the local clone's directory name must match the GitHub repository name)."
-    [$err_repo_not_in_vm2_repos]="The specified repository root is not under the expected VM2 repositories directory."
+    [$err_not_git_directory]="The directory is not in a Git working tree."
+    [$err_not_git_root]="The directory is not the root of a Git working tree."
+    [$err_behind_latest_stable_tag]="The repository is behind its latest stable tag."
+    [$err_invalid_repo]="The repository is not valid."
+    [$err_invalid_branch]="The repository is not on the expected branch."
+    [$err_repo_with_no_ci]="The repository has no CI configuration (.github/workflows)."
+    [$err_dir_with_ci]="The directory is not in a Git repository yet, but it has a CI configuration (.github/workflows)."
+    [$err_dir_with_no_ci]="The directory is not in a Git repository and has no CI configuration (.github/workflows)."
+    [$err_not_repos_parent]="The directory is not the parent directory of the vm2 repositories."
+    [$err_not_current_commit]="The repository is not at the expected commit."
+    [$err_root_not_repo_name]="The repository's directory name is not its GitHub repository name."
+    [$err_repo_not_in_vm2_repos]="The repository is not in the vm2 repositories directory."
 
     [$time_out]="The command timed out."
 
     [$err_unexpected_error]="An unexpected error occurred."
-    ["$err_has_errors"]="There are errors recorded in the global error counter."
-    ["$err_has_bugs"]="There are bugs recorded in the global bug counter. Please, fix the problems above and try again. Exiting the script immediately..."
+    ["$err_has_errors"]="Errors were reported above."
+    ["$err_has_bugs"]="Bugs (violations of a function's calling contract) were reported above."
     [$err_unknown]="An unknown error occurred."
 )
 
@@ -224,7 +224,7 @@ function error_message()
     (( $# == 1 )) || {
         _rc="$err_invalid_arguments"
         # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
-        printf "%s ${FUNCNAME[0]}() requires exactly 1 argument: an error code (provided: $#).\n" "$bug_prefix"
+        printf "%s ${FUNCNAME[0]}() requires 1 argument (provided $#): an error code.\n" "$bug_prefix"
         show_stack 2 4
     }
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
@@ -272,7 +272,7 @@ function error_name()
     (( $# == 1 )) || {
         _rc="$err_invalid_arguments"
         # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
-        printf "%s ${FUNCNAME[0]}() requires exactly 1 argument: an error code (provided: $#).\n" "$bug_prefix"
+        printf "%s ${FUNCNAME[0]}() requires 1 argument (provided $#): an error code.\n" "$bug_prefix"
         show_stack 2 4
     }
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.

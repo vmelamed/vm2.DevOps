@@ -45,13 +45,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     - [Function Parameter Validation](#function-parameter-validation)
     - [Argument-Dispatcher Precondition Ordering](#argument-dispatcher-precondition-ordering)
     - [Long-Form Options in Script Bodies](#long-form-options-in-script-bodies)
+    - [Message Templates](#message-templates)
     - [Side Effects and Dry-Run](#side-effects-and-dry-run)
 
 <!-- /TOC -->
 
 ## Project Context
 
-Val is currently the only developer on this project. There is no team. This affects prioritization (correctness still matters; urgency and process overhead do not).
+Val is currently the only developer on this project. There is no team. This affects prioritization (correctness still matters;
+urgency and process overhead do not).
 
 ## What This Repository Is
 
@@ -123,11 +125,15 @@ ShellCheck runs live in VSCode via the ShellCheck extension — do not run it fr
 
 ## Script Base Filenames Convention: `<action>-<target>`
 
-The first part of the script (`script`) should follow the convention &lt;action&gt;-&lt;target&gt; (or &lt;verb&gt;-&lt;noun&gt;), where `<action>` is the main action the script performs and `<target>` describes the subject or context of the action. For example, `setup-repo*.sh` for a script that sets up the repository; or `diff-shared*.sh` for the script that compares files with shared content between the canonical source and the local repository.
+The first part of the script (`script`) should follow the convention &lt;action&gt;-&lt;target&gt; (or &lt;verb&gt;-&lt;noun&gt;),
+where `<action>` is the main action the script performs and `<target>` describes the subject or context of the action. For example,
+`setup-repo*.sh` for a script that sets up the repository; or `diff-shared*.sh` for the script that compares files with shared
+content between the canonical source and the local repository.
 
 ## Three-File Script Convention
 
-For minimizing the visual clutter and improve maintainability, the top-level, executable scripts SHOULD consist of at least three files:
+For minimizing the visual clutter and improve maintainability, the top-level, executable scripts SHOULD consist of at least three
+files:
 
 - `action-target.args.sh`: argument parser — defines the script's calling syntax and turns the command line into final,
   frozen script variables, through the [`get_arguments` pipeline](#the-get_arguments-pipeline) below:
@@ -145,7 +151,8 @@ For minimizing the visual clutter and improve maintainability, the top-level, ex
   - calls `get_arguments "$@"`
   - implements the business logic and calls script's or library business functions
 
-New scripts should follow the pattern: `*.usage.sh` and `*.args.sh` and SHOULD implement the boilerplate code for input and help text. If scripts will run in CI, as well as standalone, source `gh_core.sh` instead of `core.sh` at the top for GitHub Actions integration.
+New scripts should follow the pattern: `*.usage.sh` and `*.args.sh` and SHOULD implement the boilerplate code for input and help
+text. If scripts will run in CI, as well as standalone, source `gh_core.sh` instead of `core.sh` at the top for GitHub Actions integration.
 
 ### The `get_arguments` Pipeline
 
@@ -206,19 +213,29 @@ See `scripts/bash/lib/FUNCTIONS_REFERENCE.md` for the full function inventory.
 
 ### Input parameters
 
-Bash has a limited mechanism for passing input parameters to functions. Parameters are passed by position and are accessible within the function using the special variables `$1`, `$2`, ..., `$N` for the first, second, ..., N-th argument, and `$#` for the total number of arguments. This is not enough especially when it comes to sensitive areas like CI/CD pipelines, where more robust and secure handling of input parameters is often required. Also, for a general purpose library like the one provided by vm2.DevOps, it is important to have a consistent and reliable way to handle input parameters across all functions.
+Bash has a limited mechanism for passing input parameters to functions. Parameters are passed by position and are accessible
+within the function using the special variables `$1`, `$2`, ..., `$N` for the first, second, ..., N-th argument, and `$#` for
+the total number of arguments. This is not enough especially when it comes to sensitive areas like CI/CD pipelines, where more
+robust and secure handling of input parameters is often required. Also, for a general purpose library like the one provided by
+vm2.DevOps, it is important to have a consistent and reliable way to handle input parameters across all functions.
 
 ### Parameter Conventions
 
 Functions that accept variadic input (variable-length parameter lists) MUST place the variadic input at the end of the
 parameter list. It is acceptable the variadic input to include option flags as ordinary arguments, e.g., `"-h"` or
-`"--header"`, to signal the presence of a specific behavior, mode, special treatment of the following parameter(s) - turning them into "named arguments", etc.
+`"--header"`, to signal the presence of a specific behavior, mode, special treatment of the following parameter(s) - turning
+them into "named arguments", etc.
 
-Nameref **output** parameters SHOULD be placed after all input parameters. If the function accepts variadic input, place the output nameref parameters immediately before the variable-length list. Exceptions would be OK for the sake of readability and maintainability.
+Nameref **output** parameters SHOULD be placed after all input parameters. If the function accepts variadic input, place the
+output nameref parameters immediately before the variable-length list. Exceptions would be OK for the sake of readability and
+maintainability.
 
-Input nameref parameters (for indexed or associative arrays) can be placed anywhere among the input parameters, but they SHOULD precede any output nameref parameters.
+Input nameref parameters (for indexed or associative arrays) can be placed anywhere among the input parameters, but they SHOULD
+precede any output nameref parameters.
 
-Typed optional positional parameters in the middle are acceptable for small, internal Bash APIs when the type boundary is genuinely unambiguous, e.g. optional boolean parameter before integer (all digits) parameter. Use named options when the interface is public, complex, or expected to grow.
+Typed optional positional parameters in the middle are acceptable for small, internal Bash APIs when the type boundary is
+genuinely unambiguous, e.g. optional boolean parameter before integer (all digits) parameter. Use named options when the
+interface is public, complex, or expected to grow.
 
 ### Parameter and Precondition Validation Patterns
 
@@ -233,18 +250,18 @@ fixed, therefore the function should exit after reporting all validation errors.
 function foo()
 {
     (( $# == <N> )) ||
-        bug -sd 3 "${FUNCNAME[0]}() requires exactly <N> arguments (provided $#):" \
-                  "  - <arg1 description>" \
-                  "  - <arg2 description>" \
+        bug -sd 3 "${FUNCNAME[0]}() requires <N> arguments (provided $#):" \
+                  "  - <arg1 role>" \
+                  "  - <arg2 role>" \
                   "  - ... " \
                   -ec "$err_invalid_arguments"
 
     # if $1 is missing it is already reported by the argument count check, otherwise we validate its value
     [[ ! -v 1 || $1 =~ <regex> ]] ||
-        bug -sd 3 "${FUNCNAME[0]}() argument 1 MUST ... (provided ${1-<missing>})" -ec "$err_specific_code_1"
+        bug -sd 3 "${FUNCNAME[0]}() requires argument 1, <role>, to <constraint> (provided '${1-<missing>}')." -ec "$err_specific_code_1"
     # if $1 is missing it is already reported by the argument count check, otherwise we validate its value
     [[ ! -v 2 ]] || is_boolean $2 ||
-        bug -sd 3 "${FUNCNAME[0]}() argument 2 MUST ... (provided ${2-<missing>})" -ec "$err_specific_code_2"
+        bug -sd 3 "${FUNCNAME[0]}() requires argument 2, <role>, to <constraint> (provided '${2-<missing>}')." -ec "$err_specific_code_2"
 
     exit_if_has_bugs
 
@@ -255,7 +272,8 @@ function foo()
 
 #### Start Every Function with a **Formal** Parameter Validation Checks
 
-These types of errors are not recoverable and indicate a programming mistake. Accumulate all validation errors and exit the script immediately with `exit_if_has_bugs`.
+These types of errors are not recoverable and indicate a programming mistake. Accumulate all validation errors and exit the
+script immediately with `exit_if_has_bugs`.
 
 - Use the `bug` function to report the calling script programming errors, e.g. the caller passed an invalid number of arguments,
   or invalid argument types (e.g. "not boolean" or "not integer" or "bad syntax")
@@ -272,14 +290,16 @@ These types of errors are not recoverable and indicate a programming mistake. Ac
 
 #### Follow the Formal Checks with **Runtime** Checks
 
-These types of errors are typically caused by user input or environmental conditions rather than programming mistakes. They may be recoverable or according to the function contract, indicate conditions that need to be handled differently.
+These types of errors are typically caused by user input or environmental conditions rather than programming mistakes. They may
+be recoverable or according to the function contract, indicate conditions that need to be handled differently.
 
 - Follow the formal parameter validation block with runtime checks that use `error` to report issues that are not programming
   mistakes but rather user input or environmental problems
 - Report and accumulate all runtime errors using the `error` function
 - `error` has its own global counter and contributes to the final decision made by `exit_if_has_errors`
 - Since some runtime errors can be recovered from or a non-zero error code may not be reporting a failure but a condition that
-  should be treated differently, depending on the context. In those cases, use the other global error count functions: `has_errors`, `get_errors`, `set_errors`, and `reset_errors` to control the error handling flow.
+  should be treated differently, depending on the context. In those cases, use the other global error count functions:
+  `has_errors`, `get_errors`, `set_errors`, and `reset_errors` to control the error handling flow.
 - **`exit_if_has_errors` MUST NOT be called from `scripts/bash/lib/*.sh` library functions — only from top-level
   scripts.** `exit_if_has_errors` hard-exits the process, which takes the decision to terminate away from whoever
   is calling the library function — possibly another library function several layers up, not the top-level script
@@ -292,7 +312,8 @@ These types of errors are typically caused by user input or environmental condit
   the process."
 
 Because of the difference in the targeted audience for `bug` and `error` messages, `exit_if_has_bugs` just displays a summary
-message, whereas `exit_if_has_errors` displays a summary message *and* a short usage text. The usage text can be suppressed with an optional parameter: `exit_if_has_errors false`
+message, whereas `exit_if_has_errors` displays a summary message *and* a short usage text. The usage text can be suppressed with
+an optional parameter: `exit_if_has_errors false`
 
 If possible and safe, use the value of the failed argument in the error message for easier debugging, e.g.:
 
@@ -350,7 +371,8 @@ results_text=$(get_results)                                   || with_error rc "
 ### Returning Values from Functions
 
 Bash functions have **only one** formal return channel: the exit status. They can communicate additional results through:
-`stdout`, caller's variables modified through namerefs, or shared global state. These mechanisms have different scoping, buffering, and error-propagation behavior, especially when command substitution and other piping mechanisms are involved.
+`stdout`, caller's variables modified through namerefs, or shared global state. These mechanisms have different scoping,
+buffering, and error-propagation behavior, especially when command substitution and other piping mechanisms are involved.
 
 - **Exit status**: All functions return an integer exit status using explicitly the `return` command or implicitly return the
   status of the last executed command. By convention, `0` indicates success, and any non-zero value indicates an error. This is
@@ -364,7 +386,8 @@ Bash functions have **only one** formal return channel: the exit status. They ca
   not have side effects that modify the state of the calling script, like global variables.
 
   For example, the function `error` in `_diagnostics.sh` increments the global error counter `__errors`, which is tested by
-  `exit_if_has_errors`. However, `$(...)` is executed in a subshell, so **no** changes to global variables within the command substitution will affect the caller's environment, e.g., in this case the global counter `__errors` would not be updated at
+  `exit_if_has_errors`. However, `$(...)` is executed in a subshell, so **no** changes to global variables within the command
+  substitution will affect the caller's environment, e.g., in this case the global counter `__errors` would not be updated at
   all. Therefore, this code will **not** have the desired effect:
 
   ```bash
@@ -389,7 +412,7 @@ Bash functions have **only one** formal return channel: the exit status. They ca
   ```bash
   output_value="$(my_function)" || {
       _command_rc=$?;
-      error "'my_function' failed with exit code $_command_rc"
+      error "Failed to run 'my_function' (exit code $_command_rc)."
   }
   exit_if_has_errors
   ```
@@ -425,11 +448,11 @@ Bash functions have **only one** formal return channel: the exit status. They ca
   ```bash
   my_function() {
       (( $# == 1 )) ||
-            bug "${FUNCTION[0]}() expects exactly 1 argument" -ec $err_invalid_nameref
+            bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of a variable to receive the result." -ec "$err_invalid_arguments"
       # properly validate the parameter as a defined variable within a param validation pattern - see above
       [[ ! -v "$1" ]] ||
             is_defined_variable "$1" ||
-            bug "${FUNCTION[0]}() expects argument 1 to be a name of a defined variable" -ec $err_invalid_nameref
+            bug "${FUNCNAME[0]}() requires argument 1 to be the name of a defined variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
 
       exit_if_has_bugs
 
@@ -437,7 +460,7 @@ Bash functions have **only one** formal return channel: the exit status. They ca
 
       # perform some operations
       if ! some_command; then
-          error "'some_command' failed"
+          error "Failed to run 'some_command'."
           return $failure
       fi
 
@@ -449,26 +472,38 @@ Bash functions have **only one** formal return channel: the exit status. They ca
   exit_if_has_errors
   ```
 
-- **Global variables**: A function can modify global variables that can be accessed by the caller. This is less preferred due to the implicit side effects and reduced clarity, but it is sometimes used for modifying global script settings (e.g. `set_verbose` or `set_errors`) or for returning complex data structures and/or multiple values.
+- **Global variables**: A function can modify global variables that can be accessed by the caller. This is less preferred due to
+- the implicit side effects and reduced clarity, but it is sometimes used for modifying global script settings (e.g.
+- `set_verbose` or `set_errors`) or for returning complex data structures and/or multiple values.
 
 ### Function Types
 
 #### Predicates
 
-Predicate functions return a value that can be considered boolean: 0 - `$positive` or `$success` for boolean **true**, and non-zero - `$negative` (defined as 1), or `$failure`, or any other non-zero value (`$err_*`) for boolean **false** and are
+Predicate functions return a value that can be considered boolean: 0 - `$positive` or `$success` for boolean **true**, and
+non-zero - `$negative` (defined as 1), or `$failure`, or any other non-zero value (`$err_*`) for boolean **false** and are
 typically named with an `is_`, `is_valid_` or `has_` prefix, e.g., `is_defined_array`, `is_positive`, and `has_errors`.
 
-The predicates may fail for reasons other than the conditions they are checking, e.g. invalid input parameters or unexpected system state. In this case they also will display an appropriate error message.
+The predicates may fail for reasons other than the conditions they are checking, e.g. invalid input parameters or unexpected
+system state. In this case they also will display an appropriate error message.
 
 #### Validation Functions
 
 Validation functions check the correctness of their input parameters. When invalid, or incorrect, or unsafe input is discovered
 they typically **display one or more error messages** explaining the validation failure(s), return a non-zero error code or
-`$positive` - 0 for **true**, for success. The names of these functions are typically prefixed with `is_safe_` or `validate_`. Examples include `is_safe_reason`, `validate_preprocessor_symbols`, and `is_safe_json_array`. The `validate_*` functions may also normalize their input or transform it into a canonical form.
+`$positive` - 0 for **true**, for success. The names of these functions are typically prefixed with `is_safe_` or `validate_`.
+Examples include `is_safe_reason`, `validate_preprocessor_symbols`, and `is_safe_json_array`. The `validate_*` functions may
+also normalize their input or transform it into a canonical form.
 
 #### Functions Forwarding `stdin`
 
-These functions are reading input from `stdin` and outputting it to one or more output streams depending on the environment, options, or internal logic. Examples include `to_output`, `to_summary`, `to_stdout`, and `to_stderr`. E.g. `to_stdout` reads from `stdin` and writes to the standard output AND to a variable `GITHUB_STEP_SUMMARY` which if not defined by GitHub has value `/dev/null` on the local machine. `to_output` reads from `stdin` and writes to the standard output AND to a variable `GITHUB_OUTPUT` if not defined by GitHub Actions, has a value `/dev/null` on the local machine, etc. `trace()` is the one logging function that does NOT go through a `to_*` tee helper -- it always writes a plain `stderr`-only line, in every context, and never touches the step summary. For more information see the [ARCHITECTURE document](docs/ARCHITECTURE.md)
+These functions are reading input from `stdin` and outputting it to one or more output streams depending on the environment,
+options, or internal logic. Examples include `to_output`, `to_summary`, `to_stdout`, and `to_stderr`. E.g. `to_stdout` reads
+from `stdin` and writes to the standard output AND to a variable `GITHUB_STEP_SUMMARY` which if not defined by GitHub has value
+`/dev/null` on the local machine. `to_output` reads from `stdin` and writes to the standard output AND to a variable
+`GITHUB_OUTPUT` if not defined by GitHub Actions, has a value `/dev/null` on the local machine, etc. `trace()` is the one logging
+function that does NOT go through a `to_*` tee helper -- it always writes a plain `stderr`-only line, in every context, and
+never touches the step summary. For more information see the [ARCHITECTURE document](docs/ARCHITECTURE.md)
 
 #### Functions Returning Values in `stdout`
 
@@ -480,13 +515,17 @@ any side effects within the function will not affect the calling context.**
 
 #### Functions Modifying Variables
 
-These functions modify the values of input variables passed by name reference. They typically do not return a value through `stdout` and may instead use exit codes to indicate success or failure. Examples include `warning_var`, `trim_var`, and `resolve_repo_root`. The caller should be aware that these functions can have **side effects that persist beyond the function's
-scope**. There is no naming convention for such functions but they should be clearly documented to indicate their side effects. In many cases the functions modifying variables are more efficient and reliable than functions that return values through
+These functions modify the values of input variables passed by name reference. They typically do not return a value through
+`stdout` and may instead use exit codes to indicate success or failure. Examples include `warning_var`, `trim_var`, and
+`resolve_repo_root`. The caller should be aware that these functions can have **side effects that persist beyond the function's
+scope**. There is no naming convention for such functions but they should be clearly documented to indicate their side effects.
+In many cases the functions modifying variables are more efficient and reliable than functions that return values through
 `stdout`.
 
 ## Shared File Sync
 
-Files that are canonical in `vm2.Templates` (`.editorconfig`, `.github/CONVENTIONS.md`, `Directory.Build.props`, etc.) are synced here via `diff-shared.sh`. The mapping is in `scripts/bash/diff-shared.config.json`.
+Files that are canonical in `vm2.Templates` (`.editorconfig`, `.github/CONVENTIONS.md`, `Directory.Build.props`, etc.) are
+synced here via `diff-shared.sh`. The mapping is in `scripts/bash/diff-shared.config.json`.
 
 **Do not edit synced files directly** without also updating the canonical source in `vm2.Templates`.
 
@@ -550,7 +589,7 @@ function example()
 
     (( $# == 1 || $# == 2 )) || {
         _rc="$err_invalid_arguments"
-        error "${FUNCNAME[0]}() requires one or two arguments (provided $#)." -ec "$_rc"
+        error "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#)." -ec "$_rc"
     }
     [[ ! -v 1 || -n $1 ]] || {
         _rc="$err_argument_value"
@@ -673,6 +712,31 @@ specific message first and the generic text of the code below it.
 error "Bad commit message: $subject" -ec "$err_argument_value"
 usage -sd 3 "Invalid argument value for the option <option_name>" -ec "$_rc"
 ```
+
+### Message Templates
+
+Every message follows the template for its kind, so the same situation always reads the same way. `scripts/bash/src/lint-vm2.sh`
+reports the most common departures (see its check 8).
+
+| Kind                        | Reader    | Template                                                                                         |
+|-----------------------------|-----------|--------------------------------------------------------------------------------------------------|
+| `bug`: argument count       | developer | `foo() requires <count> (provided $#):`, then one line per argument: `"  - <role>"`              |
+|                             |           | or, for one argument, inline: `foo() requires 1 argument (provided $#): <role>.`                 |
+| `bug`: one argument         | developer | `foo() requires [optional ]argument <N>[, <role>,] to <constraint> (provided '${N-<missing>}').` |
+| `bug`: global precondition  | developer | `foo() requires <the state> to <constraint>.`, e.g. `requires the variable 'repo' to be set.`    |
+| `error`: a step failed      | user      | `Failed to <verb> <object> '<subject>'.` (`with_error` adds the tool's exit code)                |
+| `error`: invalid user input | user      | `Invalid <thing> '<value>': <rule>.`                                                             |
+| fix hint (a separate part)  | user      | imperative, without "Please": `Use '--visibility public\|private'.`                              |
+| code text                   | both      | one generic statement, present tense, no examples, no fix: `An argument is not a directory.`     |
+
+- The code texts live in `_error_codes.sh` and `_dotnet_constants.sh`.
+- `<count>` uses digits: `1 argument`, `2 arguments`, `1 or 2 arguments`, `2 to 5 arguments`, `at least 1 argument`,
+  `at most 2 arguments`, `no arguments`. The verb is always `requires`: not `expects`, `takes`, or `accepts`.
+- Quote every value with single quotes, and end every sentence with a period.
+- `(provided …)` comes last, right before the final period. Never print a secret, not even as the provided value.
+- A runtime `error` from a library function does not start with `${FUNCNAME[0]}()`: the `@ file (line)` location and
+  the stack already name the function, and the user needs to know what failed, not where.
+- The specific message adds information to the code text that `-ec` prints below it; it does not repeat it.
 
 ### Side Effects and Dry-Run
 

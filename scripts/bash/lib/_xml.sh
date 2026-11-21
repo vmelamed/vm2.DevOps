@@ -61,7 +61,7 @@ declare -x _ignore
 #-----------------------------------------------------------------------------------------------
 function get_xml_value()
 {
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 3 arguments (provided $#):" \
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
                                                                                        "  - path to an XML file" \
                                                                                        "  - a yq path expression (query)" \
                                                                                        "  - nameref to a variable to receive the value" \
@@ -80,7 +80,7 @@ function get_xml_value()
     local _result
 
     (( _rc != success )) || _result=$(yq -p=xml -oy -r "$_query" "$_xml_file" 2>"$_ignore") \
-                                                                                || with_error _rc "$err_tool_error" "${FUNCNAME[0]}() 'yq' failed to query '$_xml_file' with '$_query'."
+                                                                                || with_error _rc "$err_tool_error" "Failed to query the XML file '$_xml_file' with '$_query'."
 
     # A multi-match query yields one line per match, in document order; keep only the last.
     (( _rc != success )) || _result=${_result##*$'\n'}

@@ -88,7 +88,7 @@ declare -A markdown=(
 #-----------------------------------------------------------------------------------------------
 function _write_title()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 argument (provided $#) - the table header text." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the table header text." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _current_table_format_name=''
@@ -130,7 +130,7 @@ function _write_line()
     local -i _rc="$success"
     local _has_name=false
 
-    (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() requires four arguments (provided $#):" \
+    (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() requires 4 arguments (provided $#):" \
                                                                                        "  - nameref to the variable to display" \
                                                                                        "  - bool, if true, masks the value with the \$secret_str placeholder instead of printing it." \
                                                                                        "  - string, the name to display instead of the variable name" \

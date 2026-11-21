@@ -154,7 +154,7 @@ function to_output()
 #-----------------------------------------------------------------------------------------------
 function gh_escape()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the value to escape." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to escape." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _value=$1
@@ -188,7 +188,7 @@ function gh_escape()
 #-----------------------------------------------------------------------------------------------
 function args_to_github_output()
 {
-    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires one or more arguments (provided $#) - the names of the variables to output." -ec "$err_invalid_arguments"
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#): the names of the variables to output." -ec "$err_invalid_arguments"
 
     # validate the variable names before doing any output
     local _var
