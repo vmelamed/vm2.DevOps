@@ -125,7 +125,7 @@ function parse_arguments()
 
 function verify_environment()
 {
-    is_tool_present bencher                                                     || error "'bencher' is not installed. Please install it first." -ec "$err_tool_not_found"
+    is_tool_present bencher                                                     || error "'bencher' is not installed. Install it first." -ec "$err_tool_not_found"
     [[ -n "${BENCHER_API_TOKEN:-}" ]]                                           || error "The BENCHER_API_TOKEN environment variable is required." -ec "$err_missing_argument"
 
     return "$success"

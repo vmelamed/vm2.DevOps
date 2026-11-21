@@ -119,3 +119,77 @@ _run_copy()
     assert_output --partial "Syntax error in"
     assert_output --partial "broken.sh"
 }
+
+# --- check 8: the message templates ----------------------------------------------------------
+
+# Appends a function with the given message call to a library file of the copy, and commits it.
+_add_message()
+{
+    printf '\nfunction __lint_probe()\n{\n    %s\n}\n' "$1" >> "$_copy/lib/_xml.sh"
+    git -C "$_copy" -c user.email=t@e.com -c user.name=t commit -qam probe
+}
+
+@test "lint-vm2: reports a bug message whose verb is not 'requires'" {
+    _copy_library
+    # shellcheck disable=SC2016 # the message is literal text for the probe function
+    _add_message 'bug "${FUNCNAME[0]}() expects 1 argument (provided $#)." -ec "$err_invalid_arguments"'
+    _run_copy
+    assert_failure
+    assert_output --partial "the verb is 'requires'"
+    assert_output --partial "_xml.sh:"
+}
+
+@test "lint-vm2: reports an argument count in words, or with 'exactly'" {
+    _copy_library
+    # shellcheck disable=SC2016 # the messages are literal text for the probe function
+    _add_message 'bug "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#)." -ec "$err_invalid_arguments"
+    bug "${FUNCNAME[0]}() requires two arguments (provided $#)." -ec "$err_invalid_arguments"'
+    _run_copy
+    assert_failure
+    assert_output --partial "the argument count uses digits"
+    assert_output --partial "the argument count has no 'exactly'"
+}
+
+@test "lint-vm2: reports an unquoted or misplaced provided value" {
+    _copy_library
+    # shellcheck disable=SC2016 # the messages are literal text for the probe function
+    _add_message 'bug "${FUNCNAME[0]}() requires argument 1 to be a file (provided ${1-<missing>})." -ec "$err_not_file"
+    bug "${FUNCNAME[0]}() requires 1 argument ($# provided)." -ec "$err_invalid_arguments"'
+    _run_copy
+    assert_failure
+    assert_output --partial "the provided value is quoted"
+    assert_output --partial "the provided value reads"
+}
+
+@test "lint-vm2: reports '-ec' before a message part" {
+    _copy_library
+    # shellcheck disable=SC2016 # the message is literal text for the probe function
+    _add_message 'error "Failed to read the file." -ec "$err_io_failure" "Check its permissions."'
+    _run_copy
+    assert_failure
+    assert_output --partial "'-ec' comes after the message parts"
+}
+
+@test "lint-vm2: reports 'Please' in a message, but not in a help text or a comment" {
+    _copy_library
+    # shellcheck disable=SC2016 # the message is literal text for the probe function
+    _add_message 'warning "Please install the tool."'
+    printf '# Please note: a comment\n' >> "$_copy/lib/_git.sh"
+    printf '#!/usr/bin/env bash\necho "Please see the help."\n' > "$_copy/src/demo.usage.sh"
+    git -C "$_copy" add -A && git -C "$_copy" -c user.email=t@e.com -c user.name=t commit -qm please
+    _run_copy
+    assert_failure
+    assert_output --partial "without 'Please'"
+    assert_output --partial "_xml.sh:"
+    refute_output --partial "_git.sh:"
+    refute_output --partial "demo.usage.sh:"
+}
+
+@test "lint-vm2: a message that follows the templates is not reported" {
+    _copy_library
+    # shellcheck disable=SC2016 # the messages are literal text for the probe function
+    _add_message 'bug "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" "  - the path" -ec "$err_invalid_arguments"
+    bug "${FUNCNAME[0]}() requires argument 1, the path, to be a file (provided '"'"'${1-<missing>}'"'"')." -ec "$err_not_file"'
+    _run_copy
+    assert_success
+}

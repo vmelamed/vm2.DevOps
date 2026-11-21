@@ -61,7 +61,7 @@ declare usage_requested=""
 #-----------------------------------------------------------------------------------------------
 function get_common_arg()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one parameter ($# provided): the command-line argument to process" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the command-line argument to process." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     # the calling scripts should not use any of the common arguments options:
@@ -235,8 +235,8 @@ Common environment variables:
 #-----------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)."
-    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})."
+    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a boolean, whether to display the long or short usage text."
+    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1, whether to display the long or short usage text, to be 'true' or 'false' (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _long_text=$1

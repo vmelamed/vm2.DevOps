@@ -239,7 +239,7 @@ NO_ERRORS"
                  echo REACHED
                  echo \"errors=\$(get_errors)\""
         assert_success
-        assert_output --partial "The input '$_value' is not a valid boolean."
+        assert_output --partial "Invalid boolean '$_value': it must be 'true' or 'false'."
         assert_output --partial "REACHED"
         assert_output --partial "errors=1"
     done

@@ -135,7 +135,7 @@ declare -xA selectors_actions
 #-----------------------------------------------------------------------------------------------
 function get_tools()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#):" \
+    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - the configuration or customization file." \
                                                                                        "  - a flag to proceed with the defaults (optional, default is true)." \
                                                                                        -ec "$err_invalid_arguments"
@@ -253,7 +253,7 @@ function get_tools()
 #-----------------------------------------------------------------------------------------------
 function configure()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#) - the SoT directory" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the SoT directory." \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
@@ -345,7 +345,7 @@ function configure()
 # shellcheck disable=SC2034 # Variable was used as an array but is now assigned a string.
 function configure_target_files()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - the path to the target repository's working tree root directory" \
                                                                                        "  - the name of an indexed array that will store the expanded target file paths" \
                                                                                        -ec "$err_invalid_arguments"
@@ -392,7 +392,7 @@ function configure_target_files()
 #-----------------------------------------------------------------------------------------------
 function customize()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires two arguments (provided $#)" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - path to the SoT directory" \
                                                                                        "  - path to the target repository directory" \
                                                                                        -ec "$err_invalid_arguments"
@@ -542,7 +542,7 @@ function parameterize()
         elif (( _cnt_matching_actions > 1 )); then
             # multiple different actions matched - this is a CLI error, report it and skip the file (clear the action, as we are not certain what to do) and report as a warning
             file_actions[_index]=""
-            warning "Multiple patterns matched for '${source_files[_index]#"$vm2_repos/"}' resulting in different actions: ${_matching_actions[*]}. Please refine your file selectors so that each matches at most one file. The file will not be processed."
+            warning "Multiple patterns matched for '${source_files[_index]#"$vm2_repos/"}' resulting in different actions: ${_matching_actions[*]}. Refine your file selectors so that each matches at most one file. The file will not be processed."
         else
             # no patterns matched - clear the action for that file (clear the action, as we are not certain what to do) and report as a warning
             file_actions[_index]=""

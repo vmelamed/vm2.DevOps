@@ -89,16 +89,16 @@ function resolve_target()
 {
     local -i _rc="$success"
 
-    (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() expects four arguments (provided $#):" \
+    (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() requires 4 arguments (provided $#):" \
                                                                                        "  - the directory of the repositories" \
                                                                                        "  - the directory name of the target repository" \
                                                                                        "  - the name of the variable to store the absolute path of the root of the target repository" \
                                                                                        "  - the name of the variable to store the absolute path of the target repository directory" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 && -d $1 ]]                                              || bug "${FUNCNAME[0]}() requires argument 1, the directory of the vm2 repositories, to be a non-empty existing directory." -ec "$err_not_directory"
-    [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the directory name of the target repository, to be a non-empty existing directory." -ec "$err_argument_value"
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3, the name of the variable to store the absolute path to the root of the working tree of the target repository." -ec "$err_invalid_nameref"
-    [[ ! -v 4 ]] || is_variable "$4"                                            || bug "${FUNCNAME[0]}() requires argument 4, the name of the variable to store the absolute path to the target repository directory." -ec "$err_invalid_nameref"
+    [[ ! -v 1 || -n $1 && -d $1 ]]                                              || bug "${FUNCNAME[0]}() requires argument 1, the directory of the vm2 repositories, to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
+    [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the directory name of the target repository, to be an existing directory (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable to receive the absolute path of the target repository's working tree root (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 4 ]] || is_variable "$4"                                            || bug "${FUNCNAME[0]}() requires argument 4 to be the name of a variable to receive the absolute path of the target repository directory (provided '${4-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
     local _repos="$1"
@@ -146,7 +146,7 @@ function resolve_target()
 #-----------------------------------------------------------------------------------------------
 function __find_shared_markers()
 {
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires exactly three arguments (provided $#):" \
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
                                                                                        "  - the file to scan for a shared-content marker pair" \
                                                                                        "  - the name of the variable to receive the begin marker's line number" \
                                                                                        "  - the name of the variable to receive the end marker's line number" \
@@ -192,7 +192,7 @@ function __find_shared_markers()
 #-----------------------------------------------------------------------------------------------
 function get_shared_block()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - the file to scan for a shared-content marker pair" \
                                                                                        "  - the name of the variable to receive the extracted shared content" \
                                                                                        -ec "$err_invalid_arguments"
@@ -240,7 +240,7 @@ function get_shared_block()
 #-----------------------------------------------------------------------------------------------
 function are_different()
 {
-    (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() requires four arguments (provided $#):" \
+    (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() requires 4 arguments (provided $#):" \
                                                                                        "  - the SoT file" \
                                                                                        "  - the target file" \
                                                                                        "  - the display-diff flag." \
@@ -325,7 +325,7 @@ function are_different()
 #-----------------------------------------------------------------------------------------------
 function merge()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - the SoT file" \
                                                                                        "  - the target file" \
                                                                                        -ec "$err_invalid_arguments"
@@ -373,7 +373,7 @@ function merge()
 #-----------------------------------------------------------------------------------------------
 function copy_file()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - the source file path" \
                                                                                        "  - destination file path." \
                                                                                        -ec "$err_invalid_arguments"
@@ -417,7 +417,7 @@ function copy_file()
 #-----------------------------------------------------------------------------------------------
 function copy_shared_block()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - the SoT file to copy the shared block from" \
                                                                                        "  - the target file to splice the shared block into" \
                                                                                        -ec "$err_invalid_arguments"

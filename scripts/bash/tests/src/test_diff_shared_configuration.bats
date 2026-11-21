@@ -323,7 +323,7 @@ EOF
     echo "not json" > "$BATS_TEST_TMPDIR/target/diff-shared.custom.json"
     run _ds "customize '$BATS_TEST_TMPDIR/sot' '$BATS_TEST_TMPDIR/target'"
     assert_failure "$err_invalid_json"
-    assert_output --partial "is not a valid JSON"
+    assert_output --partial "is not well-formed"
 }
 
 @test "customize: overrides the diff/merge tools and per-file actions from the custom config" {

@@ -87,7 +87,7 @@ execute --quiet git branch -m "$old_branch_name" "$new_branch_name"             
                                                                                 || with_error _rc "$err_tool_error" "Failed to push branch '$new_branch_name' to remote."
 # 4. Delete the old branch on remote
 (( _rc != success )) || execute --quiet git push origin --delete "${git_heads_ns}$old_branch_name" \
-                                                                                || warning "Failed to delete old branch '$old_branch_name' on remote. Please clean up manually; otherwise both branches will coexist and that may lead to confusion."
+                                                                                || warning "Failed to delete old branch '$old_branch_name' on remote. Clean up manually; otherwise both branches will coexist and that may lead to confusion."
 
 # 5. Reset the upstream tracking
 (( _rc != success )) || execute --quiet git branch --set-upstream-to="origin/$new_branch_name" "$new_branch_name" \

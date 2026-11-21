@@ -116,7 +116,7 @@ function compare_settings()
 {
     local -i _rc="$success"
 
-    (( $# == 6 || $# == 7 ))                                                    || bug "${FUNCNAME[0]}() requires six or seven arguments (provided $#):" \
+    (( $# == 6 || $# == 7 ))                                                    || bug "${FUNCNAME[0]}() requires 6 or 7 arguments (provided $#):" \
                                                                                        "  - the GitHub API endpoint path to fetch settings from" \
                                                                                        "  - jq transform JSON -> key=value lines" \
                                                                                        "  - display-format flag: if true, change expected-values array's keys to sentence-capitalized" \
@@ -131,7 +131,7 @@ function compare_settings()
     [[ ! -v 4 ]] || is_boolean "$4"                                             || bug "${FUNCNAME[0]}() requires argument 4, the display unknown key flag, to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
     [[ ! -v 5 ]] || is_associative_array "$5"                                   || bug "${FUNCNAME[0]}() requires argument 5 to name an associative array containing expected key-value pairs (provided '${5-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 6 ]] || is_associative_array "$6"                                   || bug "${FUNCNAME[0]}() requires argument 6 to name an indexed array for summary results: [matches], [diffs], [errors], and [unknowns] (provided '${6-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7"                        || bug "${FUNCNAME[0]}() requires argument 7 (if present) to name an indexed array containing the display order (provided '${7-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7"                        || bug "${FUNCNAME[0]}() requires optional argument 7 to name an indexed array containing the display order (provided '${7-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
     local -n _expected_key_values="$5"

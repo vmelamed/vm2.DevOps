@@ -58,18 +58,18 @@ declare -x gh_nuget_password
 #-----------------------------------------------------------------------------------------------
 function update_nuget_sources_with_github_vm2()
 {
-    (( $# == 0 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() accepts either 0 or 2 arguments (provided $#):" \
+    (( $# == 0 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() requires 0 or 2 arguments (provided $#):" \
                                                                                        "  - NuGet source username (in CI defaults to \$GH_ACTOR)" \
                                                                                        "  - NuGet source password (in CI defaults to \$GH_TOKEN)" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 && ! -v 2 || -n "$1" && -n "$2" ]]                                || bug "${FUNCNAME[0]}() The arguments should either be not provided or both must be provided and non-empty." -ec "$err_argument_value"
+    [[ ! -v 1 && ! -v 2 || -n "$1" && -n "$2" ]]                                || bug "${FUNCNAME[0]}() requires arguments 1 and 2 to be both missing or both non-empty." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
     local _gh_nuget_username=${1:-${gh_nuget_username:-${GH_ACTOR:-}}}
     local _gh_nuget_password=${2:-${gh_nuget_password:-${GH_TOKEN:-}}}
 
     [[ -n $_gh_nuget_username && -n $_gh_nuget_password ]] || {
-        local _message="${FUNCNAME[0]}() GitHub NuGet source credentials are not provided. Did not update the NuGet sources with GitHub packages from vm2."
+        local _message="The GitHub NuGet source credentials are not provided: the NuGet sources were not updated with the vm2 GitHub packages."
 
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         $ci && warning "$_message" || trace "$_message"
@@ -82,7 +82,7 @@ function update_nuget_sources_with_github_vm2()
                 --configfile NuGet.config \
                 --username "$_gh_nuget_username" \
                 --password "$_gh_nuget_password" \
-                --store-password-in-clear-text                                  || with_error _rc "$err_tool_error" "${FUNCNAME[0]}() Failed to update the NuGet sources with GitHub packages from vm2." \
+                --store-password-in-clear-text                                  || with_error _rc "$err_tool_error" "Failed to update the NuGet sources with the vm2 GitHub packages." \
                                                                                                                     "$(dotnet_error_message $?)"
     return "$_rc"
 }
@@ -101,7 +101,7 @@ function update_nuget_sources_with_github_vm2()
 #-----------------------------------------------------------------------------------------------
 function dotnet_clean()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 or more arguments (provided $#):" \
+    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
                                                                                        "  - path to an existing project or solution file which should be cleaned" \
                                                                                        "  - additional arguments to pass to 'dotnet clean' (optional)" \
                                                                                        -ec "$err_invalid_arguments"
@@ -151,7 +151,7 @@ function dotnet_clean()
 #-----------------------------------------------------------------------------------------------
 function dotnet_restore()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 or more arguments (provided $#):" \
+    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
                                                                                        "  - path to an existing project or solution file which dependencies should be restored" \
                                                                                        "  - additional arguments to pass to 'dotnet restore' (optional)" \
                                                                                        -ec "$err_invalid_arguments"
@@ -201,7 +201,7 @@ function dotnet_restore()
 #-----------------------------------------------------------------------------------------------
 function dotnet_build()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires one or more arguments (provided $#):" \
+    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
                                                                                        "  - path to an existing project or solution file to build" \
                                                                                        "  - name of an associative array to receive the build information (optional if this is the last argument)" \
                                                                                        "  - additional arguments to pass to 'dotnet build' (optional, if any are present - requires argument 2)" \
@@ -305,7 +305,7 @@ function dotnet_build()
 #-----------------------------------------------------------------------------------------------
 function dotnet_pack()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1, 2, 3, or more arguments (provided $#):" \
+    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
                                                                                        "  - path to an existing project file" \
                                                                                        "  - package release notes (can be empty string)" \
                                                                                        "  - nameref to an associative array variable that will store the properties of the produced packages" \
@@ -334,7 +334,7 @@ function dotnet_pack()
     # See the function's doc comment above for the failure mode this avoids.
     local _pack_config=$configuration
     [[ ! -z $_pack_config ]] || get_msbuild_property "$_project" "$key_configuration" _pack_config \
-                                                                                || with_error _rc "$err_tool_error" "${FUNCNAME[0]}() Failed to resolve the 'Configuration' property for '$_project'."
+                                                                                || with_error _rc "$err_tool_error" "Failed to resolve the 'Configuration' property of '$_project'."
     (( _rc == success ))                                                        || return "$_rc"
 
     # pack arguments for the dotnet pack command are a subset of the build arguments
@@ -435,7 +435,7 @@ function dotnet_pack()
 #-----------------------------------------------------------------------------------------------
 function list_solution_projects()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 2 arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - path to a solution file (*.sln or *.slnx)" \
                                                                                        "  - name of an indexed array variable to receive the list of project paths" \
                                                                                        -ec "$err_invalid_arguments"
@@ -487,7 +487,7 @@ function list_solution_projects()
     done
     __out=("${_src_projects[@]}" "${_other_projects[@]}")
 
-    (( ${#__out[@]} > 0 ))                                                      || with_error _rc "$err_tool_error" "${FUNCNAME[0]}() 'dotnet sln $_solution list' returned no projects (exit code $_sln_rc)." "Raw output:" "$_sln_output"
+    (( ${#__out[@]} > 0 ))                                                      || with_error _rc "$err_tool_error" "'dotnet sln $_solution list' returned no projects (exit code $_sln_rc)." "Raw output:" "$_sln_output"
     return "$_rc"
 }
 
@@ -510,7 +510,7 @@ function list_solution_projects()
 #-----------------------------------------------------------------------------------------------
 function expand_solution_projects()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly 1 argument (provided $#):" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                        "  - the name of a variable containing a JSON array of project/solution paths" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to name a declared variable (provided '${1-<missing>}')." -ec "$err_missing_argument"

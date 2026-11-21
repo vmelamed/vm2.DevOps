@@ -63,7 +63,7 @@ function press_any_key()
 #-----------------------------------------------------------------------------------------------
 function confirm()
 {
-    (( $# == 1 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
+    (( $# == 1 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
                                                                                        "  - prompt" \
                                                                                        "  - default response, optional" \
                                                                                        -ec "$err_invalid_arguments"
@@ -85,7 +85,7 @@ function confirm()
     while true; do
         read -r -p "$_prompt $_suffix: " _response
         [[ -z "$_response" || "$_response" =~ ^[ynYN]$ ]] && break
-        warning "Please enter one of Y or N (case insensitive)."
+        warning "Enter one of Y or N (case insensitive)."
     done
 
     _response=${_response:-$_default}
@@ -126,7 +126,7 @@ function confirm()
 #-----------------------------------------------------------------------------------------------
 function enter_value()
 {
-    (( $# >= 2 && $# <= 5 ))                                                    || bug "${FUNCNAME[0]}() requires from 2 to 5 arguments (provided $#):" \
+    (( $# >= 2 && $# <= 5 ))                                                    || bug "${FUNCNAME[0]}() requires 2 to 5 arguments (provided $#):" \
                                                                                        "  - a prompt" \
                                                                                        "  - the name of the variable to store the entered value" \
                                                                                        "  - default value (optional if the rest are not specified, default: '')" \
@@ -209,7 +209,7 @@ function enter_value()
 function choose()
 {
 
-    (( $# >= 4 ))                                                               || bug "${FUNCNAME[0]}() requires four or more arguments (provided $#):" \
+    (( $# >= 4 ))                                                               || bug "${FUNCNAME[0]}() requires at least 4 arguments (provided $#):" \
                                                                                        "  - prompt" \
                                                                                        "  - the name of a variable to store the user's choice" \
                                                                                        "  - at least two choices (the first one is the default)" \

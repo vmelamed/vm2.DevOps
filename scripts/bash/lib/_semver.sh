@@ -126,7 +126,7 @@ function print_semver_regexes()
 #-----------------------------------------------------------------------------------------------
 function validate_minver_tag_components()
 {
-    (( $# == 1 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() requires one or two arguments (provided $#):" \
+    (( $# == 1 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
                                                                                        "  - the SemVer tag prefix used by MinVer" \
                                                                                        "  - default prerelease identifier template, optional" \
                                                                                        -ec "$err_invalid_arguments"
@@ -178,7 +178,7 @@ declare -x rc_less_than
 #-----------------------------------------------------------------------------------------------
 function get_semver_major()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): - a valid semver string to extract the 'Major' version component from." \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a valid semver string to extract the 'Major' version component from." \
                                                                                        -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
@@ -208,7 +208,7 @@ function get_semver_major()
 #-----------------------------------------------------------------------------------------------
 function get_semver_minor()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): - a valid semver string to extract the 'Minor' version component from." \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a valid semver string to extract the 'Minor' version component from." \
                                                                                        -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
@@ -238,7 +238,7 @@ function get_semver_minor()
 #-----------------------------------------------------------------------------------------------
 function get_semver_patch()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): - a valid semver string to extract the 'Patch' version component from." \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a valid semver string to extract the 'Patch' version component from." \
                                                                                        -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
@@ -268,7 +268,7 @@ function get_semver_patch()
 #-----------------------------------------------------------------------------------------------
 function get_semver_prerelease()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): - a valid semver string to extract the 'Prerelease' version component from." \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a valid semver string to extract the 'Prerelease' version component from." \
                                                                                        -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
@@ -300,7 +300,7 @@ function get_semver_prerelease()
 #-----------------------------------------------------------------------------------------------
 function get_semver_build()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#): - a valid semver string to extract the 'Build' version component from." \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a valid semver string to extract the 'Build' version component from." \
                                                                                        -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
@@ -340,7 +340,7 @@ function get_semver_build()
 #-----------------------------------------------------------------------------------------------
 function compare_semver()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires exactly two arguments (provided $#):" \
+    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - the first semantic versions to compare" \
                                                                                        "  - second semantic versions to compare" \
                                                                                        -ec "$err_invalid_arguments"

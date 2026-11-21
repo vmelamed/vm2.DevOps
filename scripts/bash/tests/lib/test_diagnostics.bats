@@ -436,7 +436,7 @@ declare -i rc=0
 false || with_error rc
 EOF
     assert_failure "$err_invalid_arguments"
-    assert_output --partial "with_error() requires at least two arguments"
+    assert_output --partial "with_error() requires at least 2 arguments"
 }
 
 @test "with_error: bug-exits when argument 2 is not an exit code" {
@@ -497,7 +497,7 @@ error "first" -dec 2 "last"
 EOF
     assert_success
     assert_line --index 0 --partial "first @ "
-    assert_line --index 1 --partial 'Dotnet $dotnet_err_test_failure (2): At least one test failure occurred'
+    assert_line --index 1 --partial 'Dotnet $dotnet_err_test_failure (2): At least one test failed.'
     assert_line --index 2 --partial "last"
 
     _run_with_error_script <<'EOF'
@@ -512,7 +512,7 @@ EOF
 error "boom" -dec 99
 EOF
     assert_success
-    assert_output --partial 'Dotnet $dotnet_err_unknown (99): Unknown dotnet error code'
+    assert_output --partial 'Dotnet $dotnet_err_unknown (99): The dotnet exit code is unknown.'
 }
 
 @test "error: -dec does not become the script's exit code -- only -ec does" {

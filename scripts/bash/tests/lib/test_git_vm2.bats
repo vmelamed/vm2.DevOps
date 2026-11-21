@@ -137,17 +137,17 @@ _make_local_repo() {
     # proving 2 and 3 arguments are both within the valid 1-3 range.
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '..bad..branch..'"
     assert_failure "$err_invalid_branch"
-    assert_output --partial "requires argument 2, if provided, to be a valid branch name (provided '..bad..branch..')"
+    assert_output --partial "requires optional argument 2 to be a valid branch name (provided '..bad..branch..')"
 
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '' '..bad..branch..'"
     assert_failure "$err_invalid_branch"
-    assert_output --partial "requires argument 3, if provided, to be a valid branch name (provided '..bad..branch..')"
+    assert_output --partial "requires optional argument 3 to be a valid branch name (provided '..bad..branch..')"
 }
 
 @test "resolve_vm2_repos: fails when the pre-set directory value does not exist" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos='/definitely/not/a/real/path'; resolve_vm2_repos vm2_repos"
     assert_failure "$err_not_directory"
-    assert_output --partial "requires argument 1, if not empty, to hold an existing directory"
+    assert_output --partial "requires optional argument 1 to hold an existing directory"
 }
 
 @test "resolve_vm2_repos: bug-exits on an undefined output variable name" {
@@ -158,13 +158,13 @@ _make_local_repo() {
 @test "resolve_vm2_repos: rejects an invalid branch name in argument 2 (devops branch)" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '..bad..branch..'"
     assert_failure "$err_invalid_branch"
-    assert_output --partial "requires argument 2, if provided, to be a valid branch name (provided '..bad..branch..')"
+    assert_output --partial "requires optional argument 2 to be a valid branch name (provided '..bad..branch..')"
 }
 
 @test "resolve_vm2_repos: rejects an invalid branch name in argument 3 (SoT/vm2.Templates branch)" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '' '..bad..branch..'"
     assert_failure "$err_invalid_branch"
-    assert_output --partial "requires argument 3, if provided, to be a valid branch name (provided '..bad..branch..')"
+    assert_output --partial "requires optional argument 3 to be a valid branch name (provided '..bad..branch..')"
 }
 
 @test "resolve_vm2_repos: an empty branch name in argument 2 or 3 is accepted (means 'current branch')" {
@@ -172,7 +172,7 @@ _make_local_repo() {
     # error, never a branch-related error.
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos='/definitely/not/a/real/path'; resolve_vm2_repos vm2_repos '' ''"
     assert_failure "$err_not_directory"
-    assert_output --partial "requires argument 1, if not empty, to hold an existing directory"
+    assert_output --partial "requires optional argument 1 to hold an existing directory"
     refute_output --partial "valid branch name"
 }
 

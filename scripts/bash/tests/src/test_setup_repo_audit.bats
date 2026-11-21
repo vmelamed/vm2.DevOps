@@ -64,7 +64,7 @@ EOF
     # code -- is the "last" bug reported.
     run _sr 'compare_settings "a" "b" "c"'
     assert_failure "$err_argument_type"
-    assert_output --partial "requires six or seven arguments"
+    assert_output --partial "requires 6 or 7 arguments"
 }
 
 @test "compare_settings: bug-exits on a non-boolean display-format flag" {

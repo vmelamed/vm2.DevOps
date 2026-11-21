@@ -149,8 +149,8 @@ function verify_environment()
 {
     [[ -n ${BENCHER_API_TOKEN:-} ]]                                             || error "The BENCHER_API_TOKEN environment variable is required." -ec "$err_missing_argument"
 
-    is_tool_present bc                                                          || error "'bc' is not installed. Please install it first." -ec "$err_tool_not_found"
-    is_tool_present bencher                                                     || error "'bencher' is not installed. Please install it first." -ec "$err_tool_not_found"
+    is_tool_present bc                                                          || error "'bc' is not installed. Install it first." -ec "$err_tool_not_found"
+    is_tool_present bencher                                                     || error "'bencher' is not installed. Install it first." -ec "$err_tool_not_found"
 
     return "$success"
 }

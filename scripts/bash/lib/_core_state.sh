@@ -301,7 +301,7 @@ declare -x _ignore=$default__ignore
 #-----------------------------------------------------------------------------------------------
 function show_ignored_output()
 {
-    (( $# <= 1 ))                                                               || bug "${FUNCNAME[0]}() accepts at most one argument (provided $#):" \
+    (( $# <= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at most 1 argument (provided $#):" \
                                                                                        "  - the file name to redirect the ignored output to" \
                                                                                        -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -420,10 +420,10 @@ declare __table_format=${DUMP_FORMAT:-$default_table_format}
 #-----------------------------------------------------------------------------------------------
 function get_table_format()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one parameter ($# provided):" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                        "  - the name of the variable to store the current table format in." \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires a declared variable name as its argument: '${1-<missing>}'." -ec "$err_invalid_nameref"
+    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
     local -n __ret_format=$1
@@ -448,13 +448,13 @@ function get_table_format()
 #-----------------------------------------------------------------------------------------------
 function set_table_format()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one parameter ($# provided):" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                        "  - the table format, one of ${table_formats[*]}" \
                                                                                        -ec "$err_invalid_arguments"
 
     local _table_format="${1,,}"
 
-    [[ ! -v 1 ]] || is_in "$_table_format" "${table_formats[@]}"                || bug "${FUNCNAME[0]}() requires its argument to be a valid table format '${1-<missing>}': must be one of ${table_formats[*]}." -ec "$err_argument_value"
+    [[ ! -v 1 ]] || is_in "$_table_format" "${table_formats[@]}"                || bug "${FUNCNAME[0]}() requires argument 1 to be a table format, one of: ${table_formats[*]} (provided '${1-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
     __table_format=$_table_format
@@ -510,17 +510,17 @@ declare -xri state_length=10
 # shellcheck disable=SC2004 # $/${} is unnecessary on arithmetic variables.
 function save_state()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() expects exactly one argument (provided $#):" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                        "  - the name of an array variable that will store the saved state" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() expects its argument to be the name of an array variable that will store the saved state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to be the name of an array variable that will store the saved state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
     local -n __state="$1"
 
-    [[ ! -v __state[$key_pid] ]] || (( __state[$key_pid] == 0 ))                || bug "${FUNCNAME[0]}() must be called with a unused or previously restored state." -ec "$err_logic_error"
+    [[ ! -v __state[$key_pid] ]] || (( __state[$key_pid] == 0 ))                || bug "${FUNCNAME[0]}() requires the state to be unused or already restored." -ec "$err_logic_error"
     [[ ! -v __state[$key_subshell_pid] ]] || (( __state[$key_subshell_pid] == -1 )) \
-                                                                                || bug "${FUNCNAME[0]}() must be called with a unused or previously restored state." -ec "$err_logic_error"
+                                                                                || bug "${FUNCNAME[0]}() requires the state to be unused or already restored." -ec "$err_logic_error"
                                                                                 exit_if_has_bugs
 
     local _current_table_format
@@ -565,12 +565,12 @@ function restore_state()
 {
     local -i _rc=$success
 
-    (( $# == 1 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() expects exactly one argument:" \
+    (( $# == 1 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                        "  - the name of an array variable that will store the saved state" \
                                                                                        "  - an optional flag whether to preserve/restore the number of errors" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() expects its argument to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() expects its second argument to be a boolean indicating whether to preserve or restore the number of errors (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2 to be a boolean indicating whether to preserve or restore the number of errors (provided '${2-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
@@ -580,7 +580,7 @@ function restore_state()
     (( ${#__state[@]} >= state_length )) &&
     [[ -v __state[$key_pid] ]]           && (( __state[$key_pid] == BASHPID )) &&
     [[ -v __state[$key_subshell_pid] ]]  && (( __state[$key_subshell_pid] == ${BASH_SUBSHELL:-0} )) \
-                                                                                || bug "${FUNCNAME[0]}() must be called with a state that was stored by 'save_state()' in this shell/sub-shell." -ec "$err_logic_error"
+                                                                                || bug "${FUNCNAME[0]}() requires a state saved by save_state() in the same shell or subshell." -ec "$err_logic_error"
                                                                                 exit_if_has_bugs
 
     __state[$key_pid]=0
@@ -634,7 +634,7 @@ declare -a __scope_options=()
 #-----------------------------------------------------------------------------------------------
 function begin_scope()
 {
-    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() takes no arguments (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     # 'shopt -q' in a loop, not '$(shopt -p ...)': a command substitution forks, ~100 times slower
@@ -671,7 +671,7 @@ function begin_scope()
 #-----------------------------------------------------------------------------------------------
 function end_scope()
 {
-    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() takes no arguments (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
     exit_if_has_bugs
 
     local -i _top=$(( ${#__scope_pid[@]} - 1 ))
@@ -728,10 +728,10 @@ function report_open_scopes()
 #-----------------------------------------------------------------------------------------------
 function set_glob_star()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() expects exactly one argument:" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                        "  - a boolean value indicating whether the globstar option should be enabled" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() expects the first argument to be a boolean value" -ec "$err_argument_type"
+    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1 to be 'true' or 'false' (provided '${1-<missing>}')." -ec "$err_argument_type"
                                                                                 exit_if_has_bugs
 
     local _enable=$1
@@ -759,10 +759,10 @@ function set_glob_star()
 #-----------------------------------------------------------------------------------------------
 function set_null_glob()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() expects exactly one argument:" \
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                        "  - a boolean value indicating whether the nullglob option should be enabled" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() expects the first argument to be a boolean value" -ec "$err_argument_type"
+    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1 to be 'true' or 'false' (provided '${1-<missing>}')." -ec "$err_argument_type"
                                                                                 exit_if_has_bugs
 
     local _enable=$1

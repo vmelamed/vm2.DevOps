@@ -192,7 +192,7 @@ fi
 #-----------------------------------------------------------------------------------------------
 function add_trap()
 {
-    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least two arguments (provided $#):" \
+    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
                                                                                        "  - the command to append" \
                                                                                        "  - one or more signal names" \
                                                                                        -ec "$err_invalid_arguments"
@@ -268,7 +268,7 @@ function execute()
     local _quiet=false
     [[ ${1-} == --quiet ]] && { _quiet=true; shift; }
 
-    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires the command to execute (and its arguments)." -ec "$err_invalid_arguments"
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#): the command to execute, followed by its arguments." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _command
@@ -350,22 +350,22 @@ function execute_with_retry()
         case "$_option" in
             -a|--attempts )
                 shift
-                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() option --attempts MUST be followed by a natural number - the maximum attempt count." -ec "$err_missing_argument"
-                [[ ! -v 1 ]] || is_natural "$1"                                 || bug "${FUNCNAME[0]}() option --attempts MUST be followed by a natural number - the maximum attempt count (provided '${1-<missing>}')." -ec "$err_argument_type"
+                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() requires the option --attempts to be followed by a natural number, the maximum number of attempts." -ec "$err_missing_argument"
+                [[ ! -v 1 ]] || is_natural "$1"                                 || bug "${FUNCNAME[0]}() requires the option --attempts to be followed by a natural number, the maximum number of attempts (provided '${1-<missing>}')." -ec "$err_argument_type"
                 has_bugs || _max_attempts=$1
                 (( $# > 0 )) && shift
                 ;;
             -d|--delay )
                 shift
-                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() option --delay MUST be followed by a non-negative number - the delay in seconds between retries." -ec "$err_missing_argument"
-                [[ ! -v 1 ]] || is_non_negative "$1"                            || bug "${FUNCNAME[0]}() option --delay MUST be followed by a non-negative number - the delay in seconds between retries (provided '${1-<missing>}')." -ec "$err_argument_type"
+                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() requires the option --delay to be followed by a non-negative number, the delay in seconds between the attempts." -ec "$err_missing_argument"
+                [[ ! -v 1 ]] || is_non_negative "$1"                            || bug "${FUNCNAME[0]}() requires the option --delay to be followed by a non-negative number, the delay in seconds between the attempts (provided '${1-<missing>}')." -ec "$err_argument_type"
                 has_bugs || _delay=$1
                 (( $# > 0 )) && shift
                 ;;
             -c|--classify )
                 shift
-                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() option --classify MUST be followed by the name of a predicate function that can analyze the output from the command." -ec "$err_missing_argument"
-                [[ ! -v 1 ]] || is_function "$1"                                || bug "${FUNCNAME[0]}() option --classify MUST be followed by the name of a predicate function that can analyze the output from the command (provided '${1-<missing>}')." -ec "$err_argument_type"
+                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() requires the option --classify to be followed by the name of a function that classifies the output of the command." -ec "$err_missing_argument"
+                [[ ! -v 1 ]] || is_function "$1"                                || bug "${FUNCNAME[0]}() requires the option --classify to be followed by the name of a function that classifies the output of the command (provided '${1-<missing>}')." -ec "$err_argument_type"
                 has_bugs || _classify=$1
                 (( $# > 0 )) && shift
                 ;;
@@ -382,7 +382,7 @@ function execute_with_retry()
         esac
     done
 
-    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires a command to execute, followed by 0 or more arguments." -ec "$err_missing_argument"
+    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#): the command to execute, followed by its arguments." -ec "$err_missing_argument"
                                                                                 exit_if_has_bugs
 
     # build the command line for display purposes
@@ -525,7 +525,7 @@ function validate_classifier_args()
 #-----------------------------------------------------------------------------------------------
 function list_of_files()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the file pattern." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the file pattern." -ec "$err_invalid_arguments"
     [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the file pattern, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
@@ -573,8 +573,8 @@ function find_files_by_precedence()
                                                                                        "  - name of the array variable to store the found file names" \
                                                                                        "  - the file name patterns to search for, in order of precedence" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires a path to a directory (usually a repository root working tree) as the first argument (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "${FUNCNAME[0]}() requires the name of the array variable to store the found file names as the second argument (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1 to be a path to a directory, usually the root of a Git working tree (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "${FUNCNAME[0]}() requires argument 2 to be the name of an indexed array variable to receive the found file names (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
     local _dir=$1

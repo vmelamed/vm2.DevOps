@@ -17,36 +17,36 @@ declare -x err_argument_type
 declare -x bug_prefix
 
 # known return codes from the `dotnet` command
-declare -xri dotnet_success=0                       # Build succeeded; no errors or warnings were reported
-declare -xri dotnet_failure=1                       # Unknown error or catch-all error; check the build output for details
-declare -xri dotnet_err_test_failure=2              # At least one test failure occurred (if running tests as part of build)
-declare -xri dotnet_err_test_aborted=3              # Test session was aborted (e.g., by Ctrl+C)
-declare -xri dotnet_err_invalid_setup=4             # Invalid setup of used extensions (e.g., test adapters)
-declare -xri dotnet_err_invalid_cmd_line=5          # Invalid command-line arguments to the test app
-declare -xri dotnet_err_test_session_failed=7       # Test session crashed or failed to complete
-declare -xri dotnet_err_no_test_ran=8               # Zero tests ran (no tests found or configured)
-declare -xri dotnet_err_min_exec_policy_violated=9  # Minimum execution policy for tests was violated
-declare -xri dotnet_err_test_framework_failure=10   # Test framework or adapter failed to run due to infrastructure issues
-declare -xri dotnet_err_proc_exit=11                # Dependent process exited; test process will exit too
-declare -xri dotnet_err_unsupported_protocol=12     # Client does not support any supported protocol versions
-declare -xri dotnet_err_max_failed_tests=13         # Maximum failed tests reached (if limit was set)
-declare -xri dotnet_err_unknown=256                 # Unknown dotnet error code
+declare -xri dotnet_success=0                       # The command succeeded.
+declare -xri dotnet_failure=1                       # The command failed: see its output for details.
+declare -xri dotnet_err_test_failure=2              # At least one test failed.
+declare -xri dotnet_err_test_aborted=3              # The test session was aborted.
+declare -xri dotnet_err_invalid_setup=4             # The test extensions (e.g. a test adapter) are not set up correctly.
+declare -xri dotnet_err_invalid_cmd_line=5          # The command line of the test application is invalid.
+declare -xri dotnet_err_test_session_failed=7       # The test session crashed or did not complete.
+declare -xri dotnet_err_no_test_ran=8               # No tests ran.
+declare -xri dotnet_err_min_exec_policy_violated=9  # The minimum execution policy of the tests was violated.
+declare -xri dotnet_err_test_framework_failure=10   # The test framework or a test adapter failed.
+declare -xri dotnet_err_proc_exit=11                # A process that the tests depend on exited.
+declare -xri dotnet_err_unsupported_protocol=12     # The client supports none of the protocol versions.
+declare -xri dotnet_err_max_failed_tests=13         # The maximum number of failed tests was reached.
+declare -xri dotnet_err_unknown=256                 # The dotnet exit code is unknown.
 
 declare -xrA dotnet_err_messages=(
-    [$dotnet_success]="Build succeeded; no errors or warnings were reported"
-    [$dotnet_failure]="Unknown error or catch-all error; check the build output for details"
-    [$dotnet_err_test_failure]="At least one test failure occurred (if running tests as part of build)"
-    [$dotnet_err_test_aborted]="Test session was aborted (e.g., by Ctrl+C)"
-    [$dotnet_err_invalid_setup]="Invalid setup of used extensions (e.g., test adapters)"
-    [$dotnet_err_invalid_cmd_line]="Invalid command-line arguments to the test app"
-    [$dotnet_err_test_session_failed]="Test session crashed or failed to complete"
-    [$dotnet_err_no_test_ran]="Zero tests ran (no tests found or configured)"
-    [$dotnet_err_min_exec_policy_violated]="Minimum execution policy for tests was violated"
-    [$dotnet_err_test_framework_failure]="Test framework or adapter failed to run due to infrastructure issues"
-    [$dotnet_err_proc_exit]="Dependent process exited; test process will exit too"
-    [$dotnet_err_unsupported_protocol]="Client does not support any supported protocol versions"
-    [$dotnet_err_max_failed_tests]="Maximum failed tests reached (if limit was set)"
-    [$dotnet_err_unknown]="Unknown dotnet error code"
+    [$dotnet_success]="The command succeeded."
+    [$dotnet_failure]="The command failed: see its output for details."
+    [$dotnet_err_test_failure]="At least one test failed."
+    [$dotnet_err_test_aborted]="The test session was aborted."
+    [$dotnet_err_invalid_setup]="The test extensions (e.g. a test adapter) are not set up correctly."
+    [$dotnet_err_invalid_cmd_line]="The command line of the test application is invalid."
+    [$dotnet_err_test_session_failed]="The test session crashed or did not complete."
+    [$dotnet_err_no_test_ran]="No tests ran."
+    [$dotnet_err_min_exec_policy_violated]="The minimum execution policy of the tests was violated."
+    [$dotnet_err_test_framework_failure]="The test framework or a test adapter failed."
+    [$dotnet_err_proc_exit]="A process that the tests depend on exited."
+    [$dotnet_err_unsupported_protocol]="The client supports none of the protocol versions."
+    [$dotnet_err_max_failed_tests]="The maximum number of failed tests was reached."
+    [$dotnet_err_unknown]="The dotnet exit code is unknown."
 )
 
 declare -xrA dotnet_err_names=(
@@ -87,7 +87,7 @@ function dotnet_error_message()
     (( $# == 1 )) || {
         _rc="$err_invalid_arguments"
         # avoid calling the error function here to prevent recursion in case error_message is called from within error handling
-        printf "%s ${FUNCNAME[0]}() requires exactly 1 argument: an error code (provided: $#).\n" "$bug_prefix"
+        printf "%s ${FUNCNAME[0]}() requires 1 argument (provided $#): an error code.\n" "$bug_prefix"
         show_stack 2 5
     }
 

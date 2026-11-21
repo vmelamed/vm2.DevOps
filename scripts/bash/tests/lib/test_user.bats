@@ -64,7 +64,7 @@ declare -gx err_invalid_nameref
 @test "confirm: re-prompts on invalid input until a valid y/n is given" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'maybe\ny\n' | confirm 'Proceed?'"
     assert_success
-    assert_output --partial "Please enter one of Y or N"
+    assert_output --partial "Enter one of Y or N"
 }
 
 @test "confirm: bug-exits with the wrong argument count" {

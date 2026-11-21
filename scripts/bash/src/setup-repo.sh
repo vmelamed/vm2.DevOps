@@ -105,7 +105,7 @@ if has_local_repo repo_state; then
                                                                                         mismatches["<repo-directory-path>"]=1
                                                                                     }
     [[ -s "$repo_path/.github/workflows/CI.yaml" ]]                             || usage "The git-detected repository path '$repo_path' is missing a sub-directory '.github/workflows/CI.yaml'." \
-                                                                                         "Please specify a valid path to the root of the project/repository as a positional parameter or use 'dotnet new vm2.NewPkg' to create a valid directory structure." \
+                                                                                         "Specify a valid path to the root of the project/repository as a positional parameter or use 'dotnet new vm2.NewPkg' to create a valid directory structure." \
                                                                                          -ec "$err_repo_with_no_ci"
     trace "Setting repo_path='$repo_path' from git-detected repository root"
 
@@ -191,7 +191,7 @@ if $audit; then
     #===============================================================================================
 
     has_github_remote repo_state                                                || error "The repository in '$repo_path' is not linked to a GitHub remote. Cannot perform audit." \
-                                                                                         "Please ensure that the repository is properly initialized and linked to GitHub before running the script with '--audit'." \
+                                                                                         "Ensure that the repository is properly initialized and linked to GitHub before running the script with '--audit'." \
                                                                                          -ec "$err_logic_error"
                                                                                 exit_if_has_errors
 
@@ -267,7 +267,7 @@ if ! has_remote_repo repo_state; then
     info "Create GitHub repository:"
 
     confirm "Create the GitHub repository '$suggested_repo_name'?" "Y"          ||  {
-                                                                                        warning "Please rename the repository root directory to match the name of the desired GitHub repository."
+                                                                                        warning "Rename the repository root directory to match the name of the desired GitHub repository."
                                                                                         exit "$err_root_not_repo_name"
                                                                                     }
 
@@ -313,7 +313,7 @@ if ! has_remote_repo repo_state; then
     # Checks: get the repo state again that will have more real git and github information in it.
     (( rc != success )) || get_repo_state "$repo_path" repo_state               || with_error rc $? "Failed to get repository state after creation. " \
                                                                                                     "The repository may have been created successfully, but the script cannot continue with configuration." \
-                                                                                                    "Please check the repository at $repo_path."
+                                                                                                    "Check the repository at $repo_path."
     (( rc != success )) || dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
     ! has_errors                                                                || undo_changes

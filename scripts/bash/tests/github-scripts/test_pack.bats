@@ -263,7 +263,7 @@ _run_pack() {
     _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
     run _run_pack "$BATS_TEST_TMPDIR/repo" '' --build maybe src/App/App.csproj
     assert_failure
-    assert_output --partial "not a valid boolean"
+    assert_output --partial "Invalid boolean"
 }
 
 @test "pack: fails when the produced package files are missing" {
