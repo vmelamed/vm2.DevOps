@@ -250,6 +250,7 @@ if ! has_local_repo repo_state; then
         execute --quiet git -C "$repo_path" commit -m "chore: initial scaffold" || with_error rc "$err_tool_error" "Failed to commit the staged files in '$repo_path' to branch '$default_branch'."
         (( rc != success )) || trace "    Committed staged files to '$repo_path'."
     fi
+                                                                                exit_if_has_errors
 
     # shellcheck disable=SC2015 # Info: Note that A && B || C is not if-then-else. C may run when A is true.
     is_dry_run &&
@@ -330,7 +331,12 @@ fi
 if $configure_local; then
     info "Configure local git settings."
 
+    declare -i errors_before
     declare _key value
+
+    rc=$success
+    errors_before=$(get_errors)
+
     for _key in "${default_local_git_settings_order[@]}"; do
         value="${default_local_git_settings[$_key]}"
         execute git -C "$repo_path" config --local "$_key" "$value"             || with_error rc $? "Failed to configure the local Git repository with '$_key' => '$value'"
@@ -338,10 +344,16 @@ if $configure_local; then
     done
 
     # shellcheck disable=SC2015 # Info: Note that A && B || C is not if-then-else. C may run when A is true.
-    is_dry_run &&
-        info "Would have configured the local Git settings."
-        info "The local Git settings were configured."
-    rc=$success
+    if (( rc == success )); then
+        is_dry_run &&
+            info "Would have configured the local Git settings." ||
+            info "The local Git settings were configured."
+    else
+        is_dry_run &&
+            info "Some local Git settings would not have been configured: see the errors above." ||
+            info "Some local Git settings were not configured: see the errors above."
+        rc=$success
+    fi
 
     if [[ -f "$repo_path/.gitmodules" ]]; then
         info "Initialize Git submodules."
@@ -351,6 +363,9 @@ if $configure_local; then
                                     info "Would have initialized the Git submodules." ||
                                     info "The Git submodules were initialized."; }
     fi
+
+    # the errors in this block are not fatal. We showed them, now let's continue.
+    set_errors "$errors_before"
     rc=$success
 fi
 
@@ -360,8 +375,8 @@ fi
 
 initialize_jq_queries
 initialize_gh_paths
-initialize_main_protection_rs_id
-rc=$?
+rc=$success
+initialize_main_protection_rs_id || rc=$?
 # continue on success or failure (e.g. not found), otherwise exit (e.g. not authorized)
 (( rc == success || rc == failure ))                                            || exit_if_has_errors
 
