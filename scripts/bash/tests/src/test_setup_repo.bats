@@ -5,9 +5,10 @@
 # Characterization tests for scripts/bash/src/setup-repo.sh, the top-level orchestrator, as it
 # behaves TODAY.
 #
-# setup-repo.sh's own logic in this file's scope is the pre-flight sequence: tool-prerequisite
-# checks, resolving $vm2_repos and the SoT/DevOps paths, resolving the target repo path, and the
-# final validation block (branch/visibility/owner regexes, --audit preconditions) -- all of it
+# setup-repo.sh's own logic in this file's scope is the pre-flight sequence: the get_arguments
+# pipeline end to end (tool prerequisites, resolving $vm2_repos and the target repo path, and
+# validating the branch, visibility, and owner -- each stage in detail in
+# test_setup_repo_args.bats), and the --audit preconditions -- all of it
 # reachable, deterministically, WITHOUT ever calling the real GitHub API: every check exercised
 # here happens before the script's first '$actual' GitHub-repository-specific API call
 # (resolve_github_app_ids(), which only runs after the final validation block's
@@ -27,6 +28,12 @@ bats_require_minimum_version 1.5.0
 load '../libs/bats-support/load'
 load '../libs/bats-assert/load'
 load '../helpers/setup'
+
+declare BATS_TEST_TMPDIR
+
+# ShellCheck can't see that '../helpers/setup' transplants these into this file's scope at load
+# time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
+declare -gx lib_dir
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
 _setup_repo="$_src_dir/setup-repo.sh"
@@ -54,8 +61,8 @@ _make_path_excluding() {
     echo "$_dir"
 }
 
-# A fake 'gh' that answers 'gh auth status' (needed by setup-repo.sh's own tool-prerequisite
-# check) and the three global, repository-independent app-id lookups made unconditionally by
+# A fake 'gh' that answers 'gh --version' and 'gh auth status' (needed by is_gh_present(), the
+# tool-prerequisite check of verify_environment()) and the three global, repository-independent app-id lookups made unconditionally by
 # resolve_github_app_ids() (apps/github-actions, apps/dependabot, apps/codespaces) -- a real,
 # authenticated 'gh' resolves these regardless of whether the target repo has a GitHub remote,
 # so the fake must too, or a test that reaches resolve_github_app_ids() before its own exit point
@@ -68,6 +75,7 @@ _install_fake_gh_auth_only() {
     mkdir -p "$_bindir"
     cat > "$_bindir/gh" <<'EOF'
 #!/usr/bin/env bash
+[[ "$1" == "--version" ]] && { echo "gh version 2.80.0 (2026-01-01)"; exit 0; }
 [[ "$1 $2" == "auth status" ]] && exit 0
 case "$*" in
     *"apps/github-actions"*) echo 15368;  exit 0 ;;
@@ -170,7 +178,8 @@ _run_setup_repo() {
 @test "setup-repo: fails when 'gh' is not authenticated" {
     local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/nogh" gh)"
     mkdir -p "$BATS_TEST_TMPDIR/gh-bin"
-    printf '#!/usr/bin/env bash\nexit 1\n' > "$BATS_TEST_TMPDIR/gh-bin/gh"
+    # shellcheck disable=SC2016 # the fake's own "$1", not this test's
+    printf '#!/usr/bin/env bash\n[[ "$1" == "--version" ]] && { echo "gh version 2.80.0 (2026-01-01)"; exit 0; }\nexit 1\n' > "$BATS_TEST_TMPDIR/gh-bin/gh"
     chmod +x "$BATS_TEST_TMPDIR/gh-bin/gh"
     _make_vm2_repos_fixture "$BATS_TEST_TMPDIR/vm2repos"
     _make_target_repo "$BATS_TEST_TMPDIR/vm2repos/target"
@@ -188,22 +197,6 @@ _run_setup_repo() {
     run _run_setup_repo "$BATS_TEST_TMPDIR/gh-bin:$_bin" --quiet --vm2-repos "$BATS_TEST_TMPDIR/vm2repos" "$BATS_TEST_TMPDIR/vm2repos/target"
     assert_failure
     assert_output --partial "'yq' is not installed"
-}
-
-# =====================================================================================
-# vm2_repos / SoT / _ci.yaml resolution
-# =====================================================================================
-
-# bats test_tags=tool-check
-@test "setup-repo: fails when the vm2.DevOps repo has no _ci.yaml reusable workflow" {
-    local _bin; _bin="$(_make_path_excluding "$BATS_TEST_TMPDIR/bin")"
-    _install_fake_gh_auth_only "$BATS_TEST_TMPDIR/gh-bin"
-    _make_vm2_repos_fixture "$BATS_TEST_TMPDIR/vm2repos"
-    rm "$BATS_TEST_TMPDIR/vm2repos/vm2.DevOps/.github/workflows/_ci.yaml"
-    _make_target_repo "$BATS_TEST_TMPDIR/vm2repos/target"
-    run _run_setup_repo "$BATS_TEST_TMPDIR/gh-bin:$_bin" --quiet --vm2-repos "$BATS_TEST_TMPDIR/vm2repos" "$BATS_TEST_TMPDIR/vm2repos/target"
-    assert_failure
-    assert_output --partial "Could not find _ci.yaml"
 }
 
 # =====================================================================================
@@ -239,7 +232,7 @@ _run_setup_repo() {
     _make_target_repo "$BATS_TEST_TMPDIR/vm2repos/target"
     run _run_setup_repo "$BATS_TEST_TMPDIR/gh-bin:$_bin" --quiet --vm2-repos "$BATS_TEST_TMPDIR/vm2repos" --branch '..bad..' "$BATS_TEST_TMPDIR/vm2repos/target"
     assert_failure
-    assert_output --partial "Invalid branch name"
+    assert_output --partial "valid Git branch name"
 }
 
 # bats test_tags=tool-check
@@ -250,7 +243,7 @@ _run_setup_repo() {
     _make_target_repo "$BATS_TEST_TMPDIR/vm2repos/target"
     run _run_setup_repo "$BATS_TEST_TMPDIR/gh-bin:$_bin" --quiet --vm2-repos "$BATS_TEST_TMPDIR/vm2repos" --visibility bogus "$BATS_TEST_TMPDIR/vm2repos/target"
     assert_failure
-    assert_output --partial "Invalid visibility 'bogus'"
+    assert_output --partial "valid Git visibility (provided 'bogus')"
 }
 
 # bats test_tags=tool-check
@@ -272,9 +265,8 @@ _run_setup_repo() {
     _make_target_repo "$BATS_TEST_TMPDIR/vm2repos/target"
     run _run_setup_repo "$BATS_TEST_TMPDIR/gh-bin:$_bin" --quiet --vm2-repos "$BATS_TEST_TMPDIR/vm2repos" --audit --interactive-vars "$BATS_TEST_TMPDIR/vm2repos/target"
     assert_failure
-    # Both preconditions fail here (accumulate-then-gate: this target has no GitHub remote at
-    # all, so it can't be audited regardless), but the interactive-vars-during-audit message is
-    # the one this test actually targets.
-    assert_output --partial "not linked to a GitHub remote"
+    # resolve_arguments rejects the combination itself, so the run stops at the argument gate,
+    # before any check of the repository (e.g. its GitHub remote).
     assert_output --partial "Secrets and variables cannot be interactively set during audit"
+    refute_output --partial "not linked to a GitHub remote"
 }

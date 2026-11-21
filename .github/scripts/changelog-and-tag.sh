@@ -25,6 +25,7 @@ declare -x check_em
 declare -x ci
 declare -x key_artifacts_path
 declare -x semverTagReleaseRegex
+declare -x default_repo_owner
 
 # vm2 core lib defaults
 declare -x default_minver_tag_prefix
@@ -47,8 +48,8 @@ declare -x needs_empty_commit
 
 # Configure git for CI
 if $ci; then
-    execute git config user.name vmelamed
-    execute git config user.email vmelamed@users.noreply.github.com
+    execute git config user.name "$default_repo_owner"
+    execute git config user.email "$default_repo_owner@users.noreply.github.com"
 fi
 
 # ============================================================================

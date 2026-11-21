@@ -79,6 +79,10 @@ declare -xra allowed_commit_types=(
     "ci"                # n/a    Continuous integration configuration changes that do not force client rebuild
     "chore"             # n/a    Miscellaneous tasks or maintenance that do not force client rebuild
 )
+# shellcheck disable=SC2155
+declare -xr allowed_commit_types_str=$(IFS=,; echo "${allowed_commit_types[*]}")
+# shellcheck disable=SC2155
+declare -xr allowed_commit_types_rex=$(IFS='|'; echo "${allowed_commit_types[*]}")
 
 #-----------------------------------------------------------------------------------------------
 # @description Specifies the default path to the parent directory of all vm2 repositories.
@@ -86,11 +90,6 @@ declare -xra allowed_commit_types=(
 #   or environments (e.g. in CI/CD pipelines, other developers' machines, etc.).
 #-----------------------------------------------------------------------------------------------
 declare -xr default_vm2_repos_path="$HOME/repos/vm2"
-
-#-----------------------------------------------------------------------------------------------
-# @description The default owner of the GitHub repository.
-#-----------------------------------------------------------------------------------------------
-declare -xr default_repo_owner="vmelamed"
 
 #-----------------------------------------------------------------------------------------------
 # @description Specifies the name of the `vm2.DevOps` repository
@@ -130,6 +129,10 @@ declare -xr vm2_sot_repo_name="vm2.Templates"
 declare -xra sources_of_truth=(
     "AddNewPackage"
 )
+# shellcheck disable=SC2155
+declare -xr sources_of_truth_str=$(IFS=,; echo "${sources_of_truth[*]}")
+# shellcheck disable=SC2155
+declare -xr sources_of_truth_rex=$(IFS='|'; echo "${sources_of_truth[*]}")
 
 #-----------------------------------------------------------------------------------------------
 # @description Specifies the default SOT directory to use as a source for comparison and
@@ -179,6 +182,10 @@ declare -xra allowed_runners_os=(
     "macos-12"
     "macos-11"
 )
+# shellcheck disable=SC2155
+declare -xr allowed_runners_os_str=$(IFS=,; echo "${allowed_runners_os[*]}")
+# shellcheck disable=SC2155
+declare -xr allowed_runners_os_rex=$(IFS='|'; echo "${allowed_runners_os[*]}")
 
 #-----------------------------------------------------------------------------------------------
 # @description GitHub Actions applications that use variables (`vars`)
@@ -187,6 +194,10 @@ declare -xra gh_apps_with_vars=(
     "actions"
     "agents"
 )
+# shellcheck disable=SC2155
+declare -xr gh_apps_with_vars_str=$(IFS=,; echo "${gh_apps_with_vars[*]}")
+# shellcheck disable=SC2155
+declare -xr gh_apps_with_vars_rex=$(IFS='|'; echo "${gh_apps_with_vars[*]}")
 
 #-----------------------------------------------------------------------------------------------
 # @description GitHub Actions applications that use secrets (`secrets`)
@@ -197,6 +208,10 @@ declare -xra gh_apps_with_secrets=(
     "codespaces"
     # "agents"
 )
+# shellcheck disable=SC2155
+declare -xr gh_apps_with_secrets_str=$(IFS=,; echo "${gh_apps_with_secrets[*]}")
+# shellcheck disable=SC2155
+declare -xr gh_apps_with_secrets_rex=$(IFS='|'; echo "${gh_apps_with_secrets[*]}")
 
 # characters
 declare -xr secret_str='••••••'

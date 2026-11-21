@@ -25,6 +25,7 @@ declare -x default_sot
 declare -x dpp_file_name
 declare -x vm2_repositories
 declare -x sources_of_truth
+declare -x sources_of_truth_str
 
 # this script's arguments
 declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos_path}"    # the path to the folder containing all vm2 repositories, usually '$VM2_REPOS'
@@ -110,7 +111,7 @@ function validate_arguments()
     }
     is_valid_path "$summary_file"                                               || with_error _rc "$err_invalid_path" "Invalid summary file path: '$summary_file'."
     resolve_vm2_repos vm2_repos                                                 || vm2_repos=''
-    is_in "$sot" "${sources_of_truth[@]}"                                       || with_error _rc "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}."
+    is_in "$sot" "${sources_of_truth[@]}"                                       || with_error _rc "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: $sources_of_truth_str."
 
     has_errors || [[ -z $vm2_repos ]] || get_vm2_sot_path "$vm2_repos" sot_path "$sot" || true
     exit_if_has_errors true # we cannot go further without vm2_repos or sot path

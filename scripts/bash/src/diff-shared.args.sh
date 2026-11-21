@@ -20,6 +20,7 @@ declare -x err_tool_not_found
 declare -x ci
 declare -x vm2_repositories
 declare -x sources_of_truth
+declare -x sources_of_truth_str
 declare -x default_sot
 declare -x vm2_sot_repo_name
 declare -x default_vm2_repos_path
@@ -57,7 +58,7 @@ declare -a target_paths=()
 declare -x vm2_branch='main'
 declare -x sot_branch='main'
 declare -x valid_actions
-declare -x all_actions_str
+declare -x valid_actions_str
 
 function get_arguments()
 {
@@ -158,7 +159,7 @@ function resolve_arguments()
     trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
     # resolve and validate sot. We cannot continue without it.
-    is_in "$sot" "${sources_of_truth[@]}"                                       || usage "Invalid source of truth '$sot'. Valid values are: ${sources_of_truth[*]}." -ec "$err_argument_value"
+    is_in "$sot" "${sources_of_truth[@]}"                                       || usage "Invalid source of truth '$sot'. Valid values are: $sources_of_truth_str." -ec "$err_argument_value"
 
     # resolve and validate sot_path
     get_vm2_sot_path "$vm2_repos" sot_path "$sot"                               || with_error _rc $? "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'."
@@ -266,7 +267,7 @@ function get_selector_action()
         "cs" | "$action_copy_shared"        ) _action="$action_copy_shared" ;;
         "acs"| "$action_ask_to_copy_shared" ) _action="$action_ask_to_copy_shared" ;;
         ""                                  ) ;;
-        *                                   ) error "Invalid action: $_action. Valid actions are: $all_actions_str"  -ec "$err_argument_value" ;;
+        *                                   ) error "Invalid action: $_action. Valid actions are: $valid_actions_str"  -ec "$err_argument_value" ;;
     esac
 
     [[ $_file_selector != -* ]] ||

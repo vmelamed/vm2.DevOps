@@ -34,7 +34,17 @@ declare -x warn_em
 # vm2 core lib variables
 declare -x _ignore
 
+declare -xr default_repo_owner="vmelamed"
 declare -xr default_default_branch="main"
+declare -xr default_visibility="public"
+declare -xra repo_visibilities=(
+    "$default_visibility"
+    "private"
+)
+# shellcheck disable=SC2155
+declare -xr repo_visibilities_str=$(IFS=,; echo "${repo_visibilities[*]}")
+# shellcheck disable=SC2155
+declare -xr repo_visibilities_rex=$(IFS='|'; echo "${repo_visibilities[*]}")
 
 declare -xr gh_authority_rex="github\.com"
 declare -xr gh_ssh_authority_rex="git@$gh_authority_rex"                        # OK, this is not URI authority, but here we only support GitHub SSH URLs, so we can call GitHub SSH authority. This is the part of the URL before the owner/name, e.g. "git@github.com" from "git@github.com:vmelamed/vm2.DevOps.git"
@@ -85,14 +95,14 @@ declare -xar repo_state_keys=(
 declare -x _ignore
 
 #-----------------------------------------------------------------------------------------------
-# @description Predicate - tests that the specified repository owner is valid according to GitHub naming
-#   rules, i.e. it matches the regular expression for GitHub owner/organization names.
+# @description Predicate - tests that the specified GitHub repository owner is valid according
+#   to GitHub naming rules, i.e. it matches the regular expression for GitHub owner/organization names.
 #
 # Notes:
 #   - See [GitHub REST API docs](https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user)
 #     for details on GitHub repository owner naming rules.
 #
-# @arg $1 string The repository owner to validate.
+# @arg $1 string The GitHub repository owner to validate.
 #
 # @exitcode positive=0: If the GitHub repository owner is valid.
 # @exitcode negative=1: If the GitHub repository owner is not valid.
@@ -102,7 +112,7 @@ declare -x _ignore
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_repo_owner()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository owner to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the GitHub repository owner to validate." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _owner=${1:-}
@@ -110,18 +120,39 @@ function is_valid_gh_repo_owner()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Predicate - tests that the specified repository name is valid according to GitHub
-#   naming rules, i.e. it matches the regular expression for GitHub repository names and does
-#   not end with `.git`.
+# @description Tests if the specified visibility is valid.
+#
+# @arg $1 string _visibility the visibility to validate.
+#
+# @exitcode positive=0: if the visibility is valid.
+# @exitcode negative=1: if the visibility is invalid.
+#
+# @example
+#   if is_valid_branch_name "main"; then echo "Valid visibility "; fi
+#-----------------------------------------------------------------------------------------------
+function is_valid_visibility()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument - a visibility (provided $#)" -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local _visibility=$1
+
+    is_in_i "$_visibility" "${repo_visibilities[@]}"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Predicate - tests that the specified GitHub repository name is valid according to
+#   GitHub naming rules, i.e. it matches the regular expression for GitHub repository names and
+#   does not end with `.git`.
 #
 # Notes:
 #   - See [GitHub REST API docs](https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user)
 #     for details on GitHub repository naming rules.
 #
-# @arg $1 string The repository name to validate.
+# @arg $1 string The GitHub repository name to validate.
 #
-# @exitcode positive=0: If the repository name is valid.
-# @exitcode negative=1: If the repository name is not valid.
+# @exitcode positive=0: If the GitHub repository name is valid.
+# @exitcode negative=1: If the GitHub repository name is not valid.
 #
 # @example
 #   if is_valid_gh_repo_name "my-repo"; then echo "Valid repo name"; fi
@@ -130,7 +161,7 @@ function is_valid_gh_repo_owner()
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_repo_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository name to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the GitHub repository name to validate." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _repo="${1:-}"
@@ -140,17 +171,17 @@ function is_valid_gh_repo_name()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Predicate - tests that the specified repository full name (<owner>/<repo name>)
+# @description Predicate - tests that the specified GitHub repository full name (<owner>/<repo name>)
 #   is valid according to GitHub naming rules above
 #
 # Notes:
 #   - See [GitHub REST API docs](https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user)
 #     for details on GitHub repository naming rules.
 #
-# @arg $1 string The repository name to validate.
+# @arg $1 string The GitHub repository name to validate.
 #
-# @exitcode positive=0: If the repository name is valid.
-# @exitcode negative=1: If the repository name is not valid.
+# @exitcode positive=0: If the GitHub repository name is valid.
+# @exitcode negative=1: If the GitHub repository name is not valid.
 #
 # @example
 #   if is_valid_gh_repo_name "my-repo"; then echo "Valid repo name"; fi
@@ -159,7 +190,7 @@ function is_valid_gh_repo_name()
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_repo_full_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository name to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the GitHub repository name to validate." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _full_name="${1:-}"
@@ -169,17 +200,17 @@ function is_valid_gh_repo_full_name()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates that the specified repository description is valid according to GitHub
-#   rules, i.e. it is between 3 and 350 characters long.
+# @description Validates that the specified GitHub repository description is valid according to
+#   GitHub rules, i.e. it is between 3 and 350 characters long.
 #
 # Notes:
 #   - See [GitHub REST API docs](https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user)
 #     for details on GitHub repository description rules.
 #
-# @arg $1 string The repository description to validate.
+# @arg $1 string The GitHub repository description to validate.
 #
-# @exitcode success=0: If the repository description is valid.
-# @exitcode err_argument_value=4: If the repository description is not between 3 and 350
+# @exitcode success=0: If the GitHub repository description is valid.
+# @exitcode err_argument_value=4: If the GitHub repository description is not between 3 and 350
 #   characters long.
 #
 # @example
@@ -189,7 +220,7 @@ function is_valid_gh_repo_full_name()
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_repo_description()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository description to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the GitHub repository description to validate." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _description=${1:-}
@@ -199,31 +230,56 @@ function is_valid_gh_repo_description()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates that the specified repository owner is valid according to GitHub
+# @description Validates that the specified repository visibility is valid.
+#
+# @arg $1 string The repository visibility to validate.
+#
+# @exitcode success=0: If the visibility is valid.
+# @exitcode err_argument_value=4: If the visibility is not a valid.
+#
+# @example
+#   if validate_visibility "private"; then echo "Valid visibility"; fi
+# @example
+#   enter_value "Default visibility" visibility "$default_visibility" false validate_visibility)
+#-----------------------------------------------------------------------------------------------
+function validate_visibility()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument - a visibility (provided $#)" -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local -i _rc="$success"
+
+    is_valid_visibility "$1"                                                    || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Git visibility (provided '${1-<missing>}')."
+
+    return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Validates that the specified GitHub repository owner is valid according to GitHub
 #   naming rules, i.e. it matches the regular expression for GitHub owner/organization names.
 #
 # Notes:
 #   - See [GitHub REST API docs](https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user)
 #     for details on GitHub repository owner naming rules.
 #
-# @arg $1 string The repository owner to validate.
+# @arg $1 string The GitHub repository owner to validate.
 #
-# @exitcode success=0: If the repository owner is valid.
-# @exitcode err_argument_value=4: If the repository owner is not empty and does not match the
-#   GitHub owner/organization naming rules.
+# @exitcode success=0: If the GitHub repository owner is valid.
+# @exitcode err_argument_value=4: If the GitHub repository owner is not empty and does not match
+#   the GitHub owner/organization naming rules.
 #
 # @example
 #   if validate_gh_repo_owner "my-org"; then echo "Valid repo owner"; fi
 #-----------------------------------------------------------------------------------------------
 function validate_gh_repo_owner()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository owner to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the GitHub repository owner to validate." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
 
     # repo owner can be empty (for user-level repos) or must match the regex for GitHub owner/organization names
-    is_valid_gh_repo_owner "$1"                                                 || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid repository owner (provided '${1-<missing>}')."
+    is_valid_gh_repo_owner "$1"                                                 || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid GitHub repository owner (provided '${1-<missing>}')."
     return "$_rc"
 }
 
@@ -231,7 +287,7 @@ readonly __valid_repo_names_msg="GitHub repository names can be up to 100 charac
 See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user for details."
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates that the specified repository name is valid according to GitHub
+# @description Validates that the specified GitHub repository name is valid according to GitHub
 #   naming rules, i.e. it matches the regular expression for GitHub repository names and does
 #   not end with `.git`.
 #
@@ -239,11 +295,11 @@ See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-auth
 #   - See [GitHub REST API docs](https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user)
 #     for details on GitHub repository naming rules.
 #
-# @arg $1 string The repository name to validate.
+# @arg $1 string The GitHub repository name to validate.
 #
-# @exitcode success=0: If the repository name is valid.
-# @exitcode err_argument_value=4: If the repository name is empty, ends with `.git`, or does
-#   not match the GitHub repository naming rules.
+# @exitcode success=0: If the GitHub repository name is valid.
+# @exitcode err_argument_value=4: If the GitHub repository name is empty, ends with `.git`, or
+#   does not match the GitHub repository naming rules.
 #
 # @example
 #   if validate_gh_repo_name "my-repo"; then echo "Valid repo name"; fi
@@ -252,13 +308,45 @@ See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-auth
 #-----------------------------------------------------------------------------------------------
 function validate_gh_repo_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the repository name to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the GitHub repository name to validate." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
 
     # repo name cannot be empty, cannot end with .git, and must match the regex for GitHub repository names above
-    is_valid_gh_repo_name "$1"                                                  || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid repository name (provided '${1-<missing>}'). $__valid_repo_names_msg"
+    is_valid_gh_repo_name "$1"                                                  || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid GitHub repository name (provided '${1-<missing>}'). $__valid_repo_names_msg"
+    return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Validates that the specified GitHub repository full name is valid according to
+#   GitHub naming rules.
+#
+# Notes:
+#   - See [GitHub REST API docs](https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-authenticated-user)
+#     for details on GitHub repository naming rules.
+#
+# @arg $1 string The GitHub repository full name to validate.
+#
+# @exitcode success=0: If the GitHub repository name is valid.
+# @exitcode err_argument_value=4: If the GitHub repository name is empty, ends with `.git`, or
+#   does not match the GitHub repository naming rules.
+#
+# @example
+#   if validate_gh_repo_full_name "me/my-repo"; then echo "Valid repo name"; fi
+# @example
+#   enter_value "GitHub Repository name" repo_name "$default_repo_full_name" false validate_gh_repo_full_name
+#-----------------------------------------------------------------------------------------------
+function validate_gh_repo_full_name()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires exactly one argument (provided $#): the GitHub full repository name to validate." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local -i _rc=$success
+    local _full_name="${1:-}"
+
+    # repo name cannot be empty, cannot end with .git, and must match the regex for GitHub repository full names above
+    is_valid_gh_repo_full_name "$_full_name"                                    || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid GitHub full repository name (provided '${1-<missing>}')."
     return "$_rc"
 }
 
@@ -323,7 +411,7 @@ function validate_gh_repo_description()
 # @example
 #   value=$(execute_with_retry --query --classify gh_failure \
 #               gh api "repos/$repo/actions/variables/NUGET_SERVER" --jq .value)        || rc=$?
-#   (( rc == success || rc == err_not_found ))                                         || …   # absent: a default
+#   (( rc == success || rc == err_not_found ))                                          || …   # absent: a default
 #-----------------------------------------------------------------------------------------------
 function gh_failure()
 {
@@ -512,7 +600,10 @@ declare -xri url_name=8
 #
 # @exitcode success=0: On success, or when the directory has no local/GitHub repo state to
 #   report.
-# @exitcode failure=1: If the GitHub API data does not match the local Git remote data.
+# @exitcode err_root_not_repo_name=90: The root directory's name differs from the repository name
+#   in the `origin` URL (reported; the state is still filled in).
+# @exitcode err_tool_error=66: The GitHub API query failed (reported by `get_gh_repo_state`).
+# @exitcode err_logic_error=68: The GitHub API data does not match the local Git remote data.
 #
 # @example
 #   get_repo_state "/home/valo/repos/vm2.Glob" repo_state
@@ -532,12 +623,12 @@ function get_repo_state()
     local -i _rc="$success"
     local _root=$1
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
-    local __repo_state_name="$2"
-    local -n __repo_state="$__repo_state_name" # associative array variable to receive the repo state, passed by name
+    local _repo_state_var_name="$2"
+    local -n __repo_state="$_repo_state_var_name" # associative array variable to receive the repo state, passed by name
     local _full_info=${3:-true}
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
-    initialize_repo_state "$__repo_state_name" # make sure we have all fields
+    initialize_repo_state "$_repo_state_var_name" # make sure we have all fields
 
     local _root_dir
 
@@ -567,7 +658,7 @@ function get_repo_state()
 
     $_full_info                                                                 || return "$_rc" # caller does not want full info - return with what we have from git, without trying to get GitHub API data
 
-    get_gh_repo_state "$_repo_full_name" "$__repo_state_name"                   || return $?
+    get_gh_repo_state "$_repo_full_name" "$_repo_state_var_name"                || return $?
 
     # make sure all is kosher: the names we've got from Git should match the names from GitHub:
     [[

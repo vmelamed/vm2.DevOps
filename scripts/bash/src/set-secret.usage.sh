@@ -7,6 +7,7 @@ declare -x common_args_usage
 declare -x script_name
 
 declare -x gh_apps_with_secrets
+declare -x default_repo_owner
 
 #-----------------------------------------------------------------------------------------------
 # @description Builds and prints the full `--help` text for `set-secret.sh` to stdout: usage
@@ -44,7 +45,7 @@ Parameter:
 Options:
   -a, --app <value>           The application name. MUST be one of: ${gh_apps_with_secrets[*]}.
                               Optional, default is 'actions'.
-  -o, --repo-owner <value>    The GitHub repository owner. Optional, default is 'vmelamed'.
+  -o, --repo-owner <value>    The GitHub repository owner. Optional, default is '$default_repo_owner'.
 $_common_args
 Examples:
   $script_name --secret-name RELEASE_PAT --app actions

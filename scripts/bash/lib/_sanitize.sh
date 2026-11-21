@@ -39,6 +39,7 @@ declare -x build_config_regex
 declare -x tfm_regex
 declare -x rid_regex
 declare -x allowed_runners_os
+declare -x allowed_runners_os_str
 declare -x known_configurations
 declare -x known_tfms
 declare -x known_runtimes
@@ -530,7 +531,7 @@ function is_safe_runner_os()
 
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     is_safe_input "$_runner_os" &&
-    is_in "$_runner_os" "${allowed_runners_os[@]}"                              || with_error _rc "$err_argument_value" "The runner OS '$_runner_os' is not allowed. Valid options: ${allowed_runners_os[*]}."
+    is_in "$_runner_os" "${allowed_runners_os[@]}"                              || with_error _rc "$err_argument_value" "The runner OS '$_runner_os' is not allowed. Valid options: $allowed_runners_os_str."
     (( _rc == positive ))
 }
 

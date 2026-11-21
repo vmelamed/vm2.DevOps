@@ -23,7 +23,6 @@ declare -x err_io_failure
 
 declare -x secret_str
 declare -x secret_placeholder
-declare -x default_repo_owner
 
 declare -x vm2_repositories
 

@@ -3,27 +3,67 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+# vm2 core lib exit codes
 declare -x success                    # Operation completed successfully
 declare -x err_invalid_arguments      # The number of the arguments is invalid or more than one type of parameter error code is present
 declare -x err_argument_value
 declare -x err_invalid_nameref
 declare -x err_invalid_item
 
+# vm2 core lib constants
 declare -x vm2_devops_repo_name
-
+declare -x vm2_sot_repo_name
 declare -x secret_str
 declare -x secret_placeholder
+declare -x default_sot
 declare -x default_nuget_server
+declare -x default_default_branch
+declare -x default_minver_tag_prefix
+declare -x default_minver_prerelease_id
+declare -x gh_apps_with_vars
+declare -x gh_apps_with_vars_str
+declare -x gh_apps_with_secrets
+declare -x gh_apps_with_secrets_str
 
-declare -x nuget_server
+# this script constants
+declare -x default_visibility
+
+# this script variables
+declare -x vm2_repos
 declare -x repo_name
+declare -x nuget_server
+
+# variables defined below:
+declare -x defaults_validated=false
+
+declare -x default_repo_settings
+declare -x default_repo_settings_order
+
+declare -x default_repo_permissions
+declare -x default_ruleset
+declare -x default_ruleset_order
+
+declare -x actions_vars_defaults
+declare -x actions_vars_order
+declare -x actions_vars_validators
+
+declare -x agents_vars_defaults
+declare -x agents_vars_order
+declare -x agents_vars_validators
+
+declare -x actions_secrets_order
+declare -x agents_secrets_order
+declare -x codespaces_secrets_order
+
+declare -x default_local_git_settings
+declare -x default_local_git_settings_order
 
 #===============================================================================
 # GitHub repository settings
 #===============================================================================
 
 declare -xrA default_repo_settings=(
-    ["default_branch"]="main"
+    ["default_branch"]=$default_default_branch
     ["delete_branch_on_merge"]=true
     ["allow_squash_merge"]=false
     ["allow_merge_commit"]=false
@@ -34,7 +74,7 @@ declare -xrA default_repo_settings=(
     ["has_projects"]=false
     ["has_pull_requests"]=true
     ["pull_request_creation_policy"]="all"
-    ["visibility"]="public"
+    ["visibility"]=$default_visibility
 )
 
 declare -xra default_repo_settings_order=(
@@ -106,9 +146,6 @@ declare -xra default_ruleset_order=(            # UI: Order in which rules appea
 #===============================================================================
 # GitHub repository variables
 #===============================================================================
-
-declare -x gh_apps_with_vars
-
 # The vars defaults for each application not only gives the default values for the variables
 # but also serves as a definition of the expected variables for the application. Some variables
 # may be optional depending on the application's configuration or environment, e.g.,
@@ -119,8 +156,8 @@ declare -x gh_apps_with_vars
 # defaults array returned by `get_vars_defaults()`.
 declare -xA actions_vars_defaults=(
     # Build and Pack:
-    ["MINVERTAGPREFIX"]="v"
-    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="preview.0"
+    ["MINVERTAGPREFIX"]=$default_minver_tag_prefix
+    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]=$default_minver_prerelease_id
     # Test:
     ["MIN_COVERAGE_PCT"]="80"
     # Benchmarks:
@@ -216,9 +253,9 @@ function validate_app_default_vars()
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires one argument (provided $#):" \
                                                                                        "  - the name of the application (e.g., actions)" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}"                        || bug "${FUNCNAME[0]}() requires the argument to be one of (${gh_apps_with_vars[*]}) - provided ${1-<missing>}." \
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}"                        || bug "${FUNCNAME[0]}() requires the argument to be one of $gh_apps_with_vars_str - provided ${1-<missing>}." \
                                                                                        -ec "$err_argument_value"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _app=$1
     local _vars_defaults_name="${_app,,}_vars_defaults"
@@ -228,13 +265,13 @@ function validate_app_default_vars()
     is_associative_array "$_vars_defaults_name"                                 || bug "${FUNCNAME[0]}() the required associative array '$_vars_defaults_name' is not defined." -ec "$err_invalid_nameref"
     is_indexed_array "$_vars_order_name"                                        || bug "${FUNCNAME[0]}() the required indexed array '$_vars_order_name' is not defined." -ec "$err_invalid_nameref"
     is_associative_array "$_vars_validators_name"                               || bug "${FUNCNAME[0]}() the required associative array '$_vars_validators_name' is not defined." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -n _app_vars_defaults=$_vars_defaults_name
     local -n _app_vars_order=$_vars_order_name
     local -n _app_vars_validators=$_vars_validators_name
 
-    is_empty_array "$_vars_defaults_name" && return
+    ! is_empty_array "$_vars_defaults_name"                                     || return "$success"
 
     # make sure that default values, and display order are consistent: there is an entry for each default variable in the display order.
     if [[ "${#_app_vars_order}" < ${#_app_vars_defaults[@]} ]]; then
@@ -258,9 +295,10 @@ function validate_app_default_vars()
             _default_value=${_app_vars_defaults[$_var]}
             is_function "$_validator" || [[ $_validator == "true" ]]            || { bug "${FUNCNAME[0]}() '$_validator' is not a name of a defined function." -ec "$err_invalid_item"; continue; }
             $_validator "$_default_value"                                       || bug "${FUNCNAME[0]}() the default value '$_default_value' of the variable '$_var' is not pass the validator '$_validator'." -ec "$err_invalid_item"
-        }                                                                       || bug "There is no validator set for the variable '$_var'." -ec "$err_invalid_item"
+        } \
+                                                                                || bug "There is no validator set for the variable '$_var'." -ec "$err_invalid_item"
     done
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     readonly -A "$_vars_defaults_name"
     readonly -a "$_vars_order_name"
@@ -297,11 +335,11 @@ function get_vars_defaults()
                                                                                        "  - the name of the indexed array that will receive the variables display order" \
                                                                                        "  - the name of the associative array that will receive the names of the variables' validation functions (optional)" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}"                        || bug "${FUNCNAME[0]}() requires argument 1 to be a valid application name - provided: '$1'." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the variables names and their default values - provided: '$2'." -ec "$err_invalid_nameref"
-    [[ ! -v 3 ]] || is_indexed_array "$3"                                       || bug "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the variables display order - provided: '$3'." -ec "$err_invalid_nameref"
-    [[ ! -v 4 ]] || is_associative_array "$4"                                   || bug "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the variables' validation functions - provided: '$4'." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}"                        || bug "${FUNCNAME[0]}() requires argument 1 to be a valid application name - one of $gh_apps_with_vars_str (provided: '$1')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the variables names and their default values (provided: '$2')." -ec "$err_invalid_nameref"
+    [[ ! -v 3 ]] || is_indexed_array "$3"                                       || bug "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the variables display order (provided: '$3')." -ec "$err_invalid_nameref"
+    [[ ! -v 4 ]] || is_associative_array "$4"                                   || bug "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the variables' validation functions (provided: '$4')." -ec "$err_invalid_nameref"
+                                                                                exit_if_has_bugs
 
     local -r _app=$1
     local -n __vars=$2
@@ -333,7 +371,7 @@ function get_vars_defaults()
                     ;;
 
                 "NUGET_USERNAME")
-                    # If github - the current token is the full credentials - skip this entry; the others (nuget.org) do require a username - below
+                    # If github - the current token is the full credentials - skip this entry; the others (nuget.org, etc.) do require a username - below
                     [[ $nuget_server == "github" ]] && continue
                     ;;
 
@@ -367,8 +405,6 @@ function get_vars_defaults()
 #===============================================================================
 # GitHub repository "main protection" ruleset
 #===============================================================================
-
-declare -x gh_apps_with_secrets
 
 # There is no application secrets defaults - only secrets order. The defaults MUST be
 # retrieved dynamically from the `get_secrets_defaults()` function. The defaults' values are
@@ -406,7 +442,9 @@ declare -xra dependabot_secrets_order=(
                                                # https://docs.github.com/en/code-security/dependabot/working-with-dependabot/configuring-access-to-private-registries-for-dependabot#storing-credentials-for-dependabot-to-use
                                                # MUST be a classic PAT, read:packages only.
 )
+
 declare -xra agents_secrets_order=()
+
 declare -xra codespaces_secrets_order=()
 
 #-----------------------------------------------------------------------------------------------
@@ -437,7 +475,7 @@ function validate_app_default_secrets()
 
     is_indexed_array "$_app_secrets_order_name"                                 || bug "${FUNCNAME[0]}() the required indexed array '$_app_secrets_order_name' is not defined." \
                                                                                        -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -473,7 +511,7 @@ function get_secrets_defaults()
     [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the secrets names and their default values - provided: '$2'." -ec "$err_invalid_nameref"
     [[ ! -v 3 ]] || is_indexed_array "$3"                                       || bug "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the secrets display order - provided: '$3'." -ec "$err_invalid_nameref"
     [[ ! -v 4 ]] || is_associative_array "$4"                                   || bug "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the secrets' validation functions - provided: '$4'." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -r _app=$1
     local -n __secrets=$2
@@ -490,14 +528,18 @@ function get_secrets_defaults()
 
     local _secret
     for _secret in "${_app_secrets_order[@]}"; do
+
+        # NUGET_API_KEY is used for non-NuGet and non-GitHub Packages
         [[ $_app == "actions" && $_secret == "NUGET_API_KEY" ]] &&
         [[ $nuget_server == nuget || $nuget_server == github ]] && continue     || true
+
         # BENCH_DISPATCH_PAT dispatches RebuildBenchHistory-AllRepos.yaml, which exists only in vm2.DevOps -- no
         # other repo ever needs it. Skipping it here (rather than just dropping it from actions_secrets_order) also
         # means it stays a *known* secret for vm2.DevOps itself, so --purge-secrets there never treats it as
         # "unknown or obsolete" and deletes it.
         [[ $_app == "actions" && $_secret == "BENCH_DISPATCH_PAT" ]] &&
         [[ $repo_name != "$vm2_devops_repo_name" ]] && continue                 || true
+
         __secrets[$_secret]=$secret_placeholder
     done
 
@@ -511,8 +553,6 @@ function get_secrets_defaults()
         done
     fi
 }
-
-declare -x defaults_validated=false
 
 #-----------------------------------------------------------------------------------------------
 # @description Validates the integrity of the default values for the applications' variables

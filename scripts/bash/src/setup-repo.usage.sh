@@ -3,15 +3,20 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -x common_args_usage
 declare -x script_name
 
+# vm2 core lib exit codes
 declare -x err_invalid_arguments
 declare -x err_argument_type
 
+# vm2 core lib constants
+declare -x common_args_usage
 declare -x vm2_devops_repo_name
 declare -x vm2_sot_repo_name
 declare -x default_sot
+declare -x default_visibility
+declare -x default_default_branch
+declare -x default_repo_owner
 
 #-----------------------------------------------------------------------------------------------
 # @description Builds and prints the full `--help` text for `setup-repo.sh` to stdout: usage line, description of
@@ -28,7 +33,7 @@ function usage_text()
 {
     (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() expects a single boolean argument indicating whether to display the long or short usage text (provided $#)." -ec "$err_invalid_arguments"
     is_boolean "$1"                                                             || bug "${FUNCNAME[0]}() requires argument 1 to be a boolean argument indicating whether to display the long or short usage text (provided ${1-<missing>})." -ec "$err_argument_type"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local _long_text=$1
     local _common_args=''
@@ -76,15 +81,15 @@ Options:
                                    directory - the directory that will be used as the value for the '--vm2-repos' option.
                                 The value of this option is needed on every run of this script.
   -o, --owner <owner>           GitHub user ID or organization that will own the GitHub repository. If omitted, the value will
-                                be taken from the environment variable ORGANIZATION or the default: 'vmelamed'. Used during
+                                be taken from the environment variable ORGANIZATION or the default: '$default_repo_owner'. Used during
                                 linking the local repository to GitHub
   -d, --description <text>      Short description for the GitHub repository (max 350 chars). If not specified, the script will
                                 ask the user interactively with a default - the name of the repository. Used during linking
                                 the local repository to GitHub
-  --visibility (public|private) Repository visibility. Used during linking the local repository to GitHub. Default: 'public'
-  -b, --branch <branch>         GitHub default branch name. Used during linking the local repository to GitHub. Default: 'main'
+  --visibility (public|private) Repository visibility. Used during linking the local repository to GitHub. Default: '$default_visibility'
+  -b, --branch <branch>         GitHub default branch name. Used during linking the local repository to GitHub. Default: '$default_default_branch'
   -rs, --ruleset-name <name>    The name of the ruleset for protecting the default branch (main). Used during linking the local
-                                repository to GitHub. Default: "<GitHub default branch name> protection", e.g. 'main protection'
+                                repository to GitHub. Default: "<GitHub default branch name> protection", e.g. '$default_default_branch protection'
 
 Switches:
   -s, --ssh                     Specifies that SSH will be used by git for communicating with the remote origin - GitHub. Used
@@ -127,7 +132,8 @@ Examples:
   $script_name vmelamed/vm2.TestUtilities --visibility private --ssh
   $script_name vm2.Glob --audit
 
-Configured local Git settings (see 'default_local_git_settings' in setup-repo.defaults.sh for the authoritative list):
+Note: these are the configured local Git settings (see 'default_local_git_settings' in setup-repo.defaults.sh for the
+authoritative list):
   init.defaultBranch            'main'
                                 Sets the default branch name used by 'git init' for new repositories.
   core.hooksPath                '\$VM2_REPOS/$vm2_devops_repo_name/scripts/githooks'
