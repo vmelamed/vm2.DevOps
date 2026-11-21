@@ -108,16 +108,18 @@ done
 
 # 8) Messages follow the templates in vm2.DevOps/CLAUDE.md ("Message Templates"). Each rule is a common departure,
 #    found by a pattern; a deny list, not a grammar, so a correct message is never rejected. Comment lines are skipped.
-#    "Please" is allowed in the help texts (*.usage.sh), which are prose, not messages.
+#    "Please" is checked only in message parts: a string on a line that calls a message function, or a string that
+#    starts a continuation line (the next part of a multi-line message). Other strings are data ("Please wait" as a
+#    title), and the help texts (*.usage.sh) are prose, not messages. A message built in a variable first is missed.
 declare -rA message_rules=(
     ['\(\) (expects|takes|accepts) ']="the verb is 'requires', not 'expects', 'takes', or 'accepts'"
-    ['\(\) requires (exactly |either |from )?(a single|one|two|three|four|five|six|seven) ']="the argument count uses digits: 'requires 2 arguments'"
+    ['\(\) requires (exactly |either |from )?(a single|one|two|three|four|five|six|seven) ((nameref|boolean|positional) )?(argument|parameter)']="the argument count uses digits: 'requires 2 arguments'"
     ['\(\) requires exactly ']="the argument count has no 'exactly': 'requires 2 arguments'"
     ['\(\$# provided\)|\(provided: ']="the provided value reads '(provided \$#)' or '(provided '<value>')'"
     ['\(provided \$\{?[0-9]']="the provided value is quoted: '(provided '\${1-<missing>}')'"
     ['-ec "[^"]*" +"']="'-ec' comes after the message parts"
 )
-declare -r please_rule='"[^"]*\bPlease\b'
+declare -r please_rule='\b(error|with_error|warning|info|trace|bug|usage|exit_with_error|exit_with_bug|fatal_exit)\b.*"[^"]*\bPlease\b|^[[:space:]]*"[^"]*\bPlease\b'
 declare -a message_files=()
 declare -r this_file="$script_dir/$script_name"
 for file in "$lib_dir"/*.sh "$script_dir"/*.sh "$lib_dir"/../../../.github/scripts/*.sh; do

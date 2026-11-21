@@ -135,7 +135,7 @@ function _props_line_in_section()
                                                       "  - the line of the file to test" \
                                                       "  - the name of the variable that tracks whether the current line is inside the shared block" \
                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || $1 == shared || $1 == repo ]] || bug "${FUNCNAME[0]}() requires argument 2, the section to match, to be 'shared' or 'repo' (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 1 || $1 == shared || $1 == repo ]] || bug "${FUNCNAME[0]}() requires argument 1, the section to match, to be 'shared' or 'repo' (provided '${1-<missing>}')." -ec "$err_argument_value"
     [[ ! -v 3 ]] || is_variable "$3"           || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided '${3-<missing>}')." -ec "$err_argument_value"
     exit_if_has_bugs
 

@@ -14,6 +14,7 @@ load '../helpers/setup'
 declare -gx lib_dir
 declare -gx err_invalid_arguments
 declare -gx err_invalid_item
+declare -gx err_argument_value
 declare -gx err_tool_error
 declare -gx err_not_found
 declare -gx err_logic_error
@@ -160,6 +161,12 @@ XML
         > "$BATS_TEST_TMPDIR/Directory.Packages.props"
     run _up "validate_package_lines '$BATS_TEST_TMPDIR/Directory.Packages.props'"
     assert_success
+}
+
+@test "_props_line_in_section: bug-exits on an invalid section, naming argument 1 and its value" {
+    run _up "declare in_shared=false; _props_line_in_section bogus '<PackageVersion Include=\"A\" Version=\"1.0.0\" />' in_shared"
+    assert_failure "$err_argument_value"
+    assert_output --partial "requires argument 1, the section to match, to be 'shared' or 'repo' (provided 'bogus')"
 }
 
 @test "set_package_version: rewrites only the version of the matching line in the repo section" {

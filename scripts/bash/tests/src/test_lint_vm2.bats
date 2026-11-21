@@ -170,26 +170,36 @@ _add_message()
     assert_output --partial "'-ec' comes after the message parts"
 }
 
-@test "lint-vm2: reports 'Please' in a message, but not in a help text or a comment" {
+@test "lint-vm2: reports 'Please' in a message part, on the call line or on a continuation line" {
     _copy_library
-    # shellcheck disable=SC2016 # the message is literal text for the probe function
-    _add_message 'warning "Please install the tool."'
+    # shellcheck disable=SC2016 # the messages are literal text for the probe function
+    _add_message 'warning "Please install the tool."
+    error "Failed to read the file." \
+          "Please check its permissions." -ec "$err_io_failure"'
+    _run_copy
+    assert_failure
+    assert_output --partial "without 'Please'"
+    assert_output --partial 'warning "Please install the tool."'
+    assert_output --partial '"Please check its permissions."'
+}
+
+@test "lint-vm2: does not report 'Please' in a data string, a help text, or a comment" {
+    _copy_library
+    _add_message 'local _title="Please wait"'
     printf '# Please note: a comment\n' >> "$_copy/lib/_git.sh"
     printf '#!/usr/bin/env bash\necho "Please see the help."\n' > "$_copy/src/demo.usage.sh"
     git -C "$_copy" add -A && git -C "$_copy" -c user.email=t@e.com -c user.name=t commit -qm please
     _run_copy
-    assert_failure
-    assert_output --partial "without 'Please'"
-    assert_output --partial "_xml.sh:"
-    refute_output --partial "_git.sh:"
-    refute_output --partial "demo.usage.sh:"
+    assert_success
+    refute_output --partial "without 'Please'"
 }
 
-@test "lint-vm2: a message that follows the templates is not reported" {
+@test "lint-vm2: a message that follows the templates is not reported, a global precondition with a count word included" {
     _copy_library
     # shellcheck disable=SC2016 # the messages are literal text for the probe function
     _add_message 'bug "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" "  - the path" -ec "$err_invalid_arguments"
-    bug "${FUNCNAME[0]}() requires argument 1, the path, to be a file (provided '"'"'${1-<missing>}'"'"')." -ec "$err_not_file"'
+    bug "${FUNCNAME[0]}() requires argument 1, the path, to be a file (provided '"'"'${1-<missing>}'"'"')." -ec "$err_not_file"
+    bug "${FUNCNAME[0]}() requires one active transaction to be available." -ec "$err_logic_error"'
     _run_copy
     assert_success
 }
