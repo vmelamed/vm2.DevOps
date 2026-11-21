@@ -633,10 +633,16 @@ function configure_variables()
         fi
 
         # if the NuGet server has changed, update the global variable and refresh the defaults
-        if [[ $_var == "NUGET_SERVER" && -n $_value ]]; then
+        if [[ $_var == NUGET_SERVER && -n $_value ]]; then
+            # for this to work the item NUGET_USERNAME in actions_vars_order MUST come after NUGET_SERVER
             nuget_server="$_value"
             # this is one off strange move but if the NuGet server is now "github" - remove the user name, GitHub is using the token
-            [[ $nuget_server == "github" ]] && unset "_vars_defaults[NUGET_USERNAME]" || _vars_defaults["NUGET_SERVER"]="$_value"
+            if [[ $nuget_server == "github" ]]; then
+                unset "_vars_defaults[NUGET_USERNAME]"
+            else
+                _vars_defaults[NUGET_SERVER]="$_value"
+                _vars_defaults[NUGET_USERNAME]=''
+            fi
         fi
     done
 

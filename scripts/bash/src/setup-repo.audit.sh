@@ -175,6 +175,7 @@ function compare_settings()
     local -A _unknown_key_values=()
 
     local _key='' _value=''
+    [[ -n $_key_values ]] &&
     while IFS='=' read -r _key _value; do
         [[ -v _expected_key_values["$_key"] ]] &&
             _known_key_values["$_key"]="$_value" ||
@@ -270,7 +271,7 @@ function audit_branch_ruleset()
     local _ruleset_id
 
     _ruleset_id=$(execute_with_retry --query --classify gh_failure \
-                    gh api --paginate "$path_rulesets" -jq "$jq_ruleset_id" 2>"$_ignore") \
+                    gh api --paginate "$path_rulesets" --jq "$jq_ruleset_id" 2>"$_ignore") \
                                                                                 || with_error _rc "$failure" "Failed to get the rulesets."
     (( _rc != success )) || [[ -n "$_ruleset_id" ]]                             || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$default_branch' does not exist."
     (( _rc != success )) || echo "  $info_em  Ruleset '$main_protection_rs_name' for branch '$default_branch' (id: $_ruleset_id):"

@@ -178,7 +178,7 @@ declare -xA actions_vars_defaults=(
     ["ACTIONS_STEP_DEBUG"]=false
 )
 
-declare -xa actions_vars_order=(
+declare -xra actions_vars_order=(
     "--Build and Pack:"
     "MINVERTAGPREFIX"
     "MINVERDEFAULTPRERELEASEIDENTIFIERS"
