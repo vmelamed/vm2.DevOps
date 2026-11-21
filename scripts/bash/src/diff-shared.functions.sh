@@ -57,9 +57,10 @@ declare -xra valid_actions=(
     "$action_copy_shared"
     "$action_ask_to_copy_shared"
 )
-
-all_actions_str=$(print_sequence -s=', ' -q='"' "${valid_actions[@]}")
-declare -x all_actions_str
+# shellcheck disable=SC2155
+declare -xr valid_actions_str=$(IFS=,; echo "${valid_actions[*]}")
+# shellcheck disable=SC2155
+declare -xr valid_actions_rex=$(IFS='|'; echo "${valid_actions[*]}")
 
 declare -x shared_begin_marker
 declare -x shared_end_marker

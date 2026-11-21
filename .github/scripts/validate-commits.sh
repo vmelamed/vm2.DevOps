@@ -25,6 +25,8 @@ declare -x err_tool_error
 # vm2 core lib constants
 declare -x check_em
 declare -x allowed_commit_types
+declare -x allowed_commit_types_str
+declare -x allowed_commit_types_rex
 
 # vm2 core lib variables
 declare -x _ignore
@@ -40,13 +42,8 @@ get_arguments "$@"
 declare -x repo_path
 declare -x base_ref
 
-# Build the type alternation: feat|fix|perf|...
-ifs=$IFS
-IFS='|' types_pattern="${allowed_commit_types[*]}"
-IFS=$ifs
-
 # Conventional Commits: type[(scope)][!]: description
-readonly cc_regex="^($types_pattern)(\(.+\))?!?: .+"
+readonly cc_regex="^($allowed_commit_types_rex)(\(.+\))?!?: .+"
 
 # Get all commit hashes and subjects in the range
 declare -i bad=0
@@ -84,8 +81,8 @@ if (( bad > 0 )); then
     oldest_bad_parent="${bad_hashes[-1]}^"
     echo "" >&2
     info "Expected format: <type>[(scope)][!]: <description>" \
-         "Allowed types:   ${allowed_commit_types[*]}" \
-         "Examples:       chore(dependencies): update dependencies and lock files"
+         "Allowed types:   $allowed_commit_types_str" \
+         "Examples:        chore(dependencies): update dependencies and lock files"
     info "To fix, copy and paste in your terminal:" \
          "${cd_hint[@]}" \
          "  git rebase -i $oldest_bad_parent" \

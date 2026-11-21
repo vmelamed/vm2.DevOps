@@ -188,16 +188,6 @@ _run_changelog_and_tag() {
 }
 
 @test "changelog-and-tag: creates a stable release tag with the 'stable release' default reason" {
-    # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # changelog-and-tag.sh:39 calls validate_minver_tag_components() with only ONE argument
-    # (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130 tests
-    # that optional argument as '[[ -z $2 || ... ]]' instead of the '[[ ! -v 2 || ... ]]'
-    # convention required for optional parameters -- under 'set -u' (which every
-    # .github/scripts/*.sh sets), referencing a wholly-absent $2 is an unbound-variable error
-    # that crashes the ENTIRE script, every time, before it ever reaches the tag/changelog
-    # logic this test exercises. This is the exact class of bug the sibling test below
-    # ("fails cleanly... when $RELEASE_PAT is entirely unset") already exists to catch --
-    # just for a different variable.
     _make_fixture "$BATS_TEST_TMPDIR"
     run _run_changelog_and_tag "$BATS_TEST_TMPDIR/repo" '' --quiet --tag v1.0.0
     assert_success
@@ -208,16 +198,6 @@ _run_changelog_and_tag() {
 }
 
 @test "changelog-and-tag: an explicit --reason overrides the tag-type default" {
-    # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # changelog-and-tag.sh:39 calls validate_minver_tag_components() with only ONE argument
-    # (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130 tests
-    # that optional argument as '[[ -z $2 || ... ]]' instead of the '[[ ! -v 2 || ... ]]'
-    # convention required for optional parameters -- under 'set -u' (which every
-    # .github/scripts/*.sh sets), referencing a wholly-absent $2 is an unbound-variable error
-    # that crashes the ENTIRE script, every time, before it ever reaches the tag/changelog
-    # logic this test exercises. This is the exact class of bug the sibling test below
-    # ("fails cleanly... when $RELEASE_PAT is entirely unset") already exists to catch --
-    # just for a different variable.
     _make_fixture "$BATS_TEST_TMPDIR"
     run _run_changelog_and_tag "$BATS_TEST_TMPDIR/repo" '' --quiet --tag v0.2.0-preview.1 --reason "'custom reason'"
     assert_success
@@ -227,16 +207,6 @@ _run_changelog_and_tag() {
 }
 
 @test "changelog-and-tag: --needs-empty-commit creates and pushes an empty commit first" {
-    # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # changelog-and-tag.sh:39 calls validate_minver_tag_components() with only ONE argument
-    # (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130 tests
-    # that optional argument as '[[ -z $2 || ... ]]' instead of the '[[ ! -v 2 || ... ]]'
-    # convention required for optional parameters -- under 'set -u' (which every
-    # .github/scripts/*.sh sets), referencing a wholly-absent $2 is an unbound-variable error
-    # that crashes the ENTIRE script, every time, before it ever reaches the tag/changelog
-    # logic this test exercises. This is the exact class of bug the sibling test below
-    # ("fails cleanly... when $RELEASE_PAT is entirely unset") already exists to catch --
-    # just for a different variable.
     _make_fixture "$BATS_TEST_TMPDIR"
     run _run_changelog_and_tag "$BATS_TEST_TMPDIR/repo" '' --quiet --tag v1.0.0 --needs-empty-commit true
     assert_success
@@ -247,16 +217,6 @@ _run_changelog_and_tag() {
 }
 
 @test "changelog-and-tag: in CI mode, configures the git identity before committing" {
-    # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # changelog-and-tag.sh:39 calls validate_minver_tag_components() with only ONE argument
-    # (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130 tests
-    # that optional argument as '[[ -z $2 || ... ]]' instead of the '[[ ! -v 2 || ... ]]'
-    # convention required for optional parameters -- under 'set -u' (which every
-    # .github/scripts/*.sh sets), referencing a wholly-absent $2 is an unbound-variable error
-    # that crashes the ENTIRE script, every time, before it ever reaches the tag/changelog
-    # logic this test exercises. This is the exact class of bug the sibling test below
-    # ("fails cleanly... when $RELEASE_PAT is entirely unset") already exists to catch --
-    # just for a different variable.
     _make_fixture "$BATS_TEST_TMPDIR"
     run _run_changelog_and_tag "$BATS_TEST_TMPDIR/repo" 'GITHUB_ACTIONS=true' --quiet --tag v0.2.0-preview.1
     assert_success
@@ -270,16 +230,6 @@ _run_changelog_and_tag() {
 # --- degraded but non-fatal paths ------------------------------------------------------------
 
 @test "changelog-and-tag: warns and skips the changelog update when the cliff config is missing, but still tags" {
-    # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary):
-    # changelog-and-tag.sh:39 calls validate_minver_tag_components() with only ONE argument
-    # (minver_tag_prefix), omitting the optional minver_prerelease_id. _semver.sh:130 tests
-    # that optional argument as '[[ -z $2 || ... ]]' instead of the '[[ ! -v 2 || ... ]]'
-    # convention required for optional parameters -- under 'set -u' (which every
-    # .github/scripts/*.sh sets), referencing a wholly-absent $2 is an unbound-variable error
-    # that crashes the ENTIRE script, every time, before it ever reaches the tag/changelog
-    # logic this test exercises. This is the exact class of bug the sibling test below
-    # ("fails cleanly... when $RELEASE_PAT is entirely unset") already exists to catch --
-    # just for a different variable.
     _make_fixture "$BATS_TEST_TMPDIR"
     rm "$BATS_TEST_TMPDIR/repo/changelog/cliff.prerelease.toml"
     git -C "$BATS_TEST_TMPDIR/repo" commit --quiet -am "chore: remove cliff config"
@@ -293,9 +243,6 @@ _run_changelog_and_tag() {
 # --- validation failures ---------------------------------------------------------------------
 
 @test "changelog-and-tag: rejects a tag that is not a valid semver release or prerelease" {
-    # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary): blocked by
-    # validate_minver_tag_components()'s $2 unbound-variable crash -- see the comment above the
-    # "warns and skips the changelog update" test for the full explanation.
     _make_fixture "$BATS_TEST_TMPDIR"
     run _run_changelog_and_tag "$BATS_TEST_TMPDIR/repo" '' --quiet --tag notasemver
     assert_failure
@@ -303,9 +250,6 @@ _run_changelog_and_tag() {
 }
 
 @test "changelog-and-tag: fails fast when CHANGELOG.md is missing" {
-    # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary): blocked by
-    # validate_minver_tag_components()'s $2 unbound-variable crash -- see the comment above the
-    # "warns and skips the changelog update" test for the full explanation.
     _make_fixture "$BATS_TEST_TMPDIR"
     rm "$BATS_TEST_TMPDIR/repo/CHANGELOG.md"
     git -C "$BATS_TEST_TMPDIR/repo" commit --quiet -am "chore: remove changelog"
@@ -316,9 +260,6 @@ _run_changelog_and_tag() {
 }
 
 @test "changelog-and-tag: fails when the tag already exists" {
-    # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary): blocked by
-    # validate_minver_tag_components()'s $2 unbound-variable crash -- see the comment above the
-    # "warns and skips the changelog update" test for the full explanation.
     _make_fixture "$BATS_TEST_TMPDIR"
     git -C "$BATS_TEST_TMPDIR/repo" tag v0.2.0-preview.1
     git -C "$BATS_TEST_TMPDIR/repo" push --quiet origin v0.2.0-preview.1
@@ -329,9 +270,6 @@ _run_changelog_and_tag() {
 }
 
 @test "changelog-and-tag: fails cleanly (not with an unbound-variable crash) when \$RELEASE_PAT is entirely unset" {
-    # KNOWN CRITICAL REAL BUG (reported to Val, not fixed here -- see summary): blocked by
-    # validate_minver_tag_components()'s $2 unbound-variable crash -- see the comment above the
-    # "warns and skips the changelog update" test for the full explanation.
     _make_fixture "$BATS_TEST_TMPDIR"
     run env -i HOME="$HOME" PATH="/usr/local/bin:/usr/bin:/bin" GITHUB_REPOSITORY=acme/repo \
         bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_changelog_and_tag' --quiet --tag v0.2.0-preview.1"

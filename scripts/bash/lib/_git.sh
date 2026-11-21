@@ -50,7 +50,7 @@ declare -x _ignore
 #-----------------------------------------------------------------------------------------------
 function is_valid_branch_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a branch name" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument - a branch name (provided $#)" -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _branch=${1#"$git_heads_ns"}
@@ -73,7 +73,7 @@ function is_valid_branch_name()
 #-----------------------------------------------------------------------------------------------
 function is_valid_tag_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a tag name" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument - a tag name (provided $#)" -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local _tag=${1#"$git_tags_ns"}
@@ -98,7 +98,7 @@ function is_valid_tag_name()
 #-----------------------------------------------------------------------------------------------
 function is_valid_commit_sha()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a SHA string" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument - a SHA string (provided $#)" -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     [[ $1 =~ ^[0-9a-fA-F]{4,64}$ ]]                                             || return "$negative"
@@ -124,7 +124,7 @@ function is_valid_commit_sha()
 #-----------------------------------------------------------------------------------------------
 function validate_branch_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument (provided $#) - a branch name" -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() takes 1 argument - a branch name (provided $#)" -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -150,7 +150,7 @@ function validate_branch_name()
 #-----------------------------------------------------------------------------------------------
 function is_inside_work_tree()
 {
-    (( $# == 0 || $# == 1 ))                                                    || bug "${FUNCNAME[0]}() requires 0 or 1 argument (provided $#): path to a directory." -ec "$err_invalid_arguments"
+    (( $# == 0 || $# == 1 ))                                                    || bug "${FUNCNAME[0]}() requires 0 or 1 arguments - path to a directory (provided $#)." -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires optional argument 1 to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
                                                                                 exit_if_has_bugs
 

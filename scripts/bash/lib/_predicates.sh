@@ -65,12 +65,20 @@ declare -xra known_configurations=(
     Debug
     Release
 )
+# shellcheck disable=SC2155
+declare -xr known_configurations_str=$(IFS=,; echo "${known_configurations[*]}")
+# shellcheck disable=SC2155
+declare -xr known_configurations_rex=$(IFS='|'; echo "${known_configurations[*]}")
 
 declare -xr known_tfms=(
     ""
     net9.0
     net10.0
 )
+# shellcheck disable=SC2155
+declare -xr known_tfms_str=$(IFS=,; echo "${known_tfms[*]}")
+# shellcheck disable=SC2155
+declare -xr known_tfms_rex=$(IFS='|'; echo "${known_tfms[*]}")
 
 declare -xr known_runtimes=(
     ""
@@ -78,6 +86,10 @@ declare -xr known_runtimes=(
     win-x64
     osx-x64
 )
+# shellcheck disable=SC2155
+declare -xr known_runtimes_str=$(IFS=,; echo "${known_runtimes[*]}")
+# shellcheck disable=SC2155
+declare -xr known_runtimes_rex=$(IFS='|'; echo "${known_runtimes[*]}")
 
 # vm2 core lib variables
 declare -x _ignore

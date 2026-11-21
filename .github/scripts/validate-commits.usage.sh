@@ -9,6 +9,8 @@ declare -x script_name
 declare -x common_args_usage
 
 declare -x allowed_commit_types
+declare -x allowed_commit_types_str
+declare -x allowed_commit_types_rex
 
 #-----------------------------------------------------------------------------------------------
 # @description Outputs the usage text for this script to stdout.
@@ -34,10 +36,6 @@ function usage_text()
 
     $_long_text  &&  _common_args=$common_args_usage || _common_args=''
 
-    local _types
-    printf -v _types -- '%s | ' "${allowed_commit_types[@]}"
-    _types=${_types% | }
-
     cat << EOF
 Usage:
   $script_name [--<long option> <value> | -<short option> <value> | --<long switch> | -<short switch> ]*
@@ -48,12 +46,12 @@ Description:
 
   commit-message = subject, [ LF, body ] ;
   subject        = type, [ "(", scope, ")" ], [ "!" ], ": ", description ;
-  type           = $_types ;
+  type           = $allowed_commit_types_rex ;
   scope          = noun ;
   description    = non-empty string ;
   body           = free-form text ;
 
-  Message type:       Required, one of: $_types
+  Message type:       Required, one of: $allowed_commit_types_str
   Scope:              Optional. A noun describing the section of the codebase affected by the change (e.g., 'api', 'ui', 'docs')
   Breaking Change:    Optional. '!' before ':' signals a breaking change
   Description:        Required. A short description of the change

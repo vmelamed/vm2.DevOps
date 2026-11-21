@@ -40,7 +40,7 @@ declare -x _ignore
 declare -x vm2_sot_repo_name
 declare -x sot
 declare -xa valid_actions
-declare -x all_actions_str
+declare -x valid_actions_str
 declare -x diff_only
 
 # These are the diff and merge tools and respective commands from the main config file.
@@ -309,7 +309,7 @@ function configure()
         [[ -n "$_source_file" ]]                                                || with_error _rc "$err_argument_value" "Empty source file path found in '$_config_file'."
         [[ -n "$_target_file" ]]                                                || with_error _rc "$err_argument_value" "Empty target file path found in '$_config_file'."
         [[ -n "$_file_action" ]]                                                || with_error _rc "$err_argument_value" "Empty action found in '$_config_file'."
-        is_in "$_file_action" "${valid_actions[@]}"                             || with_error _rc "$err_argument_value" "'$_file_action' is not a valid action. Must be one of: $all_actions_str."
+        is_in "$_file_action" "${valid_actions[@]}"                             || with_error _rc "$err_argument_value" "'$_file_action' is not a valid action. Must be one of: $valid_actions_str."
 
         # EXPAND THE MACRO-VARIABLES "vm2_repos" AND "vm2_sot_shared" IN THE SOURCE FILE PATHS
         # but do not expand the target file path here, it will be expanded later when iterating the targets.
@@ -454,7 +454,7 @@ function customize()
             [[ -n "$_file_name" ]]                                              || continue
             # Validate action
             is_in "$_action" "${valid_actions[@]}"                              ||  {
-                                                                                        warning "Invalid action '$_action' for '$_file_name' in $_custom_config - must be one of: $all_actions_str."
+                                                                                        warning "Invalid action '$_action' for '$_file_name' in $_custom_config - must be one of: $valid_actions_str."
                                                                                         continue
                                                                                     }
 

@@ -434,15 +434,19 @@ function __search_repo_dir()
 #   resolved
 # @exitcode err_repo_with_no_ci=85: exactly one matching Git repository working tree directory
 #   was found, but it has no CI configuration
-# @exitcode err_not_git_directory=80: exactly one matching directory with CI configuration is
-#   found via a parent walk, but is not a Git repository
+# @exitcode err_repo_not_in_vm2_repos=91: the root of the found repository is not a direct child
+#   of $vm2_repos
+# @exitcode err_dir_with_ci=86: exactly one matching directory is found; it is not in a Git
+#   repository, but it or one of its ancestors has CI configuration (the namerefs are set: that
+#   ancestor is the root to initialize as a repository)
 # @exitcode err_dir_with_no_ci=87: exactly one matching directory is found, but it is not a
-#   Git repository and no ancestor up to $HOME has CI configuration
+#   Git repository and no ancestor up to $HOME (or /) has CI configuration
+# @exitcode err_not_directory=17: argument 1 is not an existing directory
 #
 # @example
 #   local repo_root abs_repo_path
 #   resolve_repo_root "$vm2_repos" "$repo_path" repo_root abs_repo_path || rc=$?
-#   (( rc == success || rc == err_repo_with_no_ci || rc == err_not_git_directory || rc == err_dir_with_no_ci )) || exit "$rc"
+#   (( rc == success || rc == err_dir_with_ci )) || exit "$rc"
 #-----------------------------------------------------------------------------------------------
 function resolve_repo_root()
 {
@@ -498,11 +502,10 @@ function resolve_repo_root()
                                         _repo_root_parent=$(realpath "$(dirname "$_repo_root")")
                                         [[ $_repo_root_parent == "$_repos" ]]
                                     }                                           || with_error _rc "$err_repo_not_in_vm2_repos" "The repository root '$_repo_root' is not under the expected VM2 repositories directory '$_repos'."
-
             (( _rc == success ))                                                || return "$_rc"
 
             # check if the repository has CI configuration (is it initialized with setup-repo.sh)?
-            [[ -d "$_repo_root/.github/workflows" ]] || _rc="$err_repo_with_no_ci"
+            [[ -d "$_repo_root/.github/workflows" ]]                            || _rc="$err_repo_with_no_ci"
             ;;
 
         "$err_not_git_directory" )
@@ -513,7 +516,7 @@ function resolve_repo_root()
             _rc=$err_dir_with_ci
             while [[ ! -d "$_found_dir/.github/workflows" ]]; do
                 _found_dir=$(dirname "$_found_dir")
-                [[ $_found_dir == "$HOME" ]] && _rc="$err_dir_with_no_ci" && break
+                [[ $_found_dir == "$HOME" || $_found_dir == "/" ]] && _rc="$err_dir_with_no_ci" && break
             done
 
             case "$_rc" in
@@ -540,9 +543,17 @@ function resolve_repo_root()
             esac
             ;;
 
-        * )
-            with_error _rc "$err_not_found" "Could not find the repository directory '${_dir_path-<missing>}' neither under '${_repos-<missing>}' nor under '\$HOME'."
+        "$err_not_found" )
+            error "Could not find the repository directory '${_dir_path-<missing>}' neither under '${_repos-<missing>}' nor under '\$HOME'." -ec "$_rc"
             return "$_rc"
+            ;;
+
+        "$err_found_too_many" )
+            error "Found more than one the repository directories '${_dir_path-<missing>}'." -ec "$_rc"
+            return "$_rc"
+            ;;
+
+        * ) error -ec "$err_unexpected_error"
             ;;
     esac
 

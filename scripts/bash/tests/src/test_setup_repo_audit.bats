@@ -38,10 +38,19 @@ _sr() {
 _install_fake_gh_json() {
     local _bindir="$1" _json="$2"
     mkdir -p "$_bindir"
+    # Like the real gh: with '--jq <query>', print the query's raw (-r) output; otherwise the JSON itself.
     cat > "$_bindir/gh" <<EOF
 #!/usr/bin/env bash
-echo '$_json'
-exit 0
+_query=''
+while (( \$# > 0 )); do
+    [[ \$1 == --jq ]] && { _query=\$2; shift; }
+    shift
+done
+if [[ -n \$_query ]]; then
+    jq -r "\$_query" <<< '$_json'
+else
+    echo '$_json'
+fi
 EOF
     chmod +x "$_bindir/gh"
 }

@@ -6,14 +6,7 @@
 declare -x script_name
 declare -x lib_dir
 
-declare -x error_em
-declare -x ok_em
-declare -x check_em
-declare -x question_em
-declare -x info_em
-declare -x warn_em
-declare -x not_eq_em
-
+# vm2 core lib exit codes
 declare -x success
 declare -x failure
 declare -x err_invalid_arguments
@@ -22,16 +15,27 @@ declare -x err_argument_type
 declare -x err_invalid_nameref
 declare -x err_tool_error
 
+# vm2 core lib constants
+declare -x error_em
+declare -x ok_em
+declare -x check_em
+declare -x question_em
+declare -x info_em
+declare -x warn_em
+declare -x not_eq_em
+
 declare -x vm2_repositories
-declare -x _ignore
 declare -x secret_str
 declare -x secret_placeholder
 
+# vm2 core lib variables
+declare -x _ignore
+
+# this scripts
 declare -x repo_path
-declare -x repo_owner
 declare -x repo_name
 declare -x repo
-declare -x branch
+declare -x default_branch
 declare -x required_checks
 
 declare -x default_repo_settings
@@ -47,6 +51,7 @@ declare -x default_local_git_settings_order
 
 declare -x main_protection_rs_name
 
+# this script constants for operating gh
 declare -x path_repo
 declare -x path_permissions
 declare -x path_vars
@@ -59,6 +64,7 @@ declare -x jq_ruleset_id
 declare -x jq_ruleset_rules
 declare -x jq_status_checks
 
+# local constants
 declare -xr missing_state='<none>'
 declare -xr present_state=$secret_str
 declare -xr undefined_default='<undefined>'
@@ -126,7 +132,7 @@ function compare_settings()
     [[ ! -v 5 ]] || is_associative_array "$5"                                   || bug "${FUNCNAME[0]}() requires argument 5 to name an associative array containing expected key-value pairs (provided '${5-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 6 ]] || is_associative_array "$6"                                   || bug "${FUNCNAME[0]}() requires argument 6 to name an indexed array for summary results: [matches], [diffs], [errors], and [unknowns] (provided '${6-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7"                        || bug "${FUNCNAME[0]}() requires argument 7 (if present) to name an indexed array containing the display order (provided '${7-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+                                                                                exit_if_has_bugs
 
     local -n _expected_key_values="$5"
 
@@ -156,14 +162,14 @@ function compare_settings()
     fi
 
     # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
-    local _json
+    local _key_values
 
-    _json=$(execute_with_retry --query --classify gh_failure \
-                gh api --paginate "$_gh_endpoint")                              ||  {
+    _key_values=$(execute_with_retry --query --classify gh_failure \
+                    gh api --paginate "$_gh_endpoint" --jq "$_jq_transform" 2>"$_ignore") \
+                                                                                ||  {
                                                                                         with_error _rc $? "Could not retrieve data from GitHub's endpoint $_gh_endpoint."
                                                                                         return "$_rc"
                                                                                     }
-
     # read the key=value pairs into $actual_key_values
     local -A _known_key_values=()
     local -A _unknown_key_values=()
@@ -173,7 +179,7 @@ function compare_settings()
         [[ -v _expected_key_values["$_key"] ]] &&
             _known_key_values["$_key"]="$_value" ||
             _unknown_key_values["$_key"]="$_value"
-    done < <(jq -r "$_jq_transform" <<< "$_json")
+    done <<< "$_key_values"
 
     local _expected_value='' _actual_value=''
 
@@ -247,33 +253,43 @@ function compare_settings()
 
 declare -x path_rulesets
 
+function get_default_branch_protection_ruleset()
+{
+    local -i _rc=$success
+    local _ruleset_id
+
+    _ruleset_id=$(execute_with_retry --query --classify gh_failure \
+                    gh api --paginate "$path_rulesets" --jq "$jq_ruleset_id" 2>"$_ignore") \
+                                                                                || with_error _rc $? "$failure" "Ruleset '$main_protection_rs_name' for branch '$default_branch' does not exist."
+    return "$_rc"
+}
+
 function audit_branch_ruleset()
 {
     local -i _rc=$success
-    local _rulesets_json
     local _ruleset_id
 
-    _rulesets_json=$(execute_with_retry --query --classify gh_failure \
-                        gh api --paginate "$path_rulesets")                     || true
-    [[ -n "${_rulesets_json:-}" ]]                                              || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$branch' is missing"
-    (( _rc != success )) || _ruleset_id=$(jq -r "$jq_ruleset_id" <<< "$_rulesets_json" 2>"$_ignore")
-    (( _rc != success )) || [[ -n "$_ruleset_id" ]]                             || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$branch' does not exist"
-    (( _rc != success )) || echo "  $info_em  Ruleset '$main_protection_rs_name' for branch '$branch' (id: $_ruleset_id):"
+    _ruleset_id=$(execute_with_retry --query --classify gh_failure \
+                    gh api --paginate "$path_rulesets" -jq "$jq_ruleset_id" 2>"$_ignore") \
+                                                                                || with_error _rc "$failure" "Failed to get the rulesets."
+    (( _rc != success )) || [[ -n "$_ruleset_id" ]]                             || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$default_branch' does not exist."
+    (( _rc != success )) || echo "  $info_em  Ruleset '$main_protection_rs_name' for branch '$default_branch' (id: $_ruleset_id):"
     (( _rc != success )) || compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" true false default_ruleset _results default_ruleset_order \
                                                                                 || with_error _rc $? "Failed to compare branch protection ruleset settings."
-    (( _rc == success )) || return "$_rc"
+    (( _rc == success ))                                                        || return "$_rc"
 }
 
 function audit_required_status_checks()
 {
     local -i _rc=$success
 
-    is_empty_array required_checks                                              && return "$_rc"
+    ! is_empty_array required_checks                                            || return "$_rc"
     echo "      $info_em  Required status checks list:"
 
-    local _json
-    _json=$(execute_with_retry --query --classify gh_failure \
-                gh api --paginate "$path_main_protection_ruleset")              ||  {
+    local _checks
+    _checks=$(execute_with_retry --query --classify gh_failure \
+                gh api --paginate "$path_main_protection_ruleset" --jq "$jq_status_checks" 2>"$_ignore") \
+                                                                                ||  {
                                                                                         with_error _rc $? "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
                                                                                         return "$_rc"
                                                                                     }
@@ -283,7 +299,7 @@ function audit_required_status_checks()
 
     while read -r _check; do
         _present_checks+=("$_check")
-    done < <(jq -r "$jq_status_checks" <<< "$_json")
+    done <<< "$_checks"
 
     for _check in "${required_checks[@]}"; do
         if ! is_empty_array _present_checks && is_in "$_check" "${_present_checks[@]}"; then

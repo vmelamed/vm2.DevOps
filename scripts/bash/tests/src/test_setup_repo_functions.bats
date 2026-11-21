@@ -580,6 +580,7 @@ if [[ "\$*" == *"-q .id"* ]]; then
 fi
 if [[ "\$*" == *"-X POST"* ]]; then
     touch "$BATS_TEST_TMPDIR/created"
+    cat > "$BATS_TEST_TMPDIR/body.json"
 fi
 exit 0
 EOF
@@ -587,15 +588,19 @@ EOF
     run _sr "main_protection_rs_name='main protection'
              path_rulesets='repos/acme/myrepo/rulesets'
              jq_ruleset_id='.id'
-             branch='main'
+             default_branch='main'
              declare -a required_checks=('Postrun-CI')
              actions_app_id=15368
              configure_branch_protection" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
     assert_success
     assert_output --partial "Creating new ruleset"
+    assert_output --partial "Configuring branch ruleset for 'main'"
     run cat "$BATS_TEST_TMPDIR/calls.log"
     assert_output --partial "-X POST repos/acme/myrepo/rulesets"
     refute_output --partial "-X PUT"
+    # the ruleset protects the default branch
+    run cat "$BATS_TEST_TMPDIR/body.json"
+    assert_output --partial '"include": ["refs/heads/main"]'
 }
 
 @test "configure_branch_protection: PUTs the existing ruleset by id when one is already found" {
@@ -610,7 +615,7 @@ EOF
     run _sr "main_protection_rs_name='main protection'
              path_rulesets='repos/acme/myrepo/rulesets'
              jq_ruleset_id='.id'
-             branch='main'
+             default_branch='main'
              declare -a required_checks=('Postrun-CI')
              actions_app_id=15368
              configure_branch_protection" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
