@@ -318,7 +318,7 @@ an optional parameter: `exit_if_has_errors false`
 If possible and safe, use the value of the failed argument in the error message for easier debugging, e.g.:
 
   ```bash
-  error -sd 3 "${FUNCNAME[0]}() argument <N> MUST <condition description> (provided ${1-<missing>})" -ec "$err_specific_code_2"
+  error -sd 3 "${FUNCNAME[0]}() requires argument <N>, <role>, to <constraint> (provided '${N-<missing>}')." -ec "$err_specific_code"
   ```
 
 Functions that interleave positional-argument parsing with validation (`shift`-based, e.g. `execute_with_retry` in
@@ -473,8 +473,8 @@ buffering, and error-propagation behavior, especially when command substitution 
   ```
 
 - **Global variables**: A function can modify global variables that can be accessed by the caller. This is less preferred due to
-- the implicit side effects and reduced clarity, but it is sometimes used for modifying global script settings (e.g.
-- `set_verbose` or `set_errors`) or for returning complex data structures and/or multiple values.
+  the implicit side effects and reduced clarity, but it is sometimes used for modifying global script settings (e.g.
+  `set_verbose` or `set_errors`) or for returning complex data structures and/or multiple values.
 
 ### Function Types
 
