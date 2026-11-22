@@ -480,22 +480,58 @@ Tests if the first argument equals one of the following arguments, case-insensit
 
 Detects if the current OS is Windows (Windows_NT, MINGW, or MSYS).
 
-### is_valid_filename()
+### is_filename()
 
 Tests if a string is a valid, simple filename (non-empty, no slashes, not `.`/`..`).
 
-### is_valid_path()
+### is_path()
 
-Tests if a string is a syntactically valid path, via `pathchk`.
+Tests if a string is a syntactically valid path: non-empty and passing `pathchk`.
 
-### is_valid_secret_name()
+### is_secret_name()
 
 Tests if a string is a valid GitHub secret name: letters, digits, and underscores only, not starting with a digit or with
 `GITHUB_` (in any case).
 
-### is_valid_secret()
+### is_secret()
 
 Tests if a string is non-empty and free of control characters.
+
+### is_build_configuration()
+
+Tests if a string is one of `$configurations_in_use` (case-sensitive).
+
+### is_visibility()
+
+Tests if a string is one of `$repo_visibilities` (case-sensitive).
+
+### is_gh_runner_os()
+
+Tests if a string is one of `$gh_runners_os_in_use`, the GitHub Actions runner labels in use.
+
+### is_framework()
+
+Tests if a string is one of `$frameworks_in_use`, the Target Framework Monikers (TFM) in use (empty included).
+
+### is_runtime()
+
+Tests if a string is one of `$runtimes_in_use`, the Runtime Identifiers (RID) in use (empty included).
+
+### is_percentage()
+
+Tests if a string is an integer between 0 and 100.
+
+### is_minverTagPrefix()
+
+Tests if a string is a valid MinVer Git tag prefix.
+
+### is_minverPrereleaseId()
+
+Tests if a string is a valid MinVer prerelease identifier.
+
+### is_nuget_server()
+
+Tests if a string is `nuget`, `github`, or a valid http(s) URL.
 
 ### is_valid_dotnet_version()
 
@@ -707,25 +743,26 @@ In-place variants of the above, operating on a referenced variable.
 
 Tests that a string contains no shell-metacharacters that could enable command injection.
 
-### is_safe_boolean()
+### is_valid_boolean()
 
 Validates that a string is `true` or `false`.
 
-### is_safe_integer()
+### is_valid_integer()
 
 Validates that a string is an integer.
 
+### is_valid_path()
+
+Validates that a string is a syntactically valid path, via `is_path`. The path does not have to exist.
+
 ### is_safe_path()
 
-Validates that a relative path contains no traversal sequences, leading `/`, or dangerous characters.
-
-### is_safe_valid_path()
-
-Combines `is_safe_path` with `is_valid_path` (syntactic validity via `pathchk`).
+Validates that a string is a valid path (`is_valid_path`) and is safe: relative, no traversal sequences, no dangerous
+characters. An empty string is not a valid path.
 
 ### is_safe_existing_path()
 
-Combines `is_safe_valid_path` with an existence check.
+Combines `is_safe_path` with an existence check.
 
 ### is_safe_existing_directory() / is_safe_existing_file()
 
@@ -736,81 +773,66 @@ Combine `is_safe_existing_path` with a directory / non-empty-file type check.
 Validates and normalizes a JSON array of strings (or a single string) into a deduplicated, trimmed JSON array, optionally
 validating each item with a caller-supplied function.
 
-### is_safe_runner_os()
+### is_valid_gh_runner_os()
 
-Validates that a string is one of the allowed GitHub Actions runner OS monikers.
+Validates that a string is one of the GitHub Actions runner labels in use, via `is_gh_runner_os`.
+
+### is_valid_visibility()
+
+Validates a GitHub repository visibility, via `is_visibility`. Callers lowercase a value typed by a person first.
+
+### is_valid_reason()
+
+Validates the length of a free-text "reason" input (at most 200 characters).
 
 ### is_safe_reason()
 
-Validates a free-text "reason" input for length and shell-safety.
-
-### is_valid_nuget_server()
-
-Tests if a string is `nuget`, `github`, or a valid http(s) URL.
+Validates a free-text "reason" input for length (`is_valid_reason`) and shell-safety.
 
 ### validate_nuget_server()
 
 Validates a NuGet server moniker and resolves it into a display name and server URL.
 
-### is_valid_configuration()
+### is_valid_build_configuration()
 
-Tests if a string is a syntactically valid build-configuration identifier.
-
-### is_safe_configuration()
-
-Validates a build configuration name, warning (not failing) if it's not one of the known configurations.
+Validates a build configuration name, via `is_build_configuration`.
 
 ### is_valid_framework()
 
-Tests if a string is a syntactically valid Target Framework Moniker (TFM).
-
-### is_safe_framework()
-
-Validates a TFM, warning (not failing) if it's not one of the known frameworks.
+Validates a Target Framework Moniker (TFM), via `is_framework`.
 
 ### is_valid_runtime()
 
-Tests if a string is a syntactically valid Runtime Identifier (RID).
-
-### is_safe_runtime()
-
-Validates a RID, warning (not failing) if it's not one of the known runtimes.
+Validates a Runtime Identifier (RID), via `is_runtime`.
 
 ### validate_runtime()
 
-Lowercases a referenced RID in place and validates it via `is_safe_runtime`.
+Lowercases a referenced RID in place and validates it via `is_valid_runtime`.
 
 ### validate_preprocessor_symbols()
 
 Validates and reformats a space/comma/colon/semicolon-separated preprocessor-symbol list into a semicolon-separated list, in place.
 
-### is_safe_secret()
+### is_valid_secret_name()
 
-Validates that a candidate secret value is non-empty and free of control characters.
+Validates a GitHub secret name, via `is_secret_name`.
 
-### is_valid_percentage()
+### is_valid_secret()
 
-Tests if a string is an integer between 0 and 100.
+Validates that a candidate secret value is non-empty and free of control characters, via `is_secret`. The error never
+shows the value.
 
-### is_safe_min_coverage_pct() / is_safe_max_regression_pct()
+### is_valid_min_coverage_pct() / is_valid_max_regression_pct()
 
-Validate a minimum-coverage / maximum-regression percentage input.
+Validate a minimum-coverage / maximum-regression percentage input, via `is_percentage`.
 
 ### is_valid_minverTagPrefix()
 
-Tests if a string is a valid MinVer Git tag prefix.
-
-### is_safe_minverTagPrefix()
-
-Validates a MinVer Git tag prefix, via `is_valid_minverTagPrefix`.
+Validates a MinVer Git tag prefix, via `is_minverTagPrefix`.
 
 ### is_valid_minverPrereleaseId()
 
-Tests if a string is a valid MinVer prerelease identifier.
-
-### is_safe_minverPrereleaseId()
-
-Validates a MinVer prerelease identifier, via `is_valid_minverPrereleaseId`.
+Validates a MinVer prerelease identifier, via `is_minverPrereleaseId`.
 
 ### escape_ere()
 

@@ -106,33 +106,33 @@ declare BATS_TEST_TMPDIR
     assert_failure "$err_argument_type"
 }
 
-# --- is_safe_boolean / is_safe_integer -----------------------------------------------------
+# --- is_valid_boolean / is_valid_integer -----------------------------------------------------
 
-@test "is_safe_boolean: accepts true/false, rejects anything else" {
-    run is_safe_boolean true
+@test "is_valid_boolean: accepts true/false, rejects anything else" {
+    run is_valid_boolean true
     assert_success
-    run is_safe_boolean false
+    run is_valid_boolean false
     assert_success
-    run is_safe_boolean maybe
+    run is_valid_boolean maybe
     assert_failure 11
 }
 
-@test "is_safe_integer: accepts integers, rejects non-integers" {
-    run is_safe_integer 42
+@test "is_valid_integer: accepts integers, rejects non-integers" {
+    run is_valid_integer 42
     assert_success
-    run is_safe_integer -7
+    run is_valid_integer -7
     assert_success
-    run is_safe_integer "abc"
+    run is_valid_integer "abc"
     assert_failure 11
 }
 
-# --- is_safe_path / is_safe_valid_path / is_safe_existing_* ------------------------------------
+# --- is_safe_path / is_safe_path / is_safe_existing_* ------------------------------------
 
-@test "is_safe_path: accepts a plain relative path, empty string" {
+@test "is_safe_path: accepts a plain relative path, but not empty string" {
     run is_safe_path "some/relative/path.txt"
     assert_success
     run is_safe_path ""
-    assert_success
+    assert_failure
 }
 
 @test "is_safe_path: rejects traversal, absolute paths, and dangerous characters" {
@@ -144,8 +144,8 @@ declare BATS_TEST_TMPDIR
     assert_failure 11
 }
 
-@test "is_safe_valid_path: accepts a safe, syntactically valid path" {
-    run is_safe_valid_path "some/relative/path.txt"
+@test "is_safe_path: accepts a safe, syntactically valid path" {
+    run is_safe_path "some/relative/path.txt"
     assert_success
 }
 
@@ -190,17 +190,17 @@ declare BATS_TEST_TMPDIR
 }
 
 @test "validate_json_array: validates each item via the provided validator function" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='[\"ubuntu-latest\", \"not-a-runner\"]'; validate_json_array v '' is_safe_runner_os"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; v='[\"ubuntu-latest\", \"not-a-runner\"]'; validate_json_array v '' is_valid_gh_runner_os"
     assert_failure "$err_unsafe_argument"
 }
 
-# --- is_safe_runner_os -------------------------------------------------------------------------
+# --- is_valid_gh_runner_os -------------------------------------------------------------------------
 
-@test "is_safe_runner_os: accepts a known runner, rejects an unknown one" {
-    run is_safe_runner_os "ubuntu-latest"
+@test "is_valid_gh_runner_os: accepts a known runner, rejects an unknown one" {
+    run is_valid_gh_runner_os "ubuntu-latest"
     assert_success
-    run is_safe_runner_os "not-a-real-runner"
-    assert_failure "$negative"
+    run is_valid_gh_runner_os "not-a-real-runner"
+    assert_failure "$err_argument_value"
 }
 
 # --- is_safe_reason ----------------------------------------------------------------------------
@@ -254,12 +254,6 @@ declare BATS_TEST_TMPDIR
 
 # --- configuration / framework / runtime validation -----------------------------------------------
 
-@test "validate_runtime: lower-cases and trims the referenced variable" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; r='  LINUX-X64  '; validate_runtime r; echo \"[\$r]\""
-    assert_success
-    assert_output "[linux-x64]"
-}
-
 # --- validate_preprocessor_symbols -----------------------------------------------------------
 
 @test "validate_preprocessor_symbols: accepts empty input" {
@@ -279,24 +273,24 @@ declare BATS_TEST_TMPDIR
     assert_failure "$err_argument_value"
 }
 
-# --- is_safe_secret ----------------------------------------------------------------------------
+# --- is_valid_secret ----------------------------------------------------------------------------
 
-@test "is_safe_secret: accepts a normal value, rejects control characters" {
-    run is_safe_secret "s3cr3t"
+@test "is_valid_secret: accepts a normal value, rejects control characters" {
+    run is_valid_secret "s3cr3t"
     assert_success
-    run is_safe_secret "$(printf 'bad\x01value')"
+    run is_valid_secret "$(printf 'bad\x01value')"
     assert_failure "$err_argument_value"
 }
 
 # --- percentage validation ---------------------------------------------------------------------
 
-@test "is_safe_min_coverage_pct / is_safe_max_regression_pct: accept valid percentages" {
-    run is_safe_min_coverage_pct 80
+@test "is_valid_min_coverage_pct / is_valid_max_regression_pct: accept valid percentages" {
+    run is_valid_min_coverage_pct 80
     assert_success
-    run is_safe_max_regression_pct 20
+    run is_valid_max_regression_pct 20
     assert_success
-    run is_safe_min_coverage_pct 150
-    assert_failure "$negative"
+    run is_valid_min_coverage_pct 150
+    assert_failure "$err_argument_type"
 }
 
 # --- escape_ere ----------------------------------------------------------------------------------

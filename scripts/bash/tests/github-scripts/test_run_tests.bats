@@ -23,7 +23,7 @@
 # git repo with those two files pre-created.
 #
 # The test project is deliberately named 'App.Tests.csproj' (17 characters) -- this used to
-# fail is_valid_path's `pathchk -p` (POSIX's 14-char-per-component "portable filename" rule,
+# fail is_path's `pathchk -p` (POSIX's 14-char-per-component "portable filename" rule,
 # fixed in _predicates.sh) exactly like the real vm2.*.Tests.csproj files did; keeping this
 # realistic name here guards against that regressing.
 

@@ -109,7 +109,7 @@ function validate_arguments()
                                                                                 }
         add_trap "rm -f ${summary_file@Q}" EXIT
     }
-    is_valid_path "$summary_file"                                               || with_error _rc "$err_invalid_path" "Invalid summary file path: '$summary_file'."
+    is_path "$summary_file"                                                     || with_error _rc "$err_invalid_path" "Invalid summary file path: '$summary_file'."
     resolve_vm2_repos vm2_repos                                                 || vm2_repos=''
     is_in "$sot" "${sources_of_truth[@]}"                                       || with_error _rc "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: $sources_of_truth_str."
 

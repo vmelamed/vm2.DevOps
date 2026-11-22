@@ -74,7 +74,7 @@ for repo in "${vm2_repositories[@]}"; do
         declare default=''
 
         $secret_exists && default="$secret_placeholder"
-        enter_value "  Enter value for secret '$secret_name'" secret_value "$default" true is_valid_secret
+        enter_value "  Enter value for secret '$secret_name'" secret_value "$default" true is_secret
 
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         [[ -n "$secret_value" && $secret_value != "$secret_placeholder" ]] && echo "$secret_str" || {

@@ -171,21 +171,81 @@ declare -xr shared_end_marker='===>>>'
 #-----------------------------------------------------------------------------------------------
 # @description GitHub Actions runners
 #-----------------------------------------------------------------------------------------------
-declare -xra allowed_runners_os=(
+declare -xra gh_runners_os_in_use=(
     "ubuntu-latest"
+    "ubuntu-26.04"
+    "ubuntu-24.04"
     "ubuntu-22.04"
-    "ubuntu-20.04"
     "windows-latest"
+    "windows-2025"
     "windows-2022"
-    "windows-2019"
     "macos-latest"
-    "macos-12"
-    "macos-11"
+    "macos-26"
+    "macos-15"
+    "macos-14"
 )
 # shellcheck disable=SC2155
-declare -xr allowed_runners_os_str=$(IFS=,; echo "${allowed_runners_os[*]}")
+declare -xr gh_runners_os_in_use_str=$(IFS=,; echo "${gh_runners_os_in_use[*]}")
 # shellcheck disable=SC2155
-declare -xr allowed_runners_os_rex=$(IFS='|'; echo "${allowed_runners_os[*]}")
+# declare -xr gh_runners_os_in_use_rex=$(IFS='|'; echo "${gh_runners_os_in_use[*]}")
+
+
+declare -xr default_repo_owner="vmelamed"
+declare -xr default_default_branch="main"
+
+#-----------------------------------------------------------------------------------------------
+# @description GitHub repository visibilities
+#-----------------------------------------------------------------------------------------------
+declare -xra repo_visibilities=(
+    "public"
+    # "internal" # only for organizations
+    "private"
+)
+# shellcheck disable=SC2155
+declare -xr repo_visibilities_str=$(IFS=,; echo "${repo_visibilities[*]}")
+# shellcheck disable=SC2155
+declare -xr repo_visibilities_rex=$(IFS='|'; echo "${repo_visibilities[*]}")
+
+declare -xr default_visibility="public"
+
+#-----------------------------------------------------------------------------------------------
+# @description dotnet build configurations
+#-----------------------------------------------------------------------------------------------
+declare -xra configurations_in_use=(
+    "Debug"
+    "Release"
+)
+# shellcheck disable=SC2155
+declare -xr configurations_in_use_str=$(IFS=,; echo "${configurations_in_use[*]}")
+# shellcheck disable=SC2155
+# declare -xr configurations_in_use_rex=$(IFS='|'; echo "${configurations_in_use[*]}")
+
+#-----------------------------------------------------------------------------------------------
+# @description dotnet target framework monikers
+#-----------------------------------------------------------------------------------------------
+declare -xr frameworks_in_use=(
+    ""
+    net9.0
+    net10.0
+)
+# shellcheck disable=SC2155
+declare -xr frameworks_in_use_str=$(IFS=,; echo "${frameworks_in_use[*]}")
+# shellcheck disable=SC2155
+# declare -xr frameworks_in_use_rex=$(IFS='|'; echo "${frameworks_in_use[*]}")
+
+#-----------------------------------------------------------------------------------------------
+# @description dotnet runtime identifiers
+#-----------------------------------------------------------------------------------------------
+declare -xr runtimes_in_use=(
+    ""
+    linux-x64
+    win-x64
+    osx-x64
+)
+# shellcheck disable=SC2155
+declare -xr runtimes_in_use_str=$(IFS=,; echo "${runtimes_in_use[*]}")
+# shellcheck disable=SC2155
+# declare -xr runtimes_in_use_rex=$(IFS='|'; echo "${runtimes_in_use[*]}")
 
 #-----------------------------------------------------------------------------------------------
 # @description GitHub Actions applications that use variables (`vars`)

@@ -245,7 +245,7 @@ function is_valid_json()
 function is_valid_json_file()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the JSON file to validate." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_valid_path "$1"                                          || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
+    [[ ! -v 1 ]] || is_path "$1"                                                || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
                                                                                 exit_if_has_bugs
 
     jq empty "$1" &> "$_ignore" && return "$positive" || return "$negative"

@@ -297,7 +297,7 @@ function resolve_arguments()
     validate_branch_name "$default_branch"                                      || true
 
     visibility="${visibility,,}"
-    validate_visibility "$visibility"                                           || true
+    is_valid_visibility "$visibility"                                           || true
 
     # shellcheck disable=SC2015 # Info: Note that A && B || C is not if-then-else. C may run when A is true.
     if $audit; then

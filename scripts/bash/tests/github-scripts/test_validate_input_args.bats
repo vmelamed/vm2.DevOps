@@ -238,7 +238,7 @@ NO_ERRORS"
              has_errors && echo HAS_ERRORS || echo NO_ERRORS"
     assert_success
     assert_output --partial "src/NotThere.csproj"
-    assert_output --partial "The runner OS 'bogus-os' is not allowed."
+    assert_output --partial "Invalid runner OS 'bogus-os'"
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -315,7 +315,7 @@ NO_ERRORS"
 @test "get_arguments: invalid values end the run with the errors and the usage" {
     run _vi "get_arguments --runners-os '[\"bogus-os\"]' --skip-tests maybe; echo AFTER"
     assert_failure
-    assert_output --partial "The runner OS 'bogus-os' is not allowed."
+    assert_output --partial "Invalid runner OS 'bogus-os'"
     assert_output --partial "Invalid boolean 'maybe': it must be 'true' or 'false'."
     assert_output --partial "Usage:"
     refute_output --partial "AFTER"

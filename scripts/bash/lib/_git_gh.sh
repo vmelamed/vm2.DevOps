@@ -34,18 +34,6 @@ declare -x warn_em
 # vm2 core lib variables
 declare -x _ignore
 
-declare -xr default_repo_owner="vmelamed"
-declare -xr default_default_branch="main"
-declare -xr default_visibility="public"
-declare -xra repo_visibilities=(
-    "$default_visibility"
-    "private"
-)
-# shellcheck disable=SC2155
-declare -xr repo_visibilities_str=$(IFS=,; echo "${repo_visibilities[*]}")
-# shellcheck disable=SC2155
-declare -xr repo_visibilities_rex=$(IFS='|'; echo "${repo_visibilities[*]}")
-
 declare -xr gh_authority_rex="github\.com"
 declare -xr gh_ssh_authority_rex="git@$gh_authority_rex"                        # OK, this is not URI authority, but here we only support GitHub SSH URLs, so we can call GitHub SSH authority. This is the part of the URL before the owner/name, e.g. "git@github.com" from "git@github.com:vmelamed/vm2.DevOps.git"
 declare -xr gh_https_authority_rex="https://$gh_authority_rex"                  # OK, this is not URI authority, but here we only support GitHub HTTPS URLs, so we can call GitHub HTTPS authority. This is the part of the URL before owner/name, e.g. "https://github.com" from https://github.com/vmelamed/vm2.DevOps
@@ -117,27 +105,6 @@ function is_valid_gh_repo_owner()
 
     local _owner=${1:-}
     [[ $_owner =~ $gh_repo_owner_regex ]]
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if the specified visibility is valid.
-#
-# @arg $1 string _visibility the visibility to validate.
-#
-# @exitcode positive=0: if the visibility is valid.
-# @exitcode negative=1: if the visibility is invalid.
-#
-# @example
-#   if is_valid_branch_name "main"; then echo "Valid visibility "; fi
-#-----------------------------------------------------------------------------------------------
-function is_valid_visibility()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a visibility." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    local _visibility=$1
-
-    is_in_i "$_visibility" "${repo_visibilities[@]}"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -227,31 +194,6 @@ function is_valid_gh_repo_description()
 
     # GitHub repository descriptions must be between 3 and 350 characters long.
     (( ${#_description} >= 3 && ${#_description} <= 350 ))
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Validates that the specified repository visibility is valid.
-#
-# @arg $1 string The repository visibility to validate.
-#
-# @exitcode success=0: If the visibility is valid.
-# @exitcode err_argument_value=4: If the visibility is not a valid.
-#
-# @example
-#   if validate_visibility "private"; then echo "Valid visibility"; fi
-# @example
-#   enter_value "Default visibility" visibility "$default_visibility" false validate_visibility)
-#-----------------------------------------------------------------------------------------------
-function validate_visibility()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a visibility." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    local -i _rc="$success"
-
-    is_valid_visibility "$1"                                                    || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Git visibility (provided '${1-<missing>}')."
-
-    return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------

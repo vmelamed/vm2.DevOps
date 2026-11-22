@@ -243,7 +243,7 @@ _run_setup_repo() {
     _make_target_repo "$BATS_TEST_TMPDIR/vm2repos/target"
     run _run_setup_repo "$BATS_TEST_TMPDIR/gh-bin:$_bin" --quiet --vm2-repos "$BATS_TEST_TMPDIR/vm2repos" --visibility bogus "$BATS_TEST_TMPDIR/vm2repos/target"
     assert_failure
-    assert_output --partial "valid Git visibility (provided 'bogus')"
+    assert_output --partial "Invalid repository visibility 'bogus'"
 }
 
 # bats test_tags=tool-check

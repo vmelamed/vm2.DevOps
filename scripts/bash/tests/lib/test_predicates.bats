@@ -409,111 +409,109 @@ declare -gx err_argument_value
     assert_failure "$failure"
 }
 
-# --- is_valid_filename / is_valid_path ---------------------------------------------------------
+# --- is_filename / is_path ---------------------------------------------------------
 
-@test "is_valid_filename: accepts a plain filename, rejects path separators and . / .." {
-    run is_valid_filename "file.txt"
+@test "is_filename: accepts a plain filename, rejects path separators and . / .." {
+    run is_filename "file.txt"
     assert_success
-    run is_valid_filename "dir/file.txt"
+    run is_filename "dir/file.txt"
     assert_failure "$failure"
-    run is_valid_filename "."
+    run is_filename "."
     assert_failure "$failure"
-    run is_valid_filename ".."
+    run is_filename ".."
     assert_failure "$failure"
-    run is_valid_filename ""
-    assert_failure "$failure"
-}
-
-@test "is_valid_path: accepts a syntactically valid path" {
-    run is_valid_path "some/relative/path.txt"
-    assert_success
-}
-
-# --- is_valid_secret -------------------------------------------------------------------------------
-
-@test "is_valid_secret: accepts a non-empty value with no control characters" {
-    run is_valid_secret "s3cr3t-Value123"
-    assert_success
-}
-
-@test "is_valid_secret: rejects empty values and control characters" {
-    run is_valid_secret ""
-    assert_failure "$failure"
-    run is_valid_secret "$(printf 'bad\x01value')"
+    run is_filename ""
     assert_failure "$failure"
 }
 
-# --- is_valid_nuget_server ---------------------------------------------------------------------
+@test "is_path: accepts a syntactically valid path" {
+    run is_path "some/relative/path.txt"
+    assert_success
+}
 
-@test "is_valid_nuget_server: accepts nuget, github, and https URLs; rejects garbage" {
-    run is_valid_nuget_server "nuget"
+# --- is_secret -------------------------------------------------------------------------------
+
+@test "is_secret: accepts a non-empty value with no control characters" {
+    run is_secret "s3cr3t-Value123"
     assert_success
-    run is_valid_nuget_server "github"
+}
+
+@test "is_secret: rejects empty values and control characters" {
+    run is_secret ""
+    assert_failure "$failure"
+    run is_secret "$(printf 'bad\x01value')"
+    assert_failure "$failure"
+}
+
+# --- is_nuget_server ---------------------------------------------------------------------
+
+@test "is_nuget_server: accepts nuget, github, and https URLs; rejects garbage" {
+    run is_nuget_server "nuget"
     assert_success
-    run is_valid_nuget_server "https://example.com/index.json"
+    run is_nuget_server "github"
     assert_success
-    run is_valid_nuget_server "ftp://example.com"
+    run is_nuget_server "https://example.com/index.json"
+    assert_success
+    run is_nuget_server "ftp://example.com"
     assert_failure
 }
 
 # --- configuration / framework / runtime validation -----------------------------------------------
 
-@test "is_valid_configuration / is_safe_configuration: accepts identifiers, warns on unknown ones" {
-    run is_valid_configuration "Release"
+@test "is_build_configuration  / is_build_configuration : accepts identifiers, warns on unknown ones" {
+    run is_build_configuration  "Release"
     assert_success
-    run is_safe_configuration "Release"
+    run is_build_configuration  "Debug"
     assert_success
-    run is_safe_configuration "Custom"
-    assert_success
-    run is_safe_configuration "not valid!"
+    run is_build_configuration  "Custom"
+    assert_failure "$negative"
+    run is_build_configuration  "not valid!"
     assert_failure "$negative"
 }
 
-@test "is_valid_framework / is_safe_framework: accepts a TFM, rejects garbage" {
+@test "is_valid_framework / is_valid_framework: accepts a TFM, rejects garbage" {
     run is_valid_framework "net10.0"
     assert_success
-    run is_safe_framework "net10.0"
+    run is_valid_framework "net10.0"
     assert_success
-    run is_safe_framework "not-a-tfm"
+    run is_valid_framework "not-a-tfm"
     assert_failure "$err_argument_value"
 }
 
-@test "is_valid_runtime / is_safe_runtime: accepts empty and known RIDs, rejects injection-shaped input" {
+@test "is_valid_runtime / is_valid_runtime: accepts empty and known RIDs, rejects injection-shaped input" {
     run is_valid_runtime ""
     assert_success
-    run is_safe_runtime "linux-x64"
+    run is_valid_runtime "linux-x64"
     assert_success
-    run is_safe_runtime "linux-x64; rm -rf /"
+    run is_valid_runtime "linux-x64; rm -rf /"
     assert_failure "$err_argument_value"
 }
 
 # --- percentage validation ---------------------------------------------------------------------
 
-@test "is_valid_percentage: accepts 0-100, rejects out of range and non-integers" {
-    run is_valid_percentage 0
+@test "is_percentage: accepts 0-100, rejects out of range and non-integers" {
+    run is_percentage 0
     assert_success
-    run is_valid_percentage 100
+    run is_percentage 100
     assert_success
-    run is_valid_percentage 101
+    run is_percentage 101
     assert_failure
-    run is_valid_percentage "abc"
+    run is_percentage "abc"
     assert_failure
 }
 
 # --- MinVer tag prefix / prerelease id validation -----------------------------------------------
 
-@test "is_valid_minverTagPrefix / is_safe_minverTagPrefix: accepts a plain tag prefix" {
+@test "is_minverTagPrefix / is_valid_minverTagPrefix: accepts a plain tag prefix" {
+    run is_minverTagPrefix "v"
+    assert_success
     run is_valid_minverTagPrefix "v"
     assert_success
-    run is_safe_minverTagPrefix "v"
-    assert_success
 }
 
-@test "is_valid_minverPrereleaseId / is_safe_minverPrereleaseId: accepts a prerelease identifier" {
+@test "is_minverPrereleaseId / is_valid_minverPrereleaseId: accepts a prerelease identifier" {
+    run is_minverPrereleaseId "preview.0"
+    assert_success
     run is_valid_minverPrereleaseId "preview.0"
     assert_success
-    run is_safe_minverPrereleaseId "preview.0"
-    assert_success
 }
-
-

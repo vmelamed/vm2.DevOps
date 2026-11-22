@@ -184,10 +184,10 @@ function resolve_arguments()
     [[ $repository == */* ]]                                                    || error "--repository must be in 'owner/repo' form (provided '${repository:-<empty>}')." -ec "$err_argument_value"
     [[ -n $event_name ]]                                                        || error "--event-name is required." -ec "$err_missing_argument"
     [[ -n $ref_name ]]                                                          || error "--ref-name is required." -ec "$err_missing_argument"
-    is_safe_max_regression_pct "$max_regression_pct"                            || true
+    is_valid_max_regression_pct "$max_regression_pct"                           || true
     is_non_negative "$max_gen1_collects"                                        || error "--max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')." -ec "$err_argument_value"
     is_non_negative "$max_gen2_collects"                                        || error "--max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')." -ec "$err_argument_value"
-    is_safe_boolean "$reset_thresholds"                                         || true
+    is_valid_boolean "$reset_thresholds"                                        || true
 
     if [[ $event_name == "pull_request" ]]; then
         [[ -n $head_ref ]]                                                      || error "--head-ref is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
