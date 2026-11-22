@@ -180,7 +180,8 @@ function sanitize_common_dotnet_args()
 
     local -i _rc=$success
     local _project=$1
-                                                                                # ignore all returned validation errors - they've been reported already and this is all that we need here
+
+    # ignore all returned validation errors - they've been reported already and this is all that we need here
     validate_preprocessor_symbols preprocessor_symbols                          || true
     validate_minver_tag_components "$minver_tag_prefix" "$minver_prerelease_id" || true
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
@@ -195,18 +196,18 @@ function sanitize_common_dotnet_args()
         [[ ! -v gh_nuget_password || -z $gh_nuget_password ]]                   || error "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty." -ec "$err_argument_value"
     }
 
-    is_valid_build_configuration "$configuration"                               || true
-    is_valid_framework "$framework"                                             || true
-    is_valid_runtime "$runtime"                                                 || true
-    # $artifacts is always resolved to a concrete, absolute path here -- this is a documented
-    # contract (see --artifacts-path's own help text above: "...or the default 'artifacts'"),
-    # and build.sh/pack.sh/run-tests.sh/run-benchmarks.sh genuinely need a concrete, resolved
-    # path for their own filesystem bookkeeping (locating coverage files, archiving output,
-    # etc.), independent of whether that value is also ever passed to `dotnet` as an explicit
-    # -property:ArtifactsPath= override. (validate-input.sh, the one caller that doesn't want
-    # that override forced downstream, never actually forwards this resolved value to any
-    # dotnet invocation in the first place, so there's nothing to protect there.)
+    # the following 3 arguments should be coming from Directory.Build.props but just in case:
+    [[ -z $configuration ]] || is_valid_build_configuration "$configuration"    || true
+    [[ -z $framework ]] || is_valid_framework "$framework"                      || true
+    [[ -z $runtime ]] || is_valid_runtime "$runtime"                            || true
+    # $artifacts is always resolved to a concrete, absolute path here -- this is a documented contract (see --artifacts-path's
+    # own help text above: "...or the default 'artifacts'"), and build.sh/pack.sh/run-tests.sh/run-benchmarks.sh genuinely need
+    # a concrete, resolved path for their own filesystem bookkeeping (locating coverage files, archiving output, etc.),
+    # independent of whether that value is also ever passed to `dotnet` as an explicit -property:ArtifactsPath= override.
+    # (validate-input.sh, the one caller that doesn't want that override forced downstream, never actually forwards this
+    # resolved value to any dotnet invocation in the first place, so there's nothing to protect there.)
     [[ -z $artifacts ]] || is_safe_path "$artifacts"                            || true
+    
     is_safe_existing_path "$_project" && get_artifacts_path "$_project" artifacts \
                                                                                 || true
 

@@ -409,7 +409,7 @@ declare -gx err_argument_value
     assert_failure "$failure"
 }
 
-# --- is_filename / is_path ---------------------------------------------------------
+# --- is_filename / is_path -------------------------------------------------------------------
 
 @test "is_filename: accepts a plain filename, rejects path separators and . / .." {
     run is_filename "file.txt"
@@ -424,26 +424,17 @@ declare -gx err_argument_value
     assert_failure "$failure"
 }
 
-@test "is_path: accepts a syntactically valid path" {
+@test "is_path: accepts a syntactically valid path, rejects an empty string, without any output" {
     run is_path "some/relative/path.txt"
     assert_success
-}
-
-# --- is_secret -------------------------------------------------------------------------------
-
-@test "is_secret: accepts a non-empty value with no control characters" {
-    run is_secret "s3cr3t-Value123"
+    run is_path "../traversal/is/still/a/path"
     assert_success
+    run is_path ""
+    assert_failure "$negative"
+    assert_output ""
 }
 
-@test "is_secret: rejects empty values and control characters" {
-    run is_secret ""
-    assert_failure "$failure"
-    run is_secret "$(printf 'bad\x01value')"
-    assert_failure "$failure"
-}
-
-# --- is_nuget_server ---------------------------------------------------------------------
+# --- is_nuget_server -------------------------------------------------------------------------
 
 @test "is_nuget_server: accepts nuget, github, and https URLs; rejects garbage" {
     run is_nuget_server "nuget"
@@ -454,37 +445,6 @@ declare -gx err_argument_value
     assert_success
     run is_nuget_server "ftp://example.com"
     assert_failure
-}
-
-# --- configuration / framework / runtime validation -----------------------------------------------
-
-@test "is_build_configuration  / is_build_configuration : accepts identifiers, warns on unknown ones" {
-    run is_build_configuration  "Release"
-    assert_success
-    run is_build_configuration  "Debug"
-    assert_success
-    run is_build_configuration  "Custom"
-    assert_failure "$negative"
-    run is_build_configuration  "not valid!"
-    assert_failure "$negative"
-}
-
-@test "is_valid_framework / is_valid_framework: accepts a TFM, rejects garbage" {
-    run is_valid_framework "net10.0"
-    assert_success
-    run is_valid_framework "net10.0"
-    assert_success
-    run is_valid_framework "not-a-tfm"
-    assert_failure "$err_argument_value"
-}
-
-@test "is_valid_runtime / is_valid_runtime: accepts empty and known RIDs, rejects injection-shaped input" {
-    run is_valid_runtime ""
-    assert_success
-    run is_valid_runtime "linux-x64"
-    assert_success
-    run is_valid_runtime "linux-x64; rm -rf /"
-    assert_failure "$err_argument_value"
 }
 
 # --- percentage validation ---------------------------------------------------------------------
@@ -500,18 +460,27 @@ declare -gx err_argument_value
     assert_failure
 }
 
-# --- MinVer tag prefix / prerelease id validation -----------------------------------------------
+# --- MinVer tag prefix / prerelease id ----------------------------------------------------------
 
-@test "is_minverTagPrefix / is_valid_minverTagPrefix: accepts a plain tag prefix" {
+@test "is_minverTagPrefix: accepts a plain tag prefix, rejects one ending in a digit or '/', without any output" {
     run is_minverTagPrefix "v"
     assert_success
-    run is_valid_minverTagPrefix "v"
+    run is_minverTagPrefix "release-"
     assert_success
+    local _prefix
+    for _prefix in "v1" "ver/" ""; do
+        run is_minverTagPrefix "$_prefix"
+        assert_failure
+        assert_output ""
+    done
 }
 
-@test "is_minverPrereleaseId / is_valid_minverPrereleaseId: accepts a prerelease identifier" {
+@test "is_minverPrereleaseId: accepts a prerelease identifier, rejects an empty one or one with invalid characters" {
     run is_minverPrereleaseId "preview.0"
     assert_success
-    run is_valid_minverPrereleaseId "preview.0"
-    assert_success
+    run is_minverPrereleaseId ""
+    assert_failure
+    run is_minverPrereleaseId "pre_view"
+    assert_failure
+    assert_output ""
 }

@@ -24,12 +24,6 @@ declare -x err_invalid_nameref
 
 # vm2 core lib constants
 declare -x vm2_repositories
-declare -x repo_visibilities
-declare -x gh_runners_os_in_use
-declare -x configurations_in_use
-declare -x frameworks_in_use
-declare -x runtimes_in_use
-
 declare -x nugetServersRegex
 
 # vm2 core lib variables
@@ -48,8 +42,8 @@ declare -xr prereleaseLabelRex='[-0-9A-Za-z.]+'
 declare -xr minverTagPrefixRex='[0-9A-Za-z_]([-0-9A-Za-z._/]*[-A-Za-z_])?'
 declare -xr minverPrereleaseIdRex=$prereleaseLabelRex
 
-declare -xr natural_regex="^$natural_rex\$"
 declare -xr zero_regex="^$zero_rex\$"
+declare -xr natural_regex="^$natural_rex\$"
 declare -xr positive_regex="^$positive_rex\$"
 declare -xr negative_regex="^$negative_rex\$"
 declare -xr non_negative_regex="^($positive_rex|$zero_rex)\$"
@@ -600,24 +594,6 @@ function is_path()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests whether a candidate secret name is valid: contains only alphanumeric
-#   characters and underscores, starts with a letter or underscore, and does not start
-#    case-insensitively with 'GITHUB_'.
-#
-# @arg $1 string Candidate secret name to validate.
-#
-# @exitcode positive=0: The secret name is valid.
-# @exitcode negative=1: The secret name is not valid.
-#-----------------------------------------------------------------------------------------------
-function is_secret_name()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub secret name to test." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    is_variable_name "$1" && [[ ${1^^} != GITHUB_* ]]
-}
-
-#-----------------------------------------------------------------------------------------------
 # @description Tests whether a candidate secret value is safe to send to the GitHub API --
 # i.e. it contains no control characters.
 #
@@ -632,106 +608,6 @@ function is_secret()
                                                                                 exit_if_has_bugs
 
     [[ -n $1 && ! $1 =~ [[:cntrl:]] ]]
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if a build configuration name is one of `$configurations_in_use`
-#   (case-sensitive).
-#
-# @arg $1 string The configuration name to test.
-#
-# @exitcode positive=0: If the configuration name is valid.
-# @exitcode negative=1: If the configuration name is invalid.
-#
-# @example
-#   if is_build_configuration "$build_config"; then echo "Valid config"; fi
-#-----------------------------------------------------------------------------------------------
-function is_build_configuration()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the build configuration value to validate." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    is_in "$1" "${configurations_in_use[@]}"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a GitHub repository visibility: one of `$repo_visibilities`
-#   (case-sensitive).
-#
-# @arg $1 string The visibility to test.
-#
-# @exitcode positive=0: If the visibility is valid.
-# @exitcode negative=1: If the visibility is invalid.
-#
-# @example
-#   if is_visibility "private"; then echo "Valid visibility"; fi
-#-----------------------------------------------------------------------------------------------
-function is_visibility()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a visibility." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    is_in "$1" "${repo_visibilities[@]}"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests that a GitHub runner OS name is in the list of used GitHub runners OSs.
-#
-# Notes:
-#   - The allowed values are defined in the `$gh_runners_os_in_use` array.
-#
-# @arg $1 string The runner OS name to validate.
-#
-# @exitcode positive=0: If the runner OS is in use.
-# @exitcode negative=1: If the runner OS is not in use.
-#
-# @example
-#   if is_gh_runner_os "ubuntu-latest"; then echo "Valid runner"; fi
-#-----------------------------------------------------------------------------------------------
-function is_gh_runner_os()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the runner OS to test." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    is_in "$1" "${gh_runners_os_in_use[@]}"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests that a Target Framework Moniker (TFM) is a valid moniker.
-#
-# @arg $1 string The TFM to validate.
-#
-# @exitcode positive=0: If the TFM is in use.
-# @exitcode negative=1: If the TFM is not in use.
-#
-# @example
-#   if is_framework "$framework"; then echo "Valid TFM"; fi
-#-----------------------------------------------------------------------------------------------
-function is_framework()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the Target Framework Moniker (TFM) value to test." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    is_in "$1" "${frameworks_in_use[@]}"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if a Runtime Identifier (RID) is a valid identifier.
-#
-# @arg $1 string The Runtime Identifier (RID) to validate.
-#
-# @exitcode positive=0: If the RID is valid.
-# @exitcode negative=1: If the RID is invalid.
-#
-# @example
-#   if is_runtime "$runtime"; then echo "Valid RID"; fi
-#-----------------------------------------------------------------------------------------------
-function is_runtime()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the Runtime Identifier (RID) value to test." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    is_in "$1" "${runtimes_in_use[@]}"
 }
 
 #-----------------------------------------------------------------------------------------------

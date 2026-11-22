@@ -10,6 +10,7 @@
     - [add\_trap()](#add_trap)
     - [execute()](#execute)
     - [execute\_with\_retry()](#execute_with_retry)
+    - [validate\_classifier\_args()](#validate_classifier_args)
     - [list\_of\_files()](#list_of_files)
     - [find\_files\_by\_precedence()](#find_files_by_precedence)
   - [\_core\_state.sh](#_core_statesh)
@@ -36,6 +37,7 @@
   - [\_error\_codes.sh](#_error_codessh)
     - [error\_message()](#error_message)
     - [error\_name()](#error_name)
+    - [http\_status\_to\_error\_code()](#http_status_to_error_code)
   - [\_predicates.sh](#_predicatessh)
     - [is\_case\_sensitive()](#is_case_sensitive)
     - [set\_case\_insensitive() / set\_case\_sensitive()](#set_case_insensitive--set_case_sensitive)
@@ -58,10 +60,13 @@
     - [is\_in()](#is_in)
     - [is\_in\_i()](#is_in_i)
     - [is\_windows()](#is_windows)
-    - [is\_valid\_filename()](#is_valid_filename)
-    - [is\_valid\_path()](#is_valid_path)
-    - [is\_valid\_secret\_name()](#is_valid_secret_name)
-    - [is\_valid\_secret()](#is_valid_secret)
+    - [is\_filename()](#is_filename)
+    - [is\_path()](#is_path)
+    - [is\_secret()](#is_secret)
+    - [is\_percentage()](#is_percentage)
+    - [is\_minverTagPrefix()](#is_minvertagprefix)
+    - [is\_minverPrereleaseId()](#is_minverprereleaseid)
+    - [is\_nuget\_server()](#is_nuget_server)
     - [is\_valid\_dotnet\_version()](#is_valid_dotnet_version)
     - [is\_tool\_present()](#is_tool_present)
     - [is\_valid\_json()](#is_valid_json)
@@ -110,32 +115,27 @@
     - [ltrim() / rtrim() / trim()](#ltrim--rtrim--trim)
     - [ltrim\_var() / rtrim\_var() / trim\_var()](#ltrim_var--rtrim_var--trim_var)
     - [is\_safe\_input()](#is_safe_input)
-    - [is\_safe\_boolean()](#is_safe_boolean)
-    - [is\_safe\_integer()](#is_safe_integer)
+    - [is\_valid\_boolean()](#is_valid_boolean)
+    - [is\_valid\_integer()](#is_valid_integer)
+    - [is\_valid\_path()](#is_valid_path)
     - [is\_safe\_path()](#is_safe_path)
-    - [is\_safe\_valid\_path()](#is_safe_valid_path)
     - [is\_safe\_existing\_path()](#is_safe_existing_path)
     - [is\_safe\_existing\_directory() / is\_safe\_existing\_file()](#is_safe_existing_directory--is_safe_existing_file)
     - [validate\_json\_array()](#validate_json_array)
-    - [is\_safe\_runner\_os()](#is_safe_runner_os)
+    - [is\_valid\_gh\_runner\_os()](#is_valid_gh_runner_os)
+    - [is\_valid\_visibility()](#is_valid_visibility)
+    - [is\_valid\_reason()](#is_valid_reason)
     - [is\_safe\_reason()](#is_safe_reason)
-    - [is\_valid\_nuget\_server()](#is_valid_nuget_server)
     - [validate\_nuget\_server()](#validate_nuget_server)
-    - [is\_valid\_configuration()](#is_valid_configuration)
-    - [is\_safe\_configuration()](#is_safe_configuration)
+    - [is\_valid\_build\_configuration()](#is_valid_build_configuration)
     - [is\_valid\_framework()](#is_valid_framework)
-    - [is\_safe\_framework()](#is_safe_framework)
     - [is\_valid\_runtime()](#is_valid_runtime)
-    - [is\_safe\_runtime()](#is_safe_runtime)
-    - [validate\_runtime()](#validate_runtime)
     - [validate\_preprocessor\_symbols()](#validate_preprocessor_symbols)
-    - [is\_safe\_secret()](#is_safe_secret)
-    - [is\_valid\_percentage()](#is_valid_percentage)
-    - [is\_safe\_min\_coverage\_pct() / is\_safe\_max\_regression\_pct()](#is_safe_min_coverage_pct--is_safe_max_regression_pct)
+    - [is\_valid\_secret\_name()](#is_valid_secret_name)
+    - [is\_valid\_secret()](#is_valid_secret)
+    - [is\_valid\_min\_coverage\_pct() / is\_valid\_max\_regression\_pct()](#is_valid_min_coverage_pct--is_valid_max_regression_pct)
     - [is\_valid\_minverTagPrefix()](#is_valid_minvertagprefix)
-    - [is\_safe\_minverTagPrefix()](#is_safe_minvertagprefix)
     - [is\_valid\_minverPrereleaseId()](#is_valid_minverprereleaseid)
-    - [is\_safe\_minverPrereleaseId()](#is_safe_minverprereleaseid)
     - [escape\_ere()](#escape_ere)
     - [validate\_json\_schema()](#validate_json_schema)
   - [\_dump\_vars.sh](#_dump_varssh)
@@ -162,8 +162,7 @@
   - [\_git\_gh.sh](#_git_ghsh)
     - [is\_valid\_gh\_repo\_owner() / is\_valid\_gh\_repo\_name() / is\_valid\_gh\_repo\_full\_name() / is\_valid\_gh\_repo\_description()](#is_valid_gh_repo_owner--is_valid_gh_repo_name--is_valid_gh_repo_full_name--is_valid_gh_repo_description)
     - [validate\_gh\_repo\_owner() / validate\_gh\_repo\_name() / validate\_gh\_repo\_description()](#validate_gh_repo_owner--validate_gh_repo_name--validate_gh_repo_description)
-    - [execute\_gh\_with\_retry()](#execute_gh_with_retry)
-    - [execute\_gh\_api\_with\_retry()](#execute_gh_api_with_retry)
+    - [gh\_failure()](#gh_failure)
     - [get\_gh\_repo\_property()](#get_gh_repo_property)
     - [is\_repo\_state\_initialized()](#is_repo_state_initialized)
     - [initialize\_repo\_state()](#initialize_repo_state)
@@ -488,34 +487,9 @@ Tests if a string is a valid, simple filename (non-empty, no slashes, not `.`/`.
 
 Tests if a string is a syntactically valid path: non-empty and passing `pathchk`.
 
-### is_secret_name()
-
-Tests if a string is a valid GitHub secret name: letters, digits, and underscores only, not starting with a digit or with
-`GITHUB_` (in any case).
-
 ### is_secret()
 
 Tests if a string is non-empty and free of control characters.
-
-### is_build_configuration()
-
-Tests if a string is one of `$configurations_in_use` (case-sensitive).
-
-### is_visibility()
-
-Tests if a string is one of `$repo_visibilities` (case-sensitive).
-
-### is_gh_runner_os()
-
-Tests if a string is one of `$gh_runners_os_in_use`, the GitHub Actions runner labels in use.
-
-### is_framework()
-
-Tests if a string is one of `$frameworks_in_use`, the Target Framework Monikers (TFM) in use (empty included).
-
-### is_runtime()
-
-Tests if a string is one of `$runtimes_in_use`, the Runtime Identifiers (RID) in use (empty included).
 
 ### is_percentage()
 
@@ -775,11 +749,11 @@ validating each item with a caller-supplied function.
 
 ### is_valid_gh_runner_os()
 
-Validates that a string is one of the GitHub Actions runner labels in use, via `is_gh_runner_os`.
+Validates that a string is one of `$gh_runners_os_in_use`, the GitHub Actions runner labels in use.
 
 ### is_valid_visibility()
 
-Validates a GitHub repository visibility, via `is_visibility`. Callers lowercase a value typed by a person first.
+Validates that a string is one of `$repo_visibilities` (case-sensitive). Callers lowercase a value typed by a person first.
 
 ### is_valid_reason()
 
@@ -795,19 +769,15 @@ Validates a NuGet server moniker and resolves it into a display name and server 
 
 ### is_valid_build_configuration()
 
-Validates a build configuration name, via `is_build_configuration`.
+Validates that a string is one of `$configurations_in_use` (case-sensitive).
 
 ### is_valid_framework()
 
-Validates a Target Framework Moniker (TFM), via `is_framework`.
+Validates that a string is one of `$frameworks_in_use`, the Target Framework Monikers (TFM) in use (empty included).
 
 ### is_valid_runtime()
 
-Validates a Runtime Identifier (RID), via `is_runtime`.
-
-### validate_runtime()
-
-Lowercases a referenced RID in place and validates it via `is_valid_runtime`.
+Validates that a string is one of `$runtimes_in_use`, the Runtime Identifiers (RID) in use (empty included).
 
 ### validate_preprocessor_symbols()
 
@@ -815,7 +785,8 @@ Validates and reformats a space/comma/colon/semicolon-separated preprocessor-sym
 
 ### is_valid_secret_name()
 
-Validates a GitHub secret name, via `is_secret_name`.
+Validates a GitHub secret name: letters, digits, and underscores only, not starting with a digit or with `GITHUB_`
+(in any case).
 
 ### is_valid_secret()
 
