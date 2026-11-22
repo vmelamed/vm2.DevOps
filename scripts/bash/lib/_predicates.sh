@@ -38,9 +38,9 @@ declare -xr decimal_rex="$integer_rex(\.[0-9]*)?|(($integer_rex)?\.[0-9]+)"
 declare -xr bool_rex='(true|false)'
 declare -xr base64_char_rex='[A-Za-z0-9+/]'
 declare -xr varNameRex="[A-Za-z_][A-Za-z0-9_]*"
-declare -xr prereleaseLabelRex='[-0-9A-Za-z.]+'
 declare -xr minverTagPrefixRex='[0-9A-Za-z_]([-0-9A-Za-z._/]*[-A-Za-z_])?'
-declare -xr minverPrereleaseIdRex=$prereleaseLabelRex
+declare -xr minverPrereleaseIdentifierRex='([-0-9A-Za-z]*[-A-Za-z][-0-9A-Za-z]*|[1-9][0-9]*|0)'
+declare -xr minverPrereleaseIdRex="($minverPrereleaseIdentifierRex(\.$minverPrereleaseIdentifierRex)*)"
 
 declare -xr zero_regex="^$zero_rex\$"
 declare -xr natural_regex="^$natural_rex\$"
