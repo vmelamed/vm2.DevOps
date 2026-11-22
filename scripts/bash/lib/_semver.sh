@@ -45,11 +45,20 @@ fi
 declare -xr majorLabelRex='(0|[1-9][0-9]*)'
 declare -xr minorLabelRex='(0|[1-9][0-9]*)'
 declare -xr patchLabelRex='(0|[1-9][0-9]*)'
-declare -xr buildLabelRex='[-0-9A-Za-z.]+'
+declare -xr buildLabelRex='([-0-9A-Za-z.]+)'
+declare -xr prereleaseIdentifierRex='([-0-9A-Za-z]*[-A-Za-z][-0-9A-Za-z]*|[1-9][0-9]*)'
+declare -xr prereleaseLabelRex="($prereleaseIdentifierRex(\.$prereleaseIdentifierRex)*)"
 
 declare -xr semverReleaseRex="$majorLabelRex\\.$minorLabelRex\\.$patchLabelRex(\\+$buildLabelRex)?"
 declare -xr semverPrereleaseRex="$majorLabelRex\\.$minorLabelRex\\.$patchLabelRex(-$prereleaseLabelRex)(\\+$buildLabelRex)?"
 declare -xr semverRex="$majorLabelRex\\.$minorLabelRex\\.$patchLabelRex(-$prereleaseLabelRex)?(\\+$buildLabelRex)?"
+
+# semverRex components indexes in BASH_REMATCH
+declare -xri semver_major=1
+declare -xri semver_minor=2
+declare -xri semver_patch=3
+declare -xri semver_prerelease=5
+declare -xri semver_build=10
 
 # Regular expressions that test if a string is exactly a semantic version:
 declare -xr semverRegex="^$semverRex$"
@@ -138,13 +147,6 @@ function validate_minver_tag_components()
     [[ -z ${2:-} || $2 =~ $minverPrereleaseIdRegex ]]                           || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires optional argument 2, the MinVer prerelease identifier template, to match '$minverPrereleaseIdRegex' (provided '${2-<missing>}'). Did you pass a variable name instead of its value?"
     return "$_rc"
 }
-
-# semver components indexes in BASH_REMATCH
-declare -xri semver_major=1
-declare -xri semver_minor=2
-declare -xri semver_patch=3
-declare -xri semver_prerelease=4
-declare -xri semver_build=5
 
 declare -x success
 declare -x failure
@@ -279,7 +281,7 @@ function get_semver_prerelease()
                                                                                      return "$_rc"
                                                                                 }
 
-    printf "%s\n" "${BASH_REMATCH[$semver_prerelease]:1}"
+    printf "%s\n" "${BASH_REMATCH[$semver_prerelease]}"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -310,7 +312,7 @@ function get_semver_build()
     [[ $_semver =~ $semverRegex ]]                                              || { with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid Semantic Versioning 2.0.0 string (provided '${1-<missing>}')."
                                                                                      return "$_rc"
                                                                                 }
-    printf "%s\n" "${BASH_REMATCH[$semver_build]:1}"
+    printf "%s\n" "${BASH_REMATCH[$semver_build]}"
     return "$_rc"
 }
 

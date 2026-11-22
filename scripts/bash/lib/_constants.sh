@@ -145,14 +145,6 @@ declare -xr sources_of_truth_rex=$(IFS='|'; echo "${sources_of_truth[*]}")
 declare -xr default_sot="AddNewPackage"
 
 #-----------------------------------------------------------------------------------------------
-# @description Regular expression for validating NuGet server names or URLs.
-#    A valid NuGet server name must be either "nuget", "github", or a valid URL starting with
-#    "http://" or "https://" schema. This regex is used to validate NuGet server names or URLs
-#    passed as arguments to functions that expect a valid NuGet server name or URL.
-#-----------------------------------------------------------------------------------------------
-declare -xr nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
-
-#-----------------------------------------------------------------------------------------------
 # @description The default repository to which the packages will be pushed.
 #-----------------------------------------------------------------------------------------------
 declare -xr default_nuget_server="nuget"
@@ -272,6 +264,14 @@ declare -xra gh_apps_with_secrets=(
 declare -xr gh_apps_with_secrets_str=$(IFS=,; echo "${gh_apps_with_secrets[*]}")
 # shellcheck disable=SC2155
 declare -xr gh_apps_with_secrets_rex=$(IFS='|'; echo "${gh_apps_with_secrets[*]}")
+
+#-----------------------------------------------------------------------------------------------
+# @description Regular expression for validating NuGet server names or URLs.
+#    A valid NuGet server name must be either "nuget", "github", or a valid URL starting with
+#    "http://" or "https://" schema. This regex is used to validate NuGet server names or URLs
+#    passed as arguments to functions that expect a valid NuGet server name or URL.
+#-----------------------------------------------------------------------------------------------
+declare -xr nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
 
 # characters
 declare -xr secret_str='••••••'

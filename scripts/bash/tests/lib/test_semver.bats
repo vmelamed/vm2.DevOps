@@ -72,12 +72,18 @@ declare -gx semverRegex
     run --separate-stderr get_semver_prerelease "4.2.3-beta.5+b1"
     assert_success
     assert_output "beta.5"
+    run --separate-stderr get_semver_prerelease "4.2.3-beta.5.1+b1"
+    assert_success
+    assert_output "beta.5.1"
 }
 
 @test "get_semver_prerelease: strips only the separator hyphen, not hyphens inside the prerelease" {
     run --separate-stderr get_semver_prerelease "1.0.0-x-y.1"
     assert_success
     assert_output "x-y.1"
+    run --separate-stderr get_semver_prerelease "1.0.0-x-y.1.2.1bc"
+    assert_success
+    assert_output "x-y.1.2.1bc"
 }
 
 @test "get_semver_prerelease: outputs an empty value for a release, with or without build metadata" {
