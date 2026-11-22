@@ -126,27 +126,47 @@ declare BATS_TEST_TMPDIR
     assert_failure 11
 }
 
-# --- is_safe_path / is_safe_path / is_safe_existing_* ------------------------------------
+# --- is_valid_path / is_safe_path / is_safe_existing_* -----------------------------------------
 
-@test "is_safe_path: accepts a plain relative path, but not empty string" {
+@test "is_valid_path: accepts a syntactically valid path, even an unsafe one" {
+    run is_valid_path "some/relative/path.txt"
+    assert_success
+    run is_valid_path "../outside/the/tree"
+    assert_success
+}
+
+@test "is_valid_path: rejects an empty string with err_argument_value and an 'Invalid path' error" {
+    run is_valid_path ""
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid path ''"
+}
+
+@test "is_valid_path: called directly under 'set -u', reports instead of dying on an unbound variable" {
+    # regression: it once read its caller's local \$_path, which exists only when is_safe_path calls it
+    run bash -c "set -u; source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; is_valid_path ''"
+    assert_failure "$err_argument_value"
+    refute_output --partial "unbound variable"
+    assert_output --partial "Invalid path ''"
+}
+
+@test "is_safe_path: accepts a plain relative path" {
     run is_safe_path "some/relative/path.txt"
     assert_success
+}
+
+@test "is_safe_path: rejects an empty string as an invalid path (err_argument_value), not as an unsafe one" {
     run is_safe_path ""
-    assert_failure
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid path ''"
 }
 
 @test "is_safe_path: rejects traversal, absolute paths, and dangerous characters" {
     run is_safe_path "../etc/passwd"
-    assert_failure 11
+    assert_failure "$err_unsafe_argument"
     run is_safe_path "/etc/passwd"
-    assert_failure 11
+    assert_failure "$err_unsafe_argument"
     run is_safe_path 'foo;rm -rf /'
-    assert_failure 11
-}
-
-@test "is_safe_path: accepts a safe, syntactically valid path" {
-    run is_safe_path "some/relative/path.txt"
-    assert_success
+    assert_failure "$err_unsafe_argument"
 }
 
 @test "is_safe_existing_path: succeeds for an existing path, fails for a non-existent one" {
@@ -167,7 +187,7 @@ declare BATS_TEST_TMPDIR
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; cd '$lib_dir' && is_safe_existing_file core.sh"
     assert_success
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; cd '$lib_dir/..' && is_safe_existing_file lib"
-    assert_failure
+    assert_failure "$err_not_file"
 }
 
 # --- validate_json_array ------------------------------------------------------------------------
@@ -194,16 +214,82 @@ declare BATS_TEST_TMPDIR
     assert_failure "$err_unsafe_argument"
 }
 
-# --- is_valid_gh_runner_os -------------------------------------------------------------------------
+# --- allow-lists: runner OS, visibility, build configuration, framework, runtime -----------------
 
-@test "is_valid_gh_runner_os: accepts a known runner, rejects an unknown one" {
+@test "is_valid_gh_runner_os: accepts a known runner, rejects an unknown one with an 'Invalid runner OS' error" {
     run is_valid_gh_runner_os "ubuntu-latest"
     assert_success
+    assert_output ""
     run is_valid_gh_runner_os "not-a-real-runner"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid runner OS 'not-a-real-runner': use one of ubuntu-latest,"
+}
+
+@test "is_valid_gh_runner_os: rejects retired runners and a capitalized label" {
+    local runner
+    for runner in "ubuntu-20.04" "windows-2019" "Ubuntu-latest"; do
+        run is_valid_gh_runner_os "$runner"
+        assert_failure "$err_argument_value"
+        assert_output --partial "Invalid runner OS '$runner'"
+    done
+}
+
+@test "is_valid_visibility: accepts public and private, rejects any other value, capitalized ones included" {
+    run is_valid_visibility "public"
+    assert_success
+    assert_output ""
+    run is_valid_visibility "Public"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid repository visibility 'Public': use one of public,private."
+}
+
+@test "is_valid_build_configuration: accepts Debug and Release, rejects any other value, lowercase ones included" {
+    run is_valid_build_configuration "Release"
+    assert_success
+    assert_output ""
+    run is_valid_build_configuration "release"
+    assert_failure
+    assert_output --partial "Invalid build configuration 'release': use one of Debug,Release"
+}
+
+@test "is_valid_framework: accepts a TFM in use and empty, rejects any other value" {
+    run is_valid_framework ""
+    assert_success
+    run is_valid_framework "net10.0"
+    assert_success
+    run is_valid_framework "net8.0"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid Target Framework Moniker (TFM) 'net8.0': use one of"
+    run is_valid_framework "NET10.0"
     assert_failure "$err_argument_value"
 }
 
-# --- is_safe_reason ----------------------------------------------------------------------------
+@test "is_valid_runtime: accepts a RID in use and empty, rejects any other value, injection-shaped ones included" {
+    run is_valid_runtime ""
+    assert_success
+    run is_valid_runtime "linux-x64"
+    assert_success
+    run is_valid_runtime "linux-x64; rm -rf /"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid Runtime Identifier (RID) 'linux-x64; rm -rf /': use one of"
+    run is_valid_runtime "Linux-x64"
+    assert_failure "$err_argument_value"
+}
+
+# --- is_valid_reason / is_safe_reason ----------------------------------------------------------
+
+@test "is_valid_reason: checks only the length: accepts 200 characters, even command-like text" {
+    run is_valid_reason "$(printf 'a%.0s' {1..200})"
+    assert_success
+    run is_valid_reason "--force"
+    assert_success
+}
+
+@test "is_valid_reason: rejects a reason longer than 200 characters" {
+    run is_valid_reason "$(printf 'a%.0s' {1..201})"
+    assert_failure "$negative"
+    assert_output --partial "The reason is too long."
+}
 
 @test "is_safe_reason: accepts a normal sentence with spaces" {
     run is_safe_reason "Emergency hotfix release"
@@ -273,7 +359,32 @@ declare BATS_TEST_TMPDIR
     assert_failure "$err_argument_value"
 }
 
-# --- is_valid_secret ----------------------------------------------------------------------------
+# --- is_valid_secret_name / is_valid_secret -----------------------------------------------------
+
+@test "is_valid_secret_name: accepts valid secret names" {
+    local name
+    for name in "NUGET_API_KEY" "_private" "a1"; do
+        run is_valid_secret_name "$name"
+        assert_success
+        assert_output ""
+    done
+}
+
+@test "is_valid_secret_name: rejects a leading digit, a hyphen, empty, and 'GITHUB_' in any case" {
+    local name
+    for name in "1ABC" "MY-SECRET" "" "github_token" "GitHub_Pat"; do
+        run is_valid_secret_name "$name"
+        assert_failure "$err_argument_value"
+        assert_output --partial "Invalid secret name '$name'"
+    done
+}
+
+@test "is_valid_secret_name: rejects an invalid name with err_argument_value and an 'Invalid secret name' error" {
+    # regression: it once had no 'return "$_rc"', so it reported the error and still succeeded
+    run is_valid_secret_name "GITHUB_TOKEN"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid secret name 'GITHUB_TOKEN'"
+}
 
 @test "is_valid_secret: accepts a normal value, rejects control characters" {
     run is_valid_secret "s3cr3t"
@@ -282,15 +393,44 @@ declare BATS_TEST_TMPDIR
     assert_failure "$err_argument_value"
 }
 
+@test "is_valid_secret: never shows the rejected value in its error" {
+    run is_valid_secret "$(printf 'TopSecret\x01Value')"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid secret value"
+    refute_output --partial "TopSecret"
+}
+
 # --- percentage validation ---------------------------------------------------------------------
 
-@test "is_valid_min_coverage_pct / is_valid_max_regression_pct: accept valid percentages" {
+@test "is_valid_min_coverage_pct, is_valid_max_regression_pct: accept 0-100, reject anything else" {
     run is_valid_min_coverage_pct 80
     assert_success
     run is_valid_max_regression_pct 20
     assert_success
     run is_valid_min_coverage_pct 150
     assert_failure "$err_argument_type"
+    run is_valid_max_regression_pct 101
+    assert_failure "$err_argument_type"
+}
+
+# --- is_valid_minverTagPrefix / is_valid_minverPrereleaseId ------------------------------------
+
+@test "is_valid_minverTagPrefix: accepts 'v', rejects a prefix ending in a digit with an 'Invalid MinVer tag prefix' error" {
+    run is_valid_minverTagPrefix "v"
+    assert_success
+    run is_valid_minverTagPrefix "v1"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid MinVer tag prefix 'v1'"
+}
+
+@test "is_valid_minverPrereleaseId: accepts 'preview.0', rejects an invalid identifier, naming it a prerelease identifier" {
+    # regression: its texts once said "MinVer tag prefix" (copied from is_valid_minverTagPrefix)
+    run is_valid_minverPrereleaseId "preview.0"
+    assert_success
+    run is_valid_minverPrereleaseId "pre_view"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid MinVer prerelease identifier 'pre_view'"
+    refute_output --partial "tag prefix"
 }
 
 # --- escape_ere ----------------------------------------------------------------------------------

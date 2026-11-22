@@ -204,7 +204,7 @@ declare -xra actions_vars_order=(
 declare -xA actions_vars_validators=(
     # Build and Pack
     ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_minverPrereleaseId"
-    ["MINVERTAGPREFIX"]="validate_minver_tag_components"
+    ["MINVERTAGPREFIX"]="is_minverTagPrefix"
     # Test
     ["MIN_COVERAGE_PCT"]="is_percentage"
     # Benchmarks
