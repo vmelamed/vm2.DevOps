@@ -344,7 +344,7 @@ function __search_repo_dir()
                                                                                        "  - the name of a variable to receive the resolved directory path" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the search root, to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_valid_path "$2"                                          || bug "${FUNCNAME[0]}() requires argument 2, the directory name or relative path to find, to be valid path (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_path "$2"                                                || bug "${FUNCNAME[0]}() requires argument 2, the directory name or relative path to find, to be valid path (provided '${2-<missing>}')." -ec "$err_argument_value"
     [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3, the name of a variable to receive the resolved directory path, to be defined (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
@@ -456,8 +456,8 @@ function resolve_repo_root()
                                                                                        "  - the name of the variable to store the absolute path of the root of the Git repository containing the found directory" \
                                                                                        "  - the name of the variable to store the absolute path of the found directory" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_valid_path "$1"                                          || bug "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
-    [[ ! -v 2 || -z $2 ]] || is_valid_path "$2"                                 || bug "${FUNCNAME[0]}() requires argument 2, the path to a directory inside the vm2 repository working tree, to be a valid path (provided '${2-<missing>}')." -ec "$err_invalid_path"
+    [[ ! -v 1 ]] || is_path "$1"                                                || bug "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
+    [[ ! -v 2 || -z $2 ]] || is_path "$2"                                       || bug "${FUNCNAME[0]}() requires argument 2, the path to a directory inside the vm2 repository working tree, to be a valid path (provided '${2-<missing>}')." -ec "$err_invalid_path"
     [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable to store the absolute path of the root of the Git repository containing the found directory (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 4 ]] || is_variable "$4"                                            || bug "${FUNCNAME[0]}() requires argument 4 to be the name of a variable to store the absolute path of the sought directory (provided '${4-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
@@ -593,9 +593,9 @@ function get_vm2_sot_path()
                                                                                        "  - the name of a variable to store the absolute path of the path to the source of truth (SoT)" \
                                                                                        "  - the SoT directory name (optional, defaults to '$default_sot')" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_valid_path "$1"                                          || bug "$_get_vm2_sot_path_invalid_arg1" -ec "$err_invalid_path"
+    [[ ! -v 1 ]] || is_path "$1"                                                || bug "$_get_vm2_sot_path_invalid_arg1" -ec "$err_invalid_path"
     [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a declared variable that will store the absolute path of the path to the SoT shared content directory (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 3 ]] || is_valid_filename "$3"                                      || bug "${FUNCNAME[0]}() requires optional argument 3 to be the name of a source-of-truth (SoT) directory (provided '${3-<missing>}')." -ec "$err_invalid_path"
+    [[ ! -v 3 ]] || is_filename "$3"                                            || bug "${FUNCNAME[0]}() requires optional argument 3 to be the name of a source-of-truth (SoT) directory (provided '${3-<missing>}')." -ec "$err_invalid_path"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"

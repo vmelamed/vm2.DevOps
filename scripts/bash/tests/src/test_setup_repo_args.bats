@@ -365,7 +365,7 @@ _make_vm2_repos() {
              echo \"returned \$? with \$(get_errors) errors\""
     assert_output --partial "valid GitHub repository owner (provided '-bad-')"
     assert_output --partial "valid Git branch name (provided '..bad..')"
-    assert_output --partial "valid Git visibility (provided 'bogus')"
+    assert_output --partial "Invalid repository visibility 'bogus'"
     assert_output --partial "3 and 350 characters (provided 'ab')"
     assert_output --partial "returned 0 with 4 errors"
 }
@@ -438,6 +438,6 @@ _make_vm2_repos() {
              echo 'still running'"
     assert_failure
     assert_output --partial "valid Git branch name"
-    assert_output --partial "valid Git visibility (provided 'bogus')"
+    assert_output --partial "Invalid repository visibility 'bogus'"
     refute_output --partial "still running"
 }

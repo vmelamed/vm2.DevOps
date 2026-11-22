@@ -35,14 +35,12 @@ declare -x err_logic_error
 # vm2 core lib constants
 declare -x nugetServersRegex
 declare -x default_nuget_server
-declare -x build_config_regex
-declare -x tfm_regex
-declare -x rid_regex
-declare -x allowed_runners_os
-declare -x allowed_runners_os_str
-declare -x known_configurations
-declare -x known_tfms
-declare -x known_runtimes
+declare -x gh_runners_os_in_use
+declare -x gh_runners_os_in_use_str
+declare -x configurations_in_use_str
+declare -x frameworks_in_use_str
+declare -x runtimes_in_use_str
+declare -x repo_visibilities_str
 
 declare -rx dangerous_chars_regex=$'[;|&$`<>(){}\n\r]'
 declare -rx dangerous_chars_and_whitespaces_regex='[;|&$`<>(){}[:space:]]'
@@ -246,9 +244,9 @@ function is_safe_input()
 # @exitcode err_unsafe_argument=11: If the input is not safe.
 #
 # @example
-#   if is_safe_boolean "$reset_flag"; then echo "Valid boolean"; fi
+#   if is_valid_boolean "$reset_flag"; then echo "Valid boolean"; fi
 #-----------------------------------------------------------------------------------------------
-function is_safe_boolean()
+function is_valid_boolean()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the boolean value to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -268,9 +266,9 @@ function is_safe_boolean()
 # @exitcode err_unsafe_argument=11: If the input is not safe.
 #
 # @example
-#   if is_safe_integer "$count"; then echo "Valid integer"; fi
+#   if is_valid_integer "$count"; then echo "Valid integer"; fi
 #-----------------------------------------------------------------------------------------------
-function is_safe_integer()
+function is_valid_integer()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the integer value to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -281,10 +279,35 @@ function is_safe_integer()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates file paths to prevent directory traversal and dangerous patterns.
+# @description Validates that a string is a valid path (non-empty and passing `pathchk`). Depends
+#   on `is_path`. The path does not have to exist.
+#
+# @arg $1 string The path to test.
+#
+# @exitcode positive=0: If the path is valid.
+# @exitcode err_argument_value=4: If the string is not a valid path.
+#
+# @example
+#   if is_valid_path "config/settings.json"; then echo "Valid path"; fi
+#-----------------------------------------------------------------------------------------------
+function is_valid_path()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local -i _rc=$positive
+
+    # is it a valid path string
+    is_path "$1"                                                                || with_error _rc "$err_argument_value" "Invalid path '$1': it must be non-empty and pass 'pathchk'."
+    return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Validates that a string is a valid and safe path: guards against directory
+#   traversal and dangerous patterns. Depends on `is_valid_path`.
 #
 # Notes:
-#   - Empty strings are considered safe.
+#   - An empty string is not a valid path, hence not safe.
 #   - Relative paths are expected; absolute paths are considered unsafe.
 #   - Rejects paths containing `..` (traversal), a leading `/` (absolute path), or unsafe
 #     characters `$`, ````, `;`.
@@ -293,6 +316,7 @@ function is_safe_integer()
 # @arg $1 string The file path to test (should be relative).
 #
 # @exitcode positive=0: If the path is safe.
+# @exitcode err_argument_value=4: If the string is not a valid path.
 # @exitcode err_unsafe_argument=11: If the input is not safe.
 #
 # @example
@@ -306,8 +330,8 @@ function is_safe_path()
     local -i _rc=$positive
     local _path="$1"
 
-    # empty string is a "safe" path ("missing" maybe valid or invalid and requires more validation)
-    [[ -n "$_path" ]]                                                           || return "$_rc"
+    # is it a valid path string
+    is_valid_path "$_path"                                                      || _rc=$?
 
     # Reject paths with one or more of:
     #   directory traversal
@@ -320,45 +344,14 @@ function is_safe_path()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates file paths to prevent directory traversal and dangerous patterns and
-#   ensures that the path string is a valid path even if it does not exist.
-#
-# Notes:
-#   - Rejects paths containing `..` (traversal), a leading `/` (absolute path), or the
-#     characters `$`, ````, `;`.
-#   - Ensures the path is a valid path string, even if the file or directory does not exist.
-#
-# @arg $1 string The file path to test (should be relative).
-#
-# @exitcode positive=0: If the path is valid and safe.
-# @exitcode negative=1: If the path is not valid.
-# @exitcode err_unsafe_argument=11: If the input is not safe.
-#
-# @example
-#   if is_safe_valid_path "config/settings.json"; then echo "Safe path"; fi
-#-----------------------------------------------------------------------------------------------
-function is_safe_valid_path()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    local _path="$1"
-    local -i _rc=$positive
-
-    is_valid_path "$_path"                                                      || with_error _rc "$err_invalid_path" "The path '$_path' is not valid."
-    (( _rc != success )) || is_safe_path "$_path"                               || _rc=$?
-    return "$_rc"
-}
-
-#-----------------------------------------------------------------------------------------------
 # @description Validates that a path is safe and exists. Depends on `is_safe_path`.
 #
 # @arg $1 string The file or directory path to test.
 #
 # @exitcode positive=0: If the path is valid, safe, and exists.
-# @exitcode negative=1: If the path is invalid.
+# @exitcode err_argument_value=4: If the string is not a valid path.
 # @exitcode err_unsafe_argument=11: If the input is not safe.
-# @exitcode err_non_existent_path=19: If the path does not exist.
+# @exitcode err_non_existent_path=20: If the path does not exist.
 #
 # @example
 #   if is_safe_existing_path "$config_file"; then source "$config_file"; fi
@@ -371,7 +364,7 @@ function is_safe_existing_path()
     local -i _rc=$positive
     local _path="$1"
 
-    is_safe_valid_path "$_path"                                                 || return $?
+    is_safe_path "$_path"                                                       || return $?
     [[ -e "$_path" ]]                                                           || with_error _rc "$err_non_existent_path" "The path '$_path' does not exist."
     return "$_rc"
 }
@@ -383,7 +376,10 @@ function is_safe_existing_path()
 # @arg $1 string The directory path to test.
 #
 # @exitcode positive=0: If the path is safe, exists, and is a directory.
-# @exitcode negative=1: Otherwise.
+# @exitcode err_argument_value=4: If the string is not a valid path.
+# @exitcode err_unsafe_argument=11: If the input is not safe.
+# @exitcode err_non_existent_path=20: If the path does not exist.
+# @exitcode err_not_directory=17: If the path is not a directory.
 #
 # @example
 #   if is_safe_existing_directory "$build_dir"; then cd "$build_dir"; fi
@@ -408,7 +404,10 @@ function is_safe_existing_directory()
 # @arg $1 string The file path to test.
 #
 # @exitcode positive=0: If the path is safe, exists, and is a non-empty file.
-# @exitcode negative=1: Otherwise.
+# @exitcode err_argument_value=4: If the string is not a valid path.
+# @exitcode err_unsafe_argument=11: If the input is not safe.
+# @exitcode err_non_existent_path=20: If the path does not exist.
+# @exitcode err_not_file=16: If the path is not a file, or the file is empty.
 #
 # @example
 #   if is_safe_existing_file "$script"; then bash "$script"; fi
@@ -447,7 +446,7 @@ function is_safe_existing_file()
 #   array, a JSON string, or null.
 #
 # @example
-#   validate_json_array runners '["ubuntu-latest"]' is_safe_runner_os
+#   validate_json_array runners '["ubuntu-latest"]' is_valid_gh_runner_os
 #-----------------------------------------------------------------------------------------------
 function validate_json_array()
 {
@@ -511,33 +510,79 @@ function validate_json_array()
 #   runners.
 #
 # Notes:
-#   - The allowed values are defined in the `$allowed_runners_os` array.
+#   - The allowed values are defined in the `$gh_runners_os_in_use` array.
 #
 # @arg $1 string The runner OS name to validate.
 #
 # @exitcode positive=0: If the runner OS is valid.
-# @exitcode negative=1: If the runner OS is empty or not in the allowed list.
+# @exitcode err_argument_value=4: If the runner OS is not in the allowed list.
 #
 # @example
-#   if is_safe_runner_os "ubuntu-latest"; then echo "Valid runner"; fi
+#   if is_valid_gh_runner_os "ubuntu-latest"; then echo "Valid runner"; fi
 #-----------------------------------------------------------------------------------------------
-function is_safe_runner_os()
+function is_valid_gh_runner_os()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the runner OS to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    local _runner_os="$1"
     local -i _rc=$positive
 
-    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    is_safe_input "$_runner_os" &&
-    is_in "$_runner_os" "${allowed_runners_os[@]}"                              || with_error _rc "$err_argument_value" "The runner OS '$_runner_os' is not allowed. Valid options: $allowed_runners_os_str."
+    is_gh_runner_os "$1"                                                        || with_error _rc "$err_argument_value" "Invalid runner OS '$1': use one of $gh_runners_os_in_use_str."
+    return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Validates a GitHub repository visibility. Depends on `is_visibility`. The match is
+#   case-sensitive: callers that take the value from a person lowercase it first.
+#
+# @arg $1 string The visibility to validate.
+#
+# @exitcode positive=0: If the visibility is valid.
+# @exitcode err_argument_value=4: If the visibility is not one of `$repo_visibilities`.
+#
+# @example
+#   if is_valid_visibility "private"; then echo "Valid visibility"; fi
+#-----------------------------------------------------------------------------------------------
+function is_valid_visibility()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a visibility." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+    local -i _rc=$success
+
+    is_visibility "$1"                                                          || with_error _rc "$err_argument_value" "Invalid repository visibility '$1': use one of $repo_visibilities_str."
+    return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Validates a "reason" text input for length constraints.
+#
+# Notes:
+#   - Maximum length is 200 characters.
+#
+# @arg $1 string The reason text to validate.
+#
+# @exitcode positive=0: If the reason is valid.
+# @exitcode negative=1: If the reason is too long.
+#
+# @example
+#   if is_valid_reason "$user_reason"; then log_reason "$user_reason"; fi
+#-----------------------------------------------------------------------------------------------
+function is_valid_reason()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the reason text to test." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local _max_length=200
+    local -i _rc=$positive
+
+    # Check length
+    (( ${#1} <= _max_length ))                                                  || with_error _rc "$err_argument_value" "The reason is too long. Maximum length is $_max_length characters."
     (( _rc == positive ))
 }
 
 #-----------------------------------------------------------------------------------------------
 # @description Validates a "reason" text input for safety and length constraints. Depends on
-#   `is_safe_input`.
+#   `is_valid_reason` and `is_safe_input`.
 #
 # Notes:
 #   - Maximum length is 200 characters.
@@ -558,14 +603,12 @@ function is_safe_reason()
                                                                                 exit_if_has_bugs
 
     local _reason="$1"
-    local _max_length=200
     local -i _rc=$positive
 
-    # Allow spaces but reject dangerous shell meta-characters
-    is_safe_input "$_reason" true                                               || _rc="$negative"
+    is_valid_reason "$_reason"                                                  || return $?
 
-    # Check length
-    (( ${#_reason} <= _max_length ))                                            || with_error _rc "$err_argument_value" "The reason is too long. Maximum length is $_max_length characters."
+    # Allow spaces but reject dangerous shell meta-characters
+    is_safe_input "$_reason" true                                               || return $?
 
     # Reject if it looks like a command (starts with -, /, .)
     [[ ! "$_reason" =~ ^[-/.] ]]                                                || with_error _rc "$err_unsafe_argument" "The reason '$_reason' appears to be a command or contains unsafe characters."
@@ -638,39 +681,36 @@ function validate_nuget_server()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates that a string is a valid build configuration name. Depends on
-#   `is_valid_configuration`.
+# @description Validates a build configuration name. Depends on `is_build_configuration`.
 #
 # Notes:
-#   - Must match the pattern `[A-Za-z_][A-Za-z0-9_]*` (a valid C-style identifier).
+#   - Must be one of `$configurations_in_use` (case-sensitive).
 #
 # @arg $1 string The configuration name to validate.
 #
 # @exitcode positive=0: If the configuration name is valid.
-# @exitcode err_argument_value=1: If the configuration name is invalid.
+# @exitcode negative=1: If the configuration name is invalid.
 #
 # @example
-#   if is_safe_configuration "$build_config"; then echo "Valid config"; fi
+#   if is_valid_build_configuration "$build_config"; then echo "Valid config"; fi
 #-----------------------------------------------------------------------------------------------
-function is_safe_configuration()
+function is_valid_build_configuration()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the configuration value to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc=$positive
 
-    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    is_safe_input "$1" &&
-    is_valid_configuration "$1"                                                 || with_error _rc "$err_argument_value" "The configuration '$1' is not valid."
-    (( _rc != positive )) || [[ -z $1 ]] ||
-                             is_in_i "$1" "${known_configurations[@]}"          || warning "The configuration '$1' is not among the known configurations: ${known_configurations[*]}." -ec "$err_argument_value"
+    is_build_configuration "$1"                                                 || with_error _rc "$err_argument_value" "Invalid build configuration '$1': use one of $configurations_in_use_str."
 
     (( _rc == success ))
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates that a Target Framework Moniker (TFM) is a valid identifier. Depends
-#   on `is_valid_framework`.
+# @description Validates a Target Framework Moniker (TFM). Depends on `is_framework`.
+#
+# Notes:
+#   - Must be one of `$frameworks_in_use` (case-sensitive); empty means "from the project".
 #
 # @arg $1 string The TFM to validate.
 #
@@ -678,26 +718,24 @@ function is_safe_configuration()
 # @exitcode err_argument_value=4: If the TFM is invalid.
 #
 # @example
-#   if is_safe_framework "$framework"; then echo "Valid TFM"; fi
+#   if is_valid_framework "$framework"; then echo "Valid TFM"; fi
 #-----------------------------------------------------------------------------------------------
-function is_safe_framework()
+function is_valid_framework()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the Target Framework Moniker (TFM) value to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc=$positive
 
-    is_valid_framework "$1"                                                     || with_error _rc "$err_argument_value" "The  Target Framework Moniker (TFM) '$1' is not valid."
-    (( _rc != positive )) || is_in "$1" "${known_tfms[@]}"                      || warning "The Target Framework Moniker (TFM) '$1' is not among the known frameworks: ${known_tfms[*]}." -ec "$err_argument_value"
-
+    is_framework "$1"                                                           || with_error _rc "$err_argument_value" "Invalid Target Framework Moniker (TFM) '$1': use one of $frameworks_in_use_str."
     return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates that a Runtime Identifier (RID) is a valid identifier. Depends on
-#   `is_valid_runtime`. If the RID is valid but not one of `$known_runtimes`, issues a warning
-#   (not an error) rather than failing, so an unrecognized-but-well-formed RID is still
-#   accepted.
+# @description Validates a Runtime Identifier (RID). Depends on `is_runtime`.
+#
+# Notes:
+#   - Must be one of `$runtimes_in_use` (case-sensitive); empty means "portable, no RID".
 #
 # @arg $1 string The Runtime Identifier (RID) to validate.
 #
@@ -705,46 +743,17 @@ function is_safe_framework()
 # @exitcode err_argument_value=4: If the RID is invalid.
 #
 # @example
-#   if is_safe_runtime "$runtime"; then echo "Valid RID"; fi
+#   if is_valid_runtime "$runtime"; then echo "Valid RID"; fi
 #-----------------------------------------------------------------------------------------------
-function is_safe_runtime()
+function is_valid_runtime()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the Runtime Identifier (RID) value to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc=$positive
 
-    is_valid_runtime "$1"                                                       || with_error _rc "$err_argument_value" "The  Runtime Identifier (RID) '$1' is not valid."
-    (( _rc != positive )) || is_in "$1" "${known_runtimes[@]}"                  || warning "The Runtime Identifier (RID) '$1' is not among the known runtimes: ${known_runtimes[*]}." -ec "$err_argument_value"
+    is_runtime "$1"                                                             || with_error _rc "$err_argument_value" "Invalid Runtime Identifier (RID) '$1': use one of $runtimes_in_use_str."
     return "$_rc"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Lowercases the referenced Runtime Identifier (RID) in place and validates that
-#   it is safe to use, via `is_safe_runtime()`.
-#
-# @arg $1 nameref to a variable containing the Runtime Identifier (RID) to validate.
-#
-# @exitcode success=0: The Runtime Identifier (RID) was lowercased and found safe.
-# @exitcode N propagated from `is_safe_runtime()` (e.g. `err_argument_value`) if the lowercased
-#   RID is not safe.
-#-----------------------------------------------------------------------------------------------
-function validate_runtime()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the Runtime Identifier (RID) variable to validate." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a defined variable that will store the normalized Runtime Identifier (RID) (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-                                                                                exit_if_has_bugs
-
-    local -n __rid="$1"
-
-    # since `_rid` is a nameref (`local -n`), `${!_rid}` uses bash's nameref-specific
-    # indirection rule and expands to the *name* of the variable `_rid` references (i.e.
-    # the original `$1`), not a second round of value-based indirection. That is exactly the
-    # variable-name argument `trim_var()` expects, so this correctly trims the caller's
-    # variable in place.
-    __rid="${__rid,,}"
-    trim_var "${!__rid}"
-    is_safe_runtime "$__rid" || return $?
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -807,28 +816,47 @@ function validate_preprocessor_symbols()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks whether a candidate secret value is safe to send to the GitHub API --
-# i.e. it contains no control characters.
+# @description Validates a GitHub secret name: contains only alphanumeric characters and
+#   underscores, starts with a letter or underscore, and does not start case-insensitively with
+#   'GITHUB_'. Depends on `is_secret_name`.
 #
-# @arg $1 string Candidate secret value to validate.
+# @arg $1 string Candidate secret name to validate.
 #
-# @exitcode positive=0: The value is non-empty and contains no control characters.
-# @exitcode err_argument_value=4: The value is empty, or contains at least one control
-#   character.
+# @exitcode positive=0: The secret name is valid.
+# @exitcode err_argument_value=4: The value is not a valid name of a GitHub Actions secret.
 #-----------------------------------------------------------------------------------------------
-function is_safe_secret()
+function is_valid_secret_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the NAME of the variable containing the secret to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub secret name to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
-
-    is_valid_secret "$1"                                                        || with_error _rc "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret value, to be non-empty and to contain no control characters."
+    is_secret_name "$1"                                                         || with_error _rc "$err_argument_value" "Invalid secret name '$1': use only letters, digits, and underscores; do not start with a digit or with 'GITHUB_'."
     return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates minimum coverage percentage input. Depends on `is_valid_percentage`.
+# @description Validates a secret value before it is sent to the GitHub API: it must be non-empty
+#   and contain no control characters. Depends on `is_secret`. The error never shows the value.
+#
+# @arg $1 string Candidate secret value to validate.
+#
+# @exitcode positive=0: The value is non-empty and contains no control characters.
+# @exitcode err_argument_value=4: The value is empty, or contains at least one control character.
+#-----------------------------------------------------------------------------------------------
+function is_valid_secret()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the secret value to test." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local -i _rc=$success
+
+    is_secret "$1"                                                              || with_error _rc "$err_argument_value" "Invalid secret value: it must be non-empty and contain no control characters."
+    return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Validates minimum coverage percentage input. Depends on `is_percentage`.
 #
 # Notes:
 #   - Must be an integer between 0 and 100, inclusive.
@@ -836,24 +864,23 @@ function is_safe_secret()
 # @arg $1 string The minimum coverage percentage to validate.
 #
 # @exitcode positive=0: If the percentage is valid.
-# @exitcode negative=1: If the percentage is invalid.
+# @exitcode err_argument_type: 3 the string is not a valid maximum regression percentage
 #
 # @example
-#   if is_safe_min_coverage_pct "80"; then echo "Valid coverage percentage"; fi
+#   if is_valid_min_coverage_pct "80"; then echo "Valid coverage percentage"; fi
 #-----------------------------------------------------------------------------------------------
-function is_safe_min_coverage_pct()
+function is_valid_min_coverage_pct()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc=$positive
 
-    is_valid_percentage "$1"                                                    || with_error _rc "$err_argument_type" "The min coverage percentage '$1' must be an integer number between 0 and 100."
-    (( _rc == positive ))
+    is_percentage "$1"                                                          || with_error _rc "$err_argument_type" "The min coverage percentage '$1' must be an integer number between 0 and 100."
+    return "$_rc"
 }
 #-----------------------------------------------------------------------------------------------
-# @description Validates maximum regression percentage input. Depends on
-#    `is_valid_percentage`.
+# @description Validates maximum regression percentage input. Depends on `is_percentage`.
 #
 # Notes:
 #   - Must be an integer between 0 and 100, inclusive.
@@ -861,73 +888,71 @@ function is_safe_min_coverage_pct()
 # @arg $1 string The maximum regression percentage to validate.
 #
 # @exitcode positive=0: If the percentage is valid.
-# @exitcode negative=1: If the percentage is invalid.
+# @exitcode err_argument_type: 3 the string is not a valid maximum regression percentage
 #
 # @example
-#   if is_safe_max_regression_pct "10"; then echo "Valid regression percentage"; fi
+#   if is_valid_max_regression_pct "10"; then echo "Valid regression percentage"; fi
 #-----------------------------------------------------------------------------------------------
-function is_safe_max_regression_pct()
+function is_valid_max_regression_pct()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc=$positive
 
-    is_valid_percentage "$1"                                                    || with_error _rc "$err_argument_value" "The max regression percentage '$1' must be an integer number between 0 and 100."
-    (( _rc == positive ))
+    is_percentage "$1"                                                          || with_error _rc "$err_argument_value" "The max regression percentage '$1' must be an integer number between 0 and 100."
+    return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates that a MinVer Git tag prefix is safe and well-formed. Delegates to
-#   `is_valid_minverTagPrefix`.
+# @description Validates that a MinVer Git tag prefix is safe and well-formed.
 #
 # Notes:
-#   - Must match `$minverTagPrefixRegex` (see `is_valid_minverTagPrefix`).
+#   - Must match `$minverTagPrefixRegex` (see `is_minverTagPrefix`).
 #
 # @arg $1 string The MinVer tag prefix to validate.
 #
 # @exitcode positive=0: If the tag prefix is valid.
-# @exitcode negative=1: If the tag prefix is invalid.
+# @exitcode err_argument_value: 4 the string is not a valid MinVer tag prefix
 #
 # @example
-#   if is_safe_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
+#   if is_valid_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
 #-----------------------------------------------------------------------------------------------
-function is_safe_minverTagPrefix()
+function is_valid_minverTagPrefix()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the MinVer tag prefix to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc=$positive
 
-    is_valid_minverTagPrefix "$@"                                               || with_error _rc "$err_argument_value" "The MinVer tag prefix '$1' is not valid."
-    (( _rc == positive ))
+    is_minverTagPrefix "$@"                                                     || with_error _rc "$err_argument_value" "The MinVer tag prefix '$1' is not valid."
+    return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates the MinVer prerelease identifier format. Delegates to
-#   `is_valid_minverPrereleaseId`.
+# @description Validates that a string is in MinVer prerelease identifier format (semver
+#   prerelease).
 #
 # Notes:
-#   - Must match `$minverPrereleaseIdRegex` (the same as the SemVer prerelease label format).
+#   - Must match `$minverPrereleaseIdRegex` (see `is_minverTagPrefix`).
 #
-# @arg $1 string The MinVer prerelease ID to validate.
+# @arg $1 string The prerelease identifier tag prefix to validate.
 #
-# @exitcode positive=0: If the prerelease ID is valid.
-# @exitcode negative=1: If the prerelease ID is invalid.
+# @exitcode positive=0: If the prerelease Id is valid.
+# @exitcode err_argument_value: 4 the string is not a valid MinVer prerelease identifier
 #
 # @example
-#   if is_safe_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
+#   if is_valid_minverPrereleaseId "v"; then echo "Valid tag prefix"; fi
 #-----------------------------------------------------------------------------------------------
-function is_safe_minverPrereleaseId()
+function is_valid_minverPrereleaseId()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the MinVer prerelease ID to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the prerelease identifier to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc=$positive
 
-    is_valid_minverPrereleaseId "$@"                                            || with_error _rc "$err_argument_value" "The prerelease ID '$1' is not valid."
-
-    (( _rc == positive ))
+    is_minverPrereleaseId "$@"                                                  || with_error _rc "$err_argument_value" "The prerelease identifier prefix '$1' is not valid."
+    return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -980,8 +1005,8 @@ function validate_json_schema()
                                                                                        "  - the JSON file to validate" \
                                                                                        "  - the JSON Schema file to validate against" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_valid_path "$1"                                          || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')." -ec "$err_not_file"
-    [[ ! -v 2 ]] || is_valid_path "$2"                                          || bug "${FUNCNAME[0]}() requires argument 2 to be a valid path (provided '${2-<missing>}')." -ec "$err_not_file"
+    [[ ! -v 1 ]] || is_path "$1"                                                || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')." -ec "$err_not_file"
+    [[ ! -v 2 ]] || is_path "$2"                                                || bug "${FUNCNAME[0]}() requires argument 2 to be a valid path (provided '${2-<missing>}')." -ec "$err_not_file"
                                                                                 exit_if_has_bugs
 
     local _json_file="$1"

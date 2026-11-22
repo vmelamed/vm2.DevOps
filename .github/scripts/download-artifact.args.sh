@@ -112,14 +112,14 @@ function resolve_arguments()
     [[ -n "$artifact_name" ]]                                                   || error "The name of the artifact to download must be specified." -ec "$err_missing_argument"
     is_safe_input "$artifact_name"                                              || true
 
-    [[ -z "$artifacts" ]] || is_safe_valid_path "$artifacts"                    || true
+    [[ -z "$artifacts" ]] || is_safe_path "$artifacts"                          || true
     [[ -n "$artifacts" ]]                                                       || error "The directory to download the artifact to must be specified." -ec "$err_missing_argument"
 
     is_safe_input "$repository"                                                 || true
     is_safe_input "$workflow_id"                                                || true
     is_safe_input "$workflow_name"                                              || true
-    is_safe_path "$workflow_path"                                               || true
-    [[ -z "$workflow_id" ]] || is_natural "$workflow_id"                        || error "The specified workflow identifier '$workflow_id' is not valid." -ec "$err_argument_type"
+    [[ -z $workflow_path ]] || is_safe_path "$workflow_path"                    || true
+    [[ -z $workflow_id ]] || is_natural "$workflow_id"                          || error "The specified workflow identifier '$workflow_id' is not valid." -ec "$err_argument_type"
 
     readonly artifact_name
     readonly artifacts

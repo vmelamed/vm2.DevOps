@@ -5,7 +5,7 @@
 # Characterization tests for scripts/bash/src/setup-repo.defaults.sh, as it behaves TODAY.
 #
 # Most of this file is data tables (default settings, rulesets, secrets, variables) rather than
-# logic, so besides the one real function (is_valid_nuget_server, in _sanitize.sh but exercised
+# logic, so besides the one real function (is_nuget_server, in _sanitize.sh but exercised
 # here via the NUGET_SERVER validator table entry), these tests also assert on internal
 # consistency between a table and its companion "*_order" display-order array -- exactly the
 # kind of silent drift (a key renamed/added/removed in one but not the other) that is invisible
@@ -36,28 +36,28 @@ _sr() {
 }
 
 # =====================================================================================
-# is_valid_nuget_server()
+# is_nuget_server()
 # =====================================================================================
 
-@test "is_valid_nuget_server: bug-exits with the wrong argument count" {
-    run _sr "is_valid_nuget_server"
+@test "is_nuget_server: bug-exits with the wrong argument count" {
+    run _sr "is_nuget_server"
     assert_failure "$err_invalid_arguments"
 }
 
-@test "is_valid_nuget_server: returns negative for a malformed server moniker" {
-    run _sr "is_valid_nuget_server bogus"
+@test "is_nuget_server: returns negative for a malformed server moniker" {
+    run _sr "is_nuget_server bogus"
     assert_failure "$failure"
 }
 
-@test "is_valid_nuget_server: succeeds (returns positive) for 'nuget' and 'github'" {
-    run _sr "is_valid_nuget_server nuget"
+@test "is_nuget_server: succeeds (returns positive) for 'nuget' and 'github'" {
+    run _sr "is_nuget_server nuget"
     assert_success
-    run _sr "is_valid_nuget_server github"
+    run _sr "is_nuget_server github"
     assert_success
 }
 
-@test "is_valid_nuget_server: succeeds for a well-formed https:// custom server URL" {
-    run _sr "is_valid_nuget_server https://example.com/v3/index.json"
+@test "is_nuget_server: succeeds for a well-formed https:// custom server URL" {
+    run _sr "is_nuget_server https://example.com/v3/index.json"
     assert_success
 }
 

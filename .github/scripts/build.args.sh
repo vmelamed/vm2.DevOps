@@ -87,7 +87,7 @@ function resolve_arguments()
         trace "Auto-detected build project: $build_project"
     fi
 
-    is_safe_valid_path "$build_project"                                         || true
+    is_safe_path "$build_project"                                               || true
     sanitize_common_dotnet_args "$build_project"
 
     readonly build_project

@@ -107,7 +107,7 @@ function resolve_arguments()
     # usually set from CLI arguments, environment variables, or defaults
     is_safe_existing_file "$package_project"                                    || true
     [[ $package_project == *.csproj ]]                                          || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
-    is_safe_boolean "$build"                                                    || true
+    is_valid_boolean "$build"                                                   || true
     is_safe_reason "$reason"                                                    || true
     sanitize_common_dotnet_args "$package_project"
 

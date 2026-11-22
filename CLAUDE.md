@@ -198,7 +198,7 @@ All core library files live in `scripts/bash/lib/` and are sourced by scripts th
 | `_core_args.sh`        | Common argument parsing to initialize core state                 |
 | `_predicates.sh`       | Boolean checks (`is_array`, `is_positive`, etc.)                 |
 | `_semver.sh`           | Semantic versioning utilities                                    |
-| `_sanitize.sh`         | Input validation (`is_safe_path`, `is_safe_configuration`, etc.) |
+| `_sanitize.sh`         | Input validation (`is_safe_path`, `is_valid_framework`, etc.)    |
 | `_dump_vars.sh`        | Dumps the values of bash variables in a tabular format           |
 | `_user.sh`             | User interface primitives                                        |
 | `_git.sh`              | Git operations (plain git, no hosting service)                   |

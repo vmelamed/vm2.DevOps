@@ -149,7 +149,7 @@ _run_validate_input() {
         --quiet
     assert_failure
     assert_output --partial "The path 'does-not-exist.csproj' does not exist"
-    assert_output --partial "The runner OS 'bogus-os' is not allowed"
+    assert_output --partial "Invalid runner OS 'bogus-os'"
     assert_output --partial "max-gen1-collects must be a non-negative integer"
     assert_output --partial "5 error(s) encountered"
 }

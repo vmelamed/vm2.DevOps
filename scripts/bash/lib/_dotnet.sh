@@ -206,7 +206,7 @@ function dotnet_build()
                                                                                        "  - name of an associative array to receive the build information (optional if this is the last argument)" \
                                                                                        "  - additional arguments to pass to 'dotnet build' (optional, if any are present - requires argument 2)" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_valid_path "$1"                                          || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path to an existing file with a suffix .csproj or .slnx or .sln (provided '${1-<missing>}')." -ec "$err_not_file"
+    [[ ! -v 1 ]] || is_path "$1"                                                || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path to an existing file with a suffix .csproj or .slnx or .sln (provided '${1-<missing>}')." -ec "$err_not_file"
     [[ ! -v 2 || -z $2 ]] || is_associative_array "$2"                          || bug "${FUNCNAME[0]}() requires optional argument 2 to name an associative array that will receive the build information (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
@@ -310,7 +310,7 @@ function dotnet_pack()
                                                                                        "  - package release notes (can be empty string)" \
                                                                                        "  - nameref to an associative array variable that will store the properties of the produced packages" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_valid_path "$1"                                          || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path to a file with a suffix .csproj (provided '${1-<missing>}')." -ec "$err_not_file"
+    [[ ! -v 1 ]] || is_path "$1"                                                || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path to a file with a suffix .csproj (provided '${1-<missing>}')." -ec "$err_not_file"
     [[ ! -v 3 || -z $3 ]] || is_associative_array "$3"                          || bug "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 

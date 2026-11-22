@@ -203,17 +203,17 @@ declare -xra actions_vars_order=(
 
 declare -xA actions_vars_validators=(
     # Build and Pack
-    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_valid_minverPrereleaseId"
+    ["MINVERDEFAULTPRERELEASEIDENTIFIERS"]="is_minverPrereleaseId"
     ["MINVERTAGPREFIX"]="validate_minver_tag_components"
     # Test
-    ["MIN_COVERAGE_PCT"]="is_valid_percentage"
+    ["MIN_COVERAGE_PCT"]="is_percentage"
     # Benchmarks
-    ["MAX_REGRESSION_PCT"]="is_valid_percentage"
+    ["MAX_REGRESSION_PCT"]="is_percentage"
     ["MAX_GEN1_COLLECTS"]="is_non_negative"
     ["MAX_GEN2_COLLECTS"]="is_non_negative"
     ["RESET_BENCHMARK_THRESHOLDS"]="is_boolean"
     # NuGet
-    ["NUGET_SERVER"]="is_valid_nuget_server"
+    ["NUGET_SERVER"]="is_nuget_server"
     ["NUGET_USERNAME"]="is_safe_input"
     # Trace
     ["VERBOSE"]="is_boolean"
@@ -481,7 +481,7 @@ function validate_app_default_secrets()
 #-----------------------------------------------------------------------------------------------
 # @description Gets the default data for one application's GitHub secrets: a placeholder
 #   default value ('secret_placeholder=$secret_str') for each secret name listed in
-#   '<app>_secrets_order', the display order itself, and (optionally) 'is_valid_secret' as the
+#   '<app>_secrets_order', the display order itself, and (optionally) 'is_secret' as the
 #   validator for every secret. For 'actions', 'NUGET_API_KEY' is skipped entirely when the
 #   current '$nuget_server' is 'nuget' or 'github' -- neither needs a stored API key secret
 #   (trusted publishing for nuget.org, the caller's token for GitHub Packages).
@@ -492,7 +492,7 @@ function validate_app_default_secrets()
 #   placeholder values.
 # @arg $3 string __secrets_order - name of an indexed array to receive the secrets' display
 #   order.
-# @arg $4 string (optional) name of an associative array to receive 'is_valid_secret' as every
+# @arg $4 string (optional) name of an associative array to receive 'is_secret' as every
 #   secret's validation function.
 #
 # @exitcode success=0: Always (the output arrays were populated, or left empty if '<app>_secrets_order' is empty).
@@ -549,7 +549,7 @@ function get_secrets_defaults()
         local -n __secrets_validators=$4
 
         for _secret in "${_app_secrets_order[@]}"; do
-            __secrets_validators[$_secret]=is_valid_secret
+            __secrets_validators[$_secret]=is_secret
         done
     fi
 }

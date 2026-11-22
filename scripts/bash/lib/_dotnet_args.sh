@@ -195,9 +195,9 @@ function sanitize_common_dotnet_args()
         [[ ! -v gh_nuget_password || -z $gh_nuget_password ]]                   || error "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty." -ec "$err_argument_value"
     }
 
-    is_safe_configuration "$configuration"                                      || true
-    is_safe_framework "$framework"                                              || true
-    is_safe_runtime "$runtime"                                                  || true
+    is_valid_build_configuration "$configuration"                               || true
+    is_valid_framework "$framework"                                             || true
+    is_valid_runtime "$runtime"                                                 || true
     # $artifacts is always resolved to a concrete, absolute path here -- this is a documented
     # contract (see --artifacts-path's own help text above: "...or the default 'artifacts'"),
     # and build.sh/pack.sh/run-tests.sh/run-benchmarks.sh genuinely need a concrete, resolved
@@ -206,9 +206,9 @@ function sanitize_common_dotnet_args()
     # -property:ArtifactsPath= override. (validate-input.sh, the one caller that doesn't want
     # that override forced downstream, never actually forwards this resolved value to any
     # dotnet invocation in the first place, so there's nothing to protect there.)
-    [[ -z $artifacts ]] || is_safe_valid_path "$artifacts"                      || true
-    is_safe_existing_path "$_project" &&
-        get_artifacts_path "$_project" artifacts                                || true
+    [[ -z $artifacts ]] || is_safe_path "$artifacts"                            || true
+    is_safe_existing_path "$_project" && get_artifacts_path "$_project" artifacts \
+                                                                                || true
 
     # freeze the common dotnet arguments -- `readonly` (a POSIX special builtin), not `declare
     # -r`, is required here: this runs inside a function body, and `declare -r` without `-g`

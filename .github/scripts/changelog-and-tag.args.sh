@@ -107,7 +107,7 @@ function resolve_arguments()
         error "Tag '$tag' is not a valid semver release or prerelease tag." -ec "$err_argument_value"
     fi
 
-    is_safe_boolean "$needs_empty_commit"                                       || true
+    is_valid_boolean "$needs_empty_commit"                                      || true
     is_safe_reason "$reason"                                                    || true
 
     readonly tag

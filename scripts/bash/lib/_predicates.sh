@@ -24,8 +24,16 @@ declare -x err_invalid_nameref
 
 # vm2 core lib constants
 declare -x vm2_repositories
+declare -x repo_visibilities
+declare -x gh_runners_os_in_use
+declare -x configurations_in_use
+declare -x frameworks_in_use
+declare -x runtimes_in_use
 
 declare -x nugetServersRegex
+
+# vm2 core lib variables
+declare -x _ignore
 
 declare -xr zero_rex='[+-]?0'
 declare -xr natural_rex='[1-9][0-9]*'
@@ -35,9 +43,6 @@ declare -xr integer_rex="[+-]?(0|$natural_rex)"
 declare -xr decimal_rex="$integer_rex(\.[0-9]*)?|(($integer_rex)?\.[0-9]+)"
 declare -xr bool_rex='(true|false)'
 declare -xr base64_char_rex='[A-Za-z0-9+/]'
-declare -xr build_config_rex="^([A-Za-z_][A-Za-z0-9_]*)?$"
-declare -xr tfm_rex="(net[1-9][0-9]*\.[0-9]+(-([a-z]+)([1-9][0-9.]*)?)?|[[:space:]]*)"
-declare -xr rid_rex="(([a-z][a-z-]*[a-z])((\.[1-9][0-9]*)*)(-[a-z][0-9a-z]*)?(-[.0-9a-z]+)?|[[:space:]]*)"
 declare -xr varNameRex="[A-Za-z_][A-Za-z0-9_]*"
 declare -xr prereleaseLabelRex='[-0-9A-Za-z.]+'
 declare -xr minverTagPrefixRex='[0-9A-Za-z_]([-0-9A-Za-z._/]*[-A-Za-z_])?'
@@ -52,47 +57,11 @@ declare -xr non_positive_regex="^($negative_rex|$zero_rex)\$"
 declare -xr integer_regex="^$integer_rex\$"
 declare -xr decimal_regex="^($decimal_rex)\$"
 declare -xr bool_regex="^$bool_rex\$"
-declare -xr build_config_regex="^$build_config_rex\$"
-declare -xr tfm_regex="^$tfm_rex\$"
-declare -xr rid_regex="^$rid_rex\$"
 declare -xr varNameRegex="^$varNameRex\$"
 declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
 declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
 
 declare -xr base64_regex="^($base64_char_rex{4})*($base64_char_rex{3}=|$base64_char_rex{2}==)?\$"
-
-declare -xra known_configurations=(
-    Debug
-    Release
-)
-# shellcheck disable=SC2155
-declare -xr known_configurations_str=$(IFS=,; echo "${known_configurations[*]}")
-# shellcheck disable=SC2155
-declare -xr known_configurations_rex=$(IFS='|'; echo "${known_configurations[*]}")
-
-declare -xr known_tfms=(
-    ""
-    net9.0
-    net10.0
-)
-# shellcheck disable=SC2155
-declare -xr known_tfms_str=$(IFS=,; echo "${known_tfms[*]}")
-# shellcheck disable=SC2155
-declare -xr known_tfms_rex=$(IFS='|'; echo "${known_tfms[*]}")
-
-declare -xr known_runtimes=(
-    ""
-    linux-x64
-    win-x64
-    osx-x64
-)
-# shellcheck disable=SC2155
-declare -xr known_runtimes_str=$(IFS=,; echo "${known_runtimes[*]}")
-# shellcheck disable=SC2155
-declare -xr known_runtimes_rex=$(IFS='|'; echo "${known_runtimes[*]}")
-
-# vm2 core lib variables
-declare -x _ignore
 
 #-----------------------------------------------------------------------------------------------
 # @description Checks if the shell is case-sensitive.
@@ -566,7 +535,7 @@ declare -x __os_name=''
 declare -x __is_windows=''
 
 #-----------------------------------------------------------------------------------------------
-# @description Detects if the current operating system is Windows (including Windows_NT,
+# @description Tests if the current operating system is Windows (including Windows_NT,
 #   MINGW, and MSYS environments).
 #
 # @noargs
@@ -592,7 +561,7 @@ function is_windows()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Detects if the given string is a valid filename (not empty, not containing
+# @description Tests if the given string is a valid filename (not empty, not containing
 #   slashes, and not "." or "..").
 #
 # @arg $1 string name - the filename to test
@@ -601,9 +570,9 @@ function is_windows()
 # @exitcode negative=1: otherwise
 #
 # @example
-#   if is_valid_filename "$filename"; then echo "Valid filename"; fi
+#   if is_filename "$filename"; then echo "Valid filename"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_filename()
+function is_filename()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -612,7 +581,7 @@ function is_valid_filename()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Detects if the given string is a valid path (not empty and passing pathchk).
+# @description Tests if the given string is a valid path (not empty and passing pathchk).
 #
 # @arg $1 string name - the path to test
 #
@@ -620,9 +589,9 @@ function is_valid_filename()
 # @exitcode negative=1: otherwise
 #
 # @example
-#   if is_valid_path "$path"; then echo "Valid path"; fi
+#   if is_path "$path"; then echo "Valid path"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_path()
+function is_path()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -631,7 +600,7 @@ function is_valid_path()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks whether a candidate secret name is valid: contains only alphanumeric
+# @description Tests whether a candidate secret name is valid: contains only alphanumeric
 #   characters and underscores, starts with a letter or underscore, and does not start
 #    case-insensitively with 'GITHUB_'.
 #
@@ -640,7 +609,7 @@ function is_valid_path()
 # @exitcode positive=0: The secret name is valid.
 # @exitcode negative=1: The secret name is not valid.
 #-----------------------------------------------------------------------------------------------
-function is_valid_secret_name()
+function is_secret_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub secret name to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -649,7 +618,7 @@ function is_valid_secret_name()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks whether a candidate secret value is safe to send to the GitHub API --
+# @description Tests whether a candidate secret value is safe to send to the GitHub API --
 # i.e. it contains no control characters.
 #
 # @arg $1 string Candidate secret value to validate.
@@ -657,7 +626,7 @@ function is_valid_secret_name()
 # @exitcode positive=0: The value contains no control characters.
 # @exitcode negative=1: otherwise
 #-----------------------------------------------------------------------------------------------
-function is_valid_secret()
+function is_secret()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the secret value to validate." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -666,7 +635,8 @@ function is_valid_secret()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if a build configuration name is a valid identifier.
+# @description Tests if a build configuration name is one of `$configurations_in_use`
+#   (case-sensitive).
 #
 # @arg $1 string The configuration name to test.
 #
@@ -674,47 +644,98 @@ function is_valid_secret()
 # @exitcode negative=1: If the configuration name is invalid.
 #
 # @example
-#   if is_valid_configuration "$build_config"; then echo "Valid config"; fi
+#   if is_build_configuration "$build_config"; then echo "Valid config"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_configuration()
+function is_build_configuration()
 {
-    __test_with_regex "$@" "$build_config_regex"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the build configuration value to validate." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    is_in "$1" "${configurations_in_use[@]}"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a valid Target Framework Moniker (TFM).
+# @description Tests if a string is a GitHub repository visibility: one of `$repo_visibilities`
+#   (case-sensitive).
+#
+# @arg $1 string The visibility to test.
+#
+# @exitcode positive=0: If the visibility is valid.
+# @exitcode negative=1: If the visibility is invalid.
+#
+# @example
+#   if is_visibility "private"; then echo "Valid visibility"; fi
+#-----------------------------------------------------------------------------------------------
+function is_visibility()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a visibility." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    is_in "$1" "${repo_visibilities[@]}"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Tests that a GitHub runner OS name is in the list of used GitHub runners OSs.
+#
+# Notes:
+#   - The allowed values are defined in the `$gh_runners_os_in_use` array.
+#
+# @arg $1 string The runner OS name to validate.
+#
+# @exitcode positive=0: If the runner OS is in use.
+# @exitcode negative=1: If the runner OS is not in use.
+#
+# @example
+#   if is_gh_runner_os "ubuntu-latest"; then echo "Valid runner"; fi
+#-----------------------------------------------------------------------------------------------
+function is_gh_runner_os()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the runner OS to test." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    is_in "$1" "${gh_runners_os_in_use[@]}"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Tests that a Target Framework Moniker (TFM) is a valid moniker.
 #
 # @arg $1 string The TFM to validate.
 #
-# @exitcode positive=0: If the TFM is valid.
-# @exitcode negative=1: If the TFM is invalid.
+# @exitcode positive=0: If the TFM is in use.
+# @exitcode negative=1: If the TFM is not in use.
 #
 # @example
-#   if is_valid_framework "$framework"; then echo "Valid TFM"; fi
+#   if is_framework "$framework"; then echo "Valid TFM"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_framework()
+function is_framework()
 {
-    __test_with_regex "$@" "$tfm_regex"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the Target Framework Moniker (TFM) value to test." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    is_in "$1" "${frameworks_in_use[@]}"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates that a string is a valid Runtime Identifier (RID).
+# @description Tests if a Runtime Identifier (RID) is a valid identifier.
 #
-# @arg $1 string The RID to validate.
+# @arg $1 string The Runtime Identifier (RID) to validate.
 #
 # @exitcode positive=0: If the RID is valid.
 # @exitcode negative=1: If the RID is invalid.
 #
 # @example
-#   if is_valid_runtime "$runtime"; then echo "Valid RID"; fi
+#   if is_runtime "$runtime"; then echo "Valid RID"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_runtime()
+function is_runtime()
 {
-    __test_with_regex  "$@" "$rid_regex"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the Runtime Identifier (RID) value to test." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    is_in "$1" "${runtimes_in_use[@]}"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates that a given value is a valid percentage (0-100).
+# @description Tests if a given value is a valid percentage (0-100).
 #
 # Notes:
 #   - Must be an integer between 0 and 100, inclusive.
@@ -725,9 +746,9 @@ function is_valid_runtime()
 # @exitcode negative=1: If the percentage is invalid.
 #
 # @example
-#   if is_valid_percentage "50"; then echo "Valid percentage"; fi
+#   if is_percentage "50"; then echo "Valid percentage"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_percentage()
+function is_percentage()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -736,7 +757,7 @@ function is_valid_percentage()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a valid MinVer Git tag prefix (e.g. `v` as in `v1.2.3`).
+# @description Tests if a string is a MinVer Git tag prefix (e.g. `v` as in `v1.2.3`).
 #
 # Notes:
 #   - Must match `$minverTagPrefixRegex` (`$minverTagPrefixRex` in `_semver.sh`): starts and
@@ -748,15 +769,15 @@ function is_valid_percentage()
 # @exitcode negative=1: If the tag prefix is invalid.
 #
 # @example
-#   if is_valid_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
+#   if is_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_minverTagPrefix()
+function is_minverTagPrefix()
 {
     __test_with_regex "$@" "$minverTagPrefixRegex"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Validates the MinVer prerelease identifier format.
+# @description Tests if a string is a MinVer prerelease identifier format.
 #
 # Notes:
 #   - Must match `$minverPrereleaseIdRegex` (the same as the SemVer prerelease label format).
@@ -767,15 +788,15 @@ function is_valid_minverTagPrefix()
 # @exitcode negative=1: If the prerelease ID is invalid.
 #
 # @example
-#   if is_valid_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
+#   if is_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_minverPrereleaseId()
+function is_minverPrereleaseId()
 {
     __test_with_regex "$@" "$minverPrereleaseIdRegex"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a valid NuGet server URL or known server name.
+# @description Tests if a string is a valid NuGet server URL or a known server name.
 #
 # Notes:
 #   - Accepts `nuget`, `github`, or a valid http(s) URL matching `$nugetServersRegex`.
@@ -786,9 +807,9 @@ function is_valid_minverPrereleaseId()
 # @exitcode negative=1: If the server is not a valid NuGet server.
 #
 # @example
-#   if is_valid_nuget_server "nuget"; then echo "Valid server"; fi
+#   if is_nuget_server "nuget"; then echo "Valid server"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_nuget_server()
+function is_nuget_server()
 {
     __test_with_regex "$@" "$nugetServersRegex"
 }
