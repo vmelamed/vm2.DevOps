@@ -3,7 +3,7 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -x _ignore
+declare -x noise_sink
 declare -x script_name
 declare -x lib_dir
 
@@ -94,19 +94,19 @@ function resolve_github_app_ids()
     # this function cannot be called before initialize_gh_paths() because the latter relies on the actions_app_id variable being set - circular dependency
     actions_app_id=$(execute_with_retry --query --classify gh_failure \
                             gh api --paginate apps/github-actions \
-                            --jq '.id' 2>"$_ignore")                            || error "Failed to resolve the app ID of GitHub Actions." -ec "$err_tool_error"
+                            --jq '.id' 2>"$noise_sink")                         || error "Failed to resolve the app ID of GitHub Actions." -ec "$err_tool_error"
     trace "GitHub Actions app ID: $actions_app_id"
     [[ "$actions_app_id" == "15368" ]]                                          || warning "Unexpected GitHub Actions app ID: $actions_app_id (expected 15368). Required status check matching may not work correctly."
 
     dependabot_app_id=$(execute_with_retry --query --classify gh_failure \
                             gh api --paginate apps/dependabot \
-                            --jq '.id' 2>"$_ignore")                            || error "Failed to resolve the app ID of Dependabot." -ec "$err_tool_error"
+                            --jq '.id' 2>"$noise_sink")                         || error "Failed to resolve the app ID of Dependabot." -ec "$err_tool_error"
     trace "Dependabot app ID: $dependabot_app_id"
     [[ "$dependabot_app_id" == "29110" ]]                                       || warning "Unexpected Dependabot app ID: $dependabot_app_id (expected 29110). Required status check matching may not work correctly for Dependabot."
 
     codespaces_app_id=$(execute_with_retry --query --classify gh_failure \
                             gh api --paginate apps/codespaces \
-                            --jq '.id' 2>"$_ignore")                            || error "Failed to resolve the app ID of Codespaces." -ec "$err_tool_error"
+                            --jq '.id' 2>"$noise_sink")                         || error "Failed to resolve the app ID of Codespaces." -ec "$err_tool_error"
     trace "Codespaces app ID: $codespaces_app_id"
     [[ "$codespaces_app_id" == "231849" ]]                                      || warning "Unexpected Codespaces app ID: $codespaces_app_id (expected 231849). Required status check matching may not work correctly for Codespaces."
                                                                                 exit_if_has_errors
@@ -325,7 +325,7 @@ function initialize_main_protection_rs_id()
 
     # try to get the main_protection_rs_id
     main_protection_rs_id=$(execute_with_retry --query --classify gh_failure \
-                                gh api --paginate "$path_rulesets" -q "$jq_ruleset_id" 2>"$_ignore") \
+                                gh api --paginate "$path_rulesets" -q "$jq_ruleset_id" 2>"$noise_sink") \
                                                                                 || return "$?"
 
     if (( main_protection_rs_id > 0 )); then
@@ -367,7 +367,7 @@ function get_current_nuget_server()
 
     # stderr is discarded: an absent variable is an expected 404, and 'gh' would print it (--trace shows it)
     _result=$(execute_with_retry --query --classify gh_failure \
-                  gh api "repos/$_repo_owner/$repo_name/actions/variables/NUGET_SERVER" --jq .value 2>"$_ignore") \
+                  gh api "repos/$_repo_owner/$repo_name/actions/variables/NUGET_SERVER" --jq .value 2>"$noise_sink") \
                                                                                 || _rc=$?
     (( _rc == success || _rc == err_not_found ))                                ||  {
                                                                                         with_error _rc "$_rc" "Could not read the variable NUGET_SERVER of the repository '$_repo_owner/$repo_name'."
@@ -401,7 +401,7 @@ function configure_default_repo_settings()
 
     local _result
     _result=$(execute_with_retry --query --classify gh_failure \
-                  gh api "$path_repo" -q "$jq_entries" 2>"$_ignore")            || {
+                  gh api "$path_repo" -q "$jq_entries" 2>"$noise_sink")         || {
                                                                                         with_error _rc "$err_tool_error" "Retrieving the current repo settings failed." \
                                                                                                                          -ec $?
                                                                                         return "$_rc"
@@ -434,7 +434,7 @@ function configure_default_repo_settings()
     if [[ ${#_rs[@]} -gt 0 ]]; then
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         execute_with_retry --quiet --classify gh_failure \
-            gh api -X PATCH "$path_repo" "${_rs[@]}" 2>"$_ignore" &&
+            gh api -X PATCH "$path_repo" "${_rs[@]}" 2>"$noise_sink" &&
             info "...repository settings configured." ||                        warning "Could not configure repository settings. Run the script with '--verbose' to see more details and troubleshoot."
     else
         info "...repository settings configured."
@@ -463,7 +463,7 @@ function configure_actions_permissions()
     local _result
     local -i _rc=$success
     _result=$(execute_with_retry --query --classify gh_failure \
-                  gh api "$path_permissions" -q "$jq_entries" 2>"$_ignore")     || {
+                  gh api "$path_permissions" -q "$jq_entries" 2>"$noise_sink")  || {
                                                                                         with_error _rc "$err_tool_error" "Retrieving the current repo permissions failed."
                                                                                         return "$_rc"
                                                                                     }
@@ -492,7 +492,7 @@ function configure_actions_permissions()
     if [[ ${#_rs[@]} -gt 0 ]]; then
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         execute_with_retry --quiet --classify gh_failure \
-            gh api -X PUT "$path_permissions" -H "Accept: application/vnd.github+json" "${_rs[@]}" 2>"$_ignore" &&
+            gh api -X PUT "$path_permissions" -H "Accept: application/vnd.github+json" "${_rs[@]}" 2>"$noise_sink" &&
             info "...actions workflow permissions configured."                  || warning "Could not configure Actions workflow permissions. Run the script with '--verbose' to see more details and troubleshoot."
     else
         info "...actions workflow permissions configured."
@@ -557,7 +557,7 @@ function configure_variables()
     local -A _current=()
     local _result
     _result=$(execute_with_retry --query --classify gh_failure \
-                  gh api --paginate "$path_repo/$_app/variables" -q "$jq_vars" 2>"$_ignore") \
+                  gh api --paginate "$path_repo/$_app/variables" -q "$jq_vars" 2>"$noise_sink") \
                                                                                 ||  {
                                                                                         with_error _rc "$err_tool_error" "Retrieving the current repo variables failed." -ec $?
                                                                                         return "$_rc"
@@ -721,7 +721,7 @@ function get_var()
 
     # read the variable's value from GitHub
     __value=$(execute_with_retry --query --classify gh_failure \
-                gh api "repos/$repo/actions/variables/$_name" --jq '.value' 2>"$_ignore") \
+                gh api "repos/$repo/actions/variables/$_name" --jq '.value' 2>"$noise_sink") \
                                                                                 ||  {
                                                                                         _rc=$?
                                                                                         warning "Failed to get the value of the variable $_name. Run the script with '--verbose' to see more details and troubleshoot."
@@ -1109,7 +1109,7 @@ function configure_branch_protection()
 
     execute_with_retry --quiet --classify gh_failure \
         gh api -X "$_method" "$_endpoint" -H "Accept: application/vnd.github+json" \
-        --input - >"$_ignore" << JSON
+        --input - >"$noise_sink" << JSON
 {
     "name": "$main_protection_rs_name",
     "target": "branch",

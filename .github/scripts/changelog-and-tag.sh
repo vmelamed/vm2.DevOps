@@ -31,7 +31,7 @@ declare -x default_repo_owner
 declare -x default_minver_tag_prefix
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script's components
 source "$script_dir/changelog-and-tag.usage.sh"

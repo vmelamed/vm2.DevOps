@@ -28,7 +28,7 @@ declare -x err_not_file
 declare -x err_io_failure
 
 # vm2 core lib constants
-declare -x _ignore
+declare -x noise_sink
 
 # this script variables
 declare -x diff_command
@@ -119,7 +119,7 @@ function resolve_target()
 
     # if it is a git repo then make sure it is in a clean state:
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    (( _rc != success )) || _branch="$(git -C "$__target_root" branch --show-current 2>"$_ignore")" \
+    (( _rc != success )) || _branch="$(git -C "$__target_root" branch --show-current 2>"$noise_sink")" \
                                                                                 || with_error _rc "$err_tool_error" "The repository in the specified target directory '$1' appears corrupted."
     (( _rc != success )) || ensure_fresh_git_state "$__target_root" "$_branch"  || with_error _rc "$err_logic_error" "The specified target repository at '$__target_root' on branch '$_branch' is not in a clean state." \
                                                                                                                      "Commit or stash your changes."
@@ -260,7 +260,7 @@ function are_different()
     local _has_shared=$4
 
     # compare fast, return fast, if no significant diffs; otherwise continue with the fancy diff tool of choice
-    if diff -q -w -B "$LOCAL" "$REMOTE" > "$_ignore"; then
+    if diff -q -w -B "$LOCAL" "$REMOTE" > "$noise_sink"; then
         trace_files "identical" "$LOCAL" "$REMOTE"
         (( ++summary_identical_count ))
         return "$negative" # NOT different!
@@ -285,7 +285,7 @@ function are_different()
         printf '%s\n' "$_target_shared" > "$_target_shared_file"
 
         local -i _shared_rc
-        if diff -q -w -B "$_source_shared_file" "$_target_shared_file" > "$_ignore"; then
+        if diff -q -w -B "$_source_shared_file" "$_target_shared_file" > "$noise_sink"; then
             _shared_rc=$shared_equal
             (( ++summary_shared_identical_count ))
         else

@@ -21,6 +21,70 @@ declare -gx err_invalid_nameref
 declare -gx err_argument_value
 declare -gx err_argument_type
 declare -gx err_logic_error
+declare -gx BATS_TEST_TMPDIR
+
+# --- ci_system / ci -------------------------------------------------------------------------
+
+# Runs a clean bash (no inherited CI variables) with the given environment assignments, sources core.sh, and prints
+# "$ci_system $ci".
+function _ci_probe()
+{
+    env -u CI -u GITHUB_ACTIONS -u TF_BUILD "$@" \
+        bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; echo \"\$ci_system \$ci\""
+}
+
+@test "ci_system: 'none' and ci false when no CI variable is set" {
+    run _ci_probe
+    assert_success
+    assert_output "none false"
+}
+
+@test "ci_system: 'github' only when GITHUB_ACTIONS is exactly 'true'" {
+    run _ci_probe GITHUB_ACTIONS=true
+    assert_output "github true"
+    run _ci_probe GITHUB_ACTIONS=false
+    assert_output "none false"
+    run _ci_probe GITHUB_ACTIONS=True
+    assert_output "none false"
+}
+
+@test "ci_system: 'azure' for TF_BUILD 'True' (Azure DevOps capitalizes it) or 'true'" {
+    run _ci_probe TF_BUILD=True
+    assert_output "azure true"
+    run _ci_probe TF_BUILD=true
+    assert_output "azure true"
+    run _ci_probe TF_BUILD=False
+    assert_output "none false"
+}
+
+@test "ci_system: 'other' for CI 'true', 'True', or '1'; not for 'false' or '0'" {
+    local value
+    for value in true True 1; do
+        run _ci_probe CI="$value"
+        assert_output "other true"
+    done
+    for value in false 0; do
+        run _ci_probe CI="$value"
+        assert_output "none false"
+    done
+}
+
+@test "ci_system: GitHub wins over the generic CI variable (GitHub Actions sets both)" {
+    run _ci_probe GITHUB_ACTIONS=true CI=true
+    assert_output "github true"
+}
+
+@test "ci_system, ci: readonly" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; ci_system=github 2>&1; ci=true 2>&1"
+    assert_output --partial "ci_system: readonly variable"
+}
+
+@test "ci_system: does not run the value of CI as a command" {
+    # regression: the old 'ci=\${CI:-…}' followed by 'if \$ci' executed whatever CI contained
+    run _ci_probe CI='touch '"$BATS_TEST_TMPDIR"'/pwned'
+    assert_output "none false"
+    [[ ! -e $BATS_TEST_TMPDIR/pwned ]]
+}
 
 # --- verbose mode ---------------------------------------------------------------------------
 
@@ -67,31 +131,31 @@ declare -gx err_logic_error
 
 # --- ignored output ---------------------------------------------------------------------------
 
-@test "show_ignored_output: no argument redirects to /dev/stderr" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; show_ignored_output; echo \"\$_ignore\""
+@test "show_noise_sink: no argument redirects to /dev/stderr" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; show_noise_sink; echo \"\$noise_sink\""
     assert_success
     assert_output "/dev/stderr"
 }
 
-@test "show_ignored_output: explicit argument redirects there" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; show_ignored_output /tmp/foo; echo \"\$_ignore\""
+@test "show_noise_sink: explicit argument redirects there" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; show_noise_sink /tmp/foo; echo \"\$noise_sink\""
     assert_success
     assert_output "/tmp/foo"
 }
 
-@test "show_ignored_output: warns (but still redirects) when targeting /dev/stdout" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; show_ignored_output /dev/stdout; echo \"\$_ignore\""
+@test "show_noise_sink: warns (but still redirects) when targeting /dev/stdout" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; show_noise_sink /dev/stdout; echo \"\$noise_sink\""
     assert_success
     assert_output --partial "/dev/stdout"
 }
 
-@test "show_ignored_output: bug-exits with more than one argument" {
-    run show_ignored_output a b
+@test "show_noise_sink: bug-exits with more than one argument" {
+    run show_noise_sink a b
     assert_failure "$err_invalid_arguments"
 }
 
-@test "hide_ignored_output: restores /dev/null" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; show_ignored_output; hide_ignored_output; echo \"\$_ignore\""
+@test "hide_noise_sink: restores /dev/null" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; show_noise_sink; hide_noise_sink; echo \"\$noise_sink\""
     assert_success
     assert_output "/dev/null"
 }

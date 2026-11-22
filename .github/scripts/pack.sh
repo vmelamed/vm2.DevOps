@@ -22,7 +22,7 @@ declare -x success
 declare -x err_tool_error
 
 # Declare variables defined in the core library.
-declare -x _ignore
+declare -x noise_sink
 
 # Define CI common variables passed in as common dotnet arguments
 declare -x preprocessor_symbols

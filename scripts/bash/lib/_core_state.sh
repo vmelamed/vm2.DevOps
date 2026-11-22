@@ -54,12 +54,27 @@ declare -x debugger
 readonly debugger
 
 #-----------------------------------------------------------------------------------------------
-# @description Indicates whether the script is running in CI/CD environment.
-#    The `$ci` value should be based only on environment variables defined by the CI/CD
-#    system, e.g. GitHub Actions, Azure DevOps, etc. Usually env.var. $CI
+# @description `$ci_system` names the CI/CD system the script runs in: `github` (GitHub Actions
+#    sets `GITHUB_ACTIONS=true`), `azure` (Azure DevOps sets `TF_BUILD=True`), `other` (a generic
+#    `CI=true` or `CI=1`), or `none` (a local run). `$ci` is `true` for any CI system.
+#
+# Notes:
+#   - Both are computed once, only from the variables the CI system defines, and are readonly.
+#   - The variables are compared, never executed: `if $CI` would run the value as a command.
+#   - Only `github` changes where output goes (the `tee_*` functions); `$ci` drives the
+#     non-interactive defaults (quiet, no traps, Markdown tables, no `glow`).
 #-----------------------------------------------------------------------------------------------
+declare -x ci_system
 declare -x ci
-ci=${CI:-${GITHUB_ACTIONS:-${TF_BUILD:-false}}}
+
+if   [[ ${GITHUB_ACTIONS-} == true ]];          then ci_system=github
+elif [[ ${TF_BUILD-} == [Tt]rue ]];             then ci_system=azure
+elif [[ ${CI-} == @([Tt]rue|1) ]];              then ci_system=other
+else                                                 ci_system=none
+fi
+[[ $ci_system == none ]] && ci=false || ci=true
+
+readonly ci_system
 readonly ci
 
 #-----------------------------------------------------------------------------------------------
@@ -68,7 +83,7 @@ readonly ci
 declare -xr default_quiet=$ci
 declare -xr default_verbose=false
 declare -xr default_dry_run=false
-declare -xr default__ignore="/dev/null"
+declare -xr default_noise_sink="/dev/null"
 declare -xra table_formats=("graphical" "markdown")
 declare -xr default_table_format="graphical"
 
@@ -272,19 +287,19 @@ function unset_dry_run()
 #-----------------------------------------------------------------------------------------------
 # @description The name of an I/O stream where unwanted output SHOULD be redirected to. E.g.,
 #   'stderr' or even 'stdout' from commands to avoid cluttering the terminal or logs. When you
-#   need to see that output for debugging purposes, you can invoke `show_ignored_output` to
-#   redirect `$_ignore` to `/dev/stderr`. AVOID redirecting `$_ignore` it to `/dev/stdout`
-#   blindly! If the output of the command is captured or redirected, the output to '$_ignore'
+#   need to see that output for debugging purposes, you can invoke `show_noise_sink` to
+#   redirect `$noise_sink` to `/dev/stderr`. AVOID redirecting `$noise_sink` to `/dev/stdout`
+#   blindly! If the output of the command is captured or redirected, the output to '$noise_sink'
 #   may interfere with the expected output of the command and the logic of the script.
-#   Therefore prefer using the functions `show_ignored_output()` without arguments and
-#   `hide_ignored_output()` to manipulate `$_ignore`.
+#   Therefore prefer using the functions `show_noise_sink()` without arguments and
+#   `hide_noise_sink()` to manipulate `$noise_sink`.
 # @default "/dev/null"
 # @type string
 #-----------------------------------------------------------------------------------------------
-declare -x _ignore=$default__ignore
+declare -x noise_sink=$default_noise_sink
 
 #-----------------------------------------------------------------------------------------------
-# @description Redirects the ignored output (held in $_ignore) to the specified file. With no
+# @description Redirects the ignored output (held in $noise_sink) to the specified file. With no
 #    argument, redirects it to `/dev/stderr` so that output that is normally discarded becomes
 #    visible for debugging purposes.
 #
@@ -297,32 +312,32 @@ declare -x _ignore=$default__ignore
 # @exitcode success=0
 #
 # @example
-#   show_ignored_output /dev/stdout
+#   show_noise_sink /dev/stdout
 #-----------------------------------------------------------------------------------------------
-function show_ignored_output()
+function show_noise_sink()
 {
     (( $# <= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at most 1 argument (provided $#):" \
                                                                                        "  - the file name to redirect the ignored output to" \
                                                                                        -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    (( $# == 0 )) && _ignore=/dev/stderr && return "$success"
+    (( $# == 0 )) && noise_sink=/dev/stderr && return "$success"
 
     local _file=$1
 
-    [[ ! $_file =~ ^(/dev/stdout|/dev/fd/1|/proc/self/fd/1)$ ]]                 || warning "Redirecting ignored output to '/stdout' may lead to unpredictable output results if it is also redirected or captured!"
+    [[ ! $_file =~ ^(/dev/stdout|/dev/fd/1|/proc/self/fd/1)$ ]]                 || warning "Redirecting the noise sink to '$_file' may lead to unpredictable output results if it is also redirected or captured!"
 
-    _ignore=$_file
+    noise_sink=$_file
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Restores the ignored output (held in $_ignore) to /dev/null.
+# @description Restores the ignored output (held in $noise_sink) to /dev/null.
 #
 # @exitcode success=0
 #-----------------------------------------------------------------------------------------------
-function hide_ignored_output()
+function hide_noise_sink()
 {
-    _ignore=$default__ignore
+    noise_sink=$default_noise_sink
 }
 
 #===============================================================================================
@@ -337,7 +352,7 @@ function hide_ignored_output()
 #
 # Notes:
 #   - Sets the global variable `$verbose` to `true`.
-#   - Sets the global variable `$_ignore` to `/dev/stderr`.
+#   - Sets the global variable `$noise_sink` to `/dev/stderr`.
 #   - Enables bash trace mode (`set -x`).
 #   - the output may become verbose and include all commands executed along with their
 #     arguments, therefore it is recommended to use this mode primarily for debugging purposes
@@ -351,7 +366,7 @@ function hide_ignored_output()
 function set_trace_enabled()
 {
     __verbose=true
-    _ignore=/dev/stderr
+    noise_sink=/dev/stderr
     set -x
 }
 
@@ -361,7 +376,7 @@ function set_trace_enabled()
 #
 # Notes:
 #   - Sets the global variable `$verbose` to `false`.
-#   - Sets the global variable `$_ignore` to `/dev/null`.
+#   - Sets the global variable `$noise_sink` to `/dev/null`.
 #   - Disables bash trace mode (`set +x`).
 #
 # @exitcode success=0
@@ -373,7 +388,7 @@ function set_trace_enabled()
 function unset_trace_enabled()
 {
     __verbose=false
-    _ignore=$default__ignore
+    noise_sink=$default_noise_sink
     set +x
 }
 
@@ -388,7 +403,7 @@ function unset_trace_enabled()
 #-----------------------------------------------------------------------------------------------
 function is_trace_enabled()
 {
-    is_verbose && [[ $_ignore != "$default__ignore" && $- =~ .*x.* ]]
+    is_verbose && [[ $noise_sink != "$default_noise_sink" && $- =~ .*x.* ]]
 }
 
 #===============================================================================================
@@ -472,14 +487,14 @@ declare -xr key_quiet="Quiet"
 declare -xr key_verbose="Verbose"
 declare -xr key_dry_run="Dry_Run"
 declare -xr key_tracing="Tracing"
-declare -xr key_ignore="Ignore"
+declare -xr key_noise_sink="Noise_Sink"
 declare -xr key_table_format="Table_Format"
 declare -xr key_errors="Errors_Count"
 declare -xri state_length=10
 
 #-----------------------------------------------------------------------------------------------
 # @description Saves the current state of the global flags: quiet, verbose, dry-run,
-#   `$_ignore`, table format, and the bash tracing option to an associative array, so it can
+#   `$noise_sink`, table format, and the bash tracing option to an associative array, so it can
 #   be restored later by `restore_state`.
 #
 # @arg $1 nameref `__state` name of an associative array variable that will store the saved
@@ -530,7 +545,7 @@ function save_state()
     __state[$key_pid]=$BASHPID
     __state[$key_subshell_pid]=${BASH_SUBSHELL:-0}
     __state[$key_ci]="$ci"
-    __state[$key_ignore]=$_ignore
+    __state[$key_noise_sink]=$noise_sink
     __state[$key_table_format]=$_current_table_format
     __state[$key_errors]=$(get_errors)
     is_quiet          && __state[$key_quiet]=true   || __state[$key_quiet]=false
@@ -585,7 +600,7 @@ function restore_state()
 
     __state[$key_pid]=0
     __state[$key_subshell_pid]=-1
-    _ignore=${__state[$key_ignore]}
+    noise_sink=${__state[$key_noise_sink]}
     set_table_format "${__state[$key_table_format]}"
     $_restore_errors && set_errors "${__state[$key_errors]}"
     ${__state[$key_quiet]}   && set_quiet   || unset_quiet

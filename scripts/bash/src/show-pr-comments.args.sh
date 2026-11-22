@@ -19,7 +19,7 @@ declare -x err_tool_unauthenticated
 
 # vm2 core lib constants
 declare -x ci
-declare -x _ignore
+declare -x noise_sink
 
 # default constants for parameters
 declare -xr default_interval=15
@@ -126,11 +126,11 @@ function resolve_arguments()
     [[ -n $repo ]] || repo=$(execute_with_retry --query --classify gh_failure \
                                 gh repo view \
                                 --json nameWithOwner \
-                                --jq .nameWithOwner 2>"$_ignore")               || error "The current directory is not in a GitHub repository; use '--repo <owner/repo>'." -ec "$err_not_found"
+                                --jq .nameWithOwner 2>"$noise_sink")            || error "The current directory is not in a GitHub repository; use '--repo <owner/repo>'." -ec "$err_not_found"
     [[ -n $pr_number || -z $repo ]] || pr_number=$(execute_with_retry --query --classify gh_failure \
                                                         gh pr view \
                                                         --json number \
-                                                        --jq .number 2>"$_ignore") \
+                                                        --jq .number 2>"$noise_sink") \
                                                                                 || error "The current branch has no pull request; give the pull request number." -ec "$err_not_found"
 
     readonly pr_number

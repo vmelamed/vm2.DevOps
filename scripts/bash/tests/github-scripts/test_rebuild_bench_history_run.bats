@@ -5,11 +5,11 @@
 # Characterization tests for .github/scripts/rebuild-bench-history-run.sh, as it behaves TODAY.
 #
 # Was previously broken (hung forever on the very first loop iteration): line 107 called
-# `to_stdout "some message"`, but to_stdout is a pure stdin-consuming filter (per its own doc:
+# `tee_stdout "some message"`, but tee_stdout is a pure stdin-consuming filter (per its own doc:
 # reads lines from stdin, takes no arguments) -- it ignored the argument and blocked on `read`
 # forever, since nothing piped into it and stdin was never closed. Reproduced directly: the
 # process sat in state S with an open stdin fd, zero CPU, never returning. Fixed to
-# `echo "..." | to_stdout`, matching every other correct use of it in the codebase.
+# `echo "..." | tee_stdout`, matching every other correct use of it in the codebase.
 #
 # `run-benchmarks.sh` and `bencher` are both faked (this script's own job is orchestrating
 # repeated calls to them and interpreting their results, not re-testing run-benchmarks.sh's own
@@ -277,7 +277,7 @@ EOF
     git -C "$BATS_TEST_TMPDIR" init -q
     run timeout 20 env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/fakebin:/usr/local/bin:/usr/bin:/bin" \
         RUN_BENCHMARKS_CALL_LOG="$BATS_TEST_TMPDIR/rb.log" BENCHER_CALL_LOG="$BATS_TEST_TMPDIR/bencher.log" \
-        BENCHER_API_TOKEN=tok GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \
+        BENCHER_API_TOKEN=tok GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" GITHUB_OUTPUT="$BATS_TEST_TMPDIR/output.txt" \
         bash -c "cd '$BATS_TEST_TMPDIR' && bash '$_rebuild_run' --quiet --repeat 1 --bencher-project p --bencher-testbed t"
     assert_success
 

@@ -26,7 +26,7 @@ declare -x semverTagPrereleaseRegex
 # vm2 core lib defaults
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script's components
 source "$script_dir/compute-prerelease-version.usage.sh"
@@ -96,7 +96,7 @@ else
 fi
 
 last_stable_ref="${latest_stable_tag:-$(git rev-list --max-parents=0 HEAD)}"
-commits=$(git log "$last_stable_ref"..HEAD --pretty=format:"%s%n%b" 2>"$_ignore" || echo "")
+commits=$(git log "$last_stable_ref"..HEAD --pretty=format:"%s%n%b" 2>"$noise_sink" || echo "")
 
 # Determine bump type from conventional commits
 # KEEP IN SYNC WITH vm2.DevOps/scripts/bash/lib/_constants.sh AND vm2.Templates/templates/AddNewPackage/content/.gitmessage!
@@ -177,7 +177,7 @@ info "Computed prerelease version: $prerelease_version [$bump_type]"
 # Duplicate guard
 # ============================================================================
 
-if [[ "$bump_type" != *"none"* ]] && git rev-parse "$prerelease_tag" >"$_ignore" 2>&1; then
+if [[ "$bump_type" != *"none"* ]] && git rev-parse "$prerelease_tag" >"$noise_sink" 2>&1; then
     error "Tag '$prerelease_tag' already exists. Possible remedy: delete the tag, or merge another PR first." -ec "$err_tool_error"
 fi
 

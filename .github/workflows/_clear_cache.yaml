@@ -82,7 +82,7 @@ jobs:
                   if [[ -n "$cache_id" ]]; then
                       echo "  🗑️  Deleting: $cache_key (ID: $cache_id)"
                       if execute_with_retry --classify gh_failure \
-                             gh cache delete "$cache_id" --confirm 2>"$_ignore"; then
+                             gh cache delete "$cache_id" --confirm 2>"$noise_sink"; then
                           ((deleted_count++)) || true
                           echo "      ✅ Deleted successfully"
                       else

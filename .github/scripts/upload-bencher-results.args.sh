@@ -15,7 +15,7 @@ declare -x err_logic_error
 declare -x err_tool_not_found
 
 declare -x ci
-declare -x _ignore
+declare -x noise_sink
 
 declare -x key_gh_full_name
 
@@ -165,7 +165,7 @@ function resolve_arguments()
 
     if [[ -z $repository ]]; then
         declare _repo_root
-        _repo_root=$(git rev-parse --show-toplevel 2>"$_ignore") || true
+        _repo_root=$(git rev-parse --show-toplevel 2>"$noise_sink")             || true
         if [[ -n ${_repo_root:-} ]]; then
             declare -A _repo_state=()
             get_repo_state "$_repo_root" _repo_state false || true
@@ -173,7 +173,7 @@ function resolve_arguments()
         fi
     fi
 
-    [[ -n $ref_name ]] || ref_name=$(git branch --show-current 2>"$_ignore") || true
+    [[ -n $ref_name ]] || ref_name=$(git branch --show-current 2>"$noise_sink") || true
 
     # validate the values of the variables. results_dir is NOT run through is_safe_path/is_safe_existing_path: those
     # reject absolute paths by design (the framework's convention for user-facing --artifacts-path-style inputs), but

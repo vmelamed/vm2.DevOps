@@ -35,7 +35,7 @@ declare -x clr_green
 declare -x clr_yellow
 declare -x clr_blue
 
-declare -x _ignore
+declare -x noise_sink
 
 declare -x vm2_sot_repo_name
 declare -x sot
@@ -153,7 +153,7 @@ function get_tools()
         read -r _dc || true
         read -r _mt || true
         read -r _mc || true
-    } < <(jq -r '.diff.tool // empty, .diff.command // empty, .merge.tool // empty, .merge.command // empty' "$_file" 2>"$_ignore")
+    } < <(jq -r '.diff.tool // empty, .diff.command // empty, .merge.tool // empty, .merge.command // empty' "$_file" 2>"$noise_sink")
 
     if [[ -n $_dt && -n $_dc ]] && is_tool_present "$_dt"; then
         # there is a good, configured diff tool and command - use it
@@ -164,8 +164,8 @@ function get_tools()
         trace "No 'diff' tool was configured or available in '$_file'. Proceeding with the main configuration."
     else
         # get it from Git
-        _dt=$(git config --get "diff.tool" 2>"$_ignore" || true) &&
-        _dc=$(git config --get "diff.$_dt.cmd" 2>"$_ignore" || true)
+        _dt=$(git config --get "diff.tool" 2>"$noise_sink" || true) &&
+        _dc=$(git config --get "diff.$_dt.cmd" 2>"$noise_sink" || true)
 
         if [[ -n "$_dt" ]] && is_tool_present "$_dt" && { [[ -n "$_dc" ]] || is_in "$_dt" "${!diff_commands[@]}"; }; then
             # OK the git configured diff tool is available, if a command is not configured, get ours
@@ -198,8 +198,8 @@ function get_tools()
         trace "No 'merge' tool was configured or available in '$_file'. Proceeding with the main configuration."
     else
         # get it from Git
-        _mt=$(git config --get "merge.tool" 2>"$_ignore" || true)
-        _mc=$(git config --get "mergetool.$_mt.cmd" 2>"$_ignore" || true)
+        _mt=$(git config --get "merge.tool" 2>"$noise_sink" || true)
+        _mc=$(git config --get "mergetool.$_mt.cmd" 2>"$noise_sink" || true)
 
         if [[ -n $_mt ]] && is_tool_present "$_mt" && { [[ -n $_mc ]] || is_in "$_mt" "${!merge_commands[@]}"; }; then
             # for the purposes of this script, our hardcoded merge commands work better than the ones configured in git,
@@ -265,7 +265,7 @@ function configure()
 
     # validate the config file and load the diff and merge tools from it:
     [[ -s "$_config_file" ]]                                                    || with_error _rc "$err_argument_value" "The configuration file '$_config_file' was not found or is empty."
-    (( _rc != success )) || jq empty "$_config_file" 2>"$_ignore"               || with_error _rc "$err_argument_value" "The configuration file '$_config_file' contains invalid JSON."
+    (( _rc != success )) || jq empty "$_config_file" 2>"$noise_sink"            || with_error _rc "$err_argument_value" "The configuration file '$_config_file' contains invalid JSON."
     (( _rc != success )) || validate_json_schema "$_config_file" "$_schema_config" \
                                                                                 || with_error _rc "$err_argument_value" "The configuration file '$_config_file' does not conform to the schema '$_schema_config'."
     (( _rc == success )) || exit_if_has_errors
@@ -443,7 +443,7 @@ function customize()
 
     if [[ -s "$_custom_config" ]]; then
         # Read each key-value pair from JSON
-        _result=$(jq -r '(.action_overrides // {}) | to_entries | .[] | .key+"="+.value' "$_custom_config" 2>"$_ignore") \
+        _result=$(jq -r '(.action_overrides // {}) | to_entries | .[] | .key+"="+.value' "$_custom_config" 2>"$noise_sink") \
                                                                                 ||  {
                                                                                         with_error _rc "$err_tool_error" "Getting file and action customization failed."
                                                                                         return "$_rc"

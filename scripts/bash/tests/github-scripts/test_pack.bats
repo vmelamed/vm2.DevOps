@@ -334,7 +334,7 @@ EOF
     _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
     run env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/repo/fakebin:/usr/local/bin:/usr/bin:/bin" \
         DOTNET_CALL_LOG="$BATS_TEST_TMPDIR/repo/dotnet.log" \
-        GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \
+        GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" GITHUB_OUTPUT="$BATS_TEST_TMPDIR/output.txt" \
         bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_pack' --quiet src/App/App.csproj"
     assert_success
 
@@ -348,7 +348,7 @@ EOF
     _install_fake_dotnet_and_package "$BATS_TEST_TMPDIR/repo"
     run env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/repo/fakebin:/usr/local/bin:/usr/bin:/bin" \
         DOTNET_CALL_LOG="$BATS_TEST_TMPDIR/repo/dotnet.log" \
-        GITHUB_ACTIONS=true GITHUB_OUTPUT="$BATS_TEST_TMPDIR/output.txt" \
+        GITHUB_ACTIONS=true GITHUB_OUTPUT="$BATS_TEST_TMPDIR/output.txt" GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \
         bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_pack' --quiet src/App/App.csproj"
     assert_success
 

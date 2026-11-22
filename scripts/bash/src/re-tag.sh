@@ -26,7 +26,7 @@ declare -x err_logic_error
 declare -x git_tags_ns
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 source "$script_dir/re-tag.args.sh"
 source "$script_dir/re-tag.usage.sh"
@@ -71,11 +71,11 @@ declare -x new_tag
 
 # Resolve the commit the old/del tag points to (dereference annotated tags)
 if $delete_mode; then
-    commit=$(git rev-list -n1 "${git_tags_ns}$del_tag" 2>"$_ignore")            || usage "Tag '$del_tag' not found locally." -ec "$err_argument_value"
+    commit=$(git rev-list -n1 "${git_tags_ns}$del_tag" 2>"$noise_sink")         || usage "Tag '$del_tag' not found locally." -ec "$err_argument_value"
     info "Tag '$del_tag' → commit ${commit:0:12}"
 else
-    commit=$(git rev-list -n1 "${git_tags_ns}$old_tag" 2>"$_ignore")            || usage "Tag '$old_tag' not found locally." -ec "$err_argument_value"
-    existing_sha=$(git rev-list -n1 "${git_tags_ns}$new_tag" 2>"$_ignore")      && usage "Tag '$new_tag' already exists → commit ${existing_sha:0:12}." -ec "$err_argument_value"
+    commit=$(git rev-list -n1 "${git_tags_ns}$old_tag" 2>"$noise_sink")         || usage "Tag '$old_tag' not found locally." -ec "$err_argument_value"
+    existing_sha=$(git rev-list -n1 "${git_tags_ns}$new_tag" 2>"$noise_sink")   && usage "Tag '$new_tag' already exists → commit ${existing_sha:0:12}." -ec "$err_argument_value"
     info "Tag '$old_tag' → commit ${commit:0:12}"
 fi
 
@@ -101,7 +101,7 @@ delete_tag()
     execute git tag -d -- "$_tag"
     trace "Deleted local tag '$_tag'."
 
-    if git ls-remote --exit-code --tags origin "${git_tags_ns}$_tag" &>"$_ignore"; then
+    if git ls-remote --exit-code --tags origin "${git_tags_ns}$_tag" &>"$noise_sink"; then
         execute git push origin ":${git_tags_ns}$_tag"
         trace "Deleted remote tag 'origin/$_tag'."
     else

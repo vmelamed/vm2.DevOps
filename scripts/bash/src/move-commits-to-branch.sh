@@ -66,7 +66,7 @@ declare -x err_tool_error
 # vm2 core lib constants
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script's components
 source "$script_dir/move-commits-to-branch.args.sh"

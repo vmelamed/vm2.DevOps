@@ -31,7 +31,7 @@ declare -x err_io_failure
 declare -x check_em
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script's components
 source "$script_dir/download-artifact.args.sh"
@@ -47,7 +47,7 @@ declare -x workflow_name
 declare -x workflow_path
 
 [[ -n $repository ]] || repository=$(execute_with_retry --query --classify gh_failure \
-                                        gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$_ignore") \
+                                        gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$noise_sink") \
                                                                                 || exit_with_error "The current directory is not in a GitHub repository; use '--repository <owner/repo>'." -ec "$err_not_found"
 
 readonly repository

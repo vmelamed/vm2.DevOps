@@ -71,11 +71,16 @@ vm2.DevOps provides CI/CD automation framework for .NET NuGet packages through a
 
 ### Layer 1: Consumer Workflows
 
-The GitHub Actions workflows at this level originate at **`vm2.Templates/templates/AddNewPackage/content/.github/workflows/`** - the source of truth (*SOT*). They are practically copied to every new vm2 repo's `.github/workflows` when it is created with `dotnet install new vm2pkg`. These are the thin, per-repo entry points.
+The GitHub Actions workflows at this level originate at **`vm2.Templates/templates/AddNewPackage/content/.github/workflows/`** -
+the source of truth (*SOT*). They are practically copied to every new vm2 repo's `.github/workflows` when it is created with
+`dotnet install new vm2pkg`. These are the thin, per-repo entry points.
 
-Changes in the workflow templates must be kept in sync with the template's original SOT and vice versa (although the SOT is quite stable these days). This is achieved by executing the standalone script `diff-shared.sh`. The script compares and then copies or merges the source-of-truth template files into the files with shared content, like the workloads at this level.
+Changes in the workflow templates must be kept in sync with the template's original SOT and vice versa (although the SOT is quite
+stable these days). This is achieved by executing the standalone script `diff-shared.sh`. The script compares and then copies or
+merges the source-of-truth template files into the files with shared content, like the workloads at this level.
 
-Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.) and delegates to a reusable workflow via GitHub Actions property `uses: vmelamed/vm2.DevOps/.github/workflows/_*.yaml@main`. For example, `CI.yaml` calls
+Each consumer workflow sets repo-specific parameters (project paths, coverage thresholds, etc.) and delegates to a reusable
+workflow via GitHub Actions property `uses: vmelamed/vm2.DevOps/.github/workflows/_*.yaml@main`. For example, `CI.yaml` calls
 `_ci.yaml`, `Prerelease.yaml` calls `_prerelease.yaml`, and so on, see the diagram below.
 
 ```text
@@ -126,9 +131,16 @@ This ensures each commit runs CI exactly once regardless of event type.
 
 #### Gathering Inputs
 
-The workflows at this level have a number of inputs: GitHub Actions `vars`, `secrets`, and `env`-s, manually triggered actions bring inputs from the UI, default values, etc. To handle and prioritize the inputs, a composite action `gather-inputs` (`vm2.DevOps/.github/actions/gather-inputs/action.yaml`) at this level gathers the relevant inputs and exports them as finalized parameters (`uses: ... with:...`) for the downstream reusable workflows and scripts to consume. The input-gathering action also performs some normalization and validation of inputs, ensuring consistent formats (e.g., JSON arrays for project paths), enforcing required parameters, etc.
+The workflows at this level have a number of inputs: GitHub Actions `vars`, `secrets`, and `env`-s, manually triggered actions
+bring inputs from the UI, default values, etc. To handle and prioritize the inputs, a composite action `gather-inputs`
+(`vm2.DevOps/.github/actions/gather-inputs/action.yaml`) at this level gathers the relevant inputs and exports them as finalized
+parameters (`uses: ... with:...`) for the downstream reusable workflows and scripts to consume. The input-gathering action also
+performs some normalization and validation of inputs, ensuring consistent formats (e.g., JSON arrays for project paths),
+enforcing required parameters, etc.
 
-> [!Note] When extending the composite action, remember that `vars` and `env` are not automatically passed through to reusable workflows, so they must be explicitly included in the action's `outputs` and then passed as `with` parameters to the reusable workflows. See `gather-inputs/action.yaml` for the full implementation.
+> [!Note] When extending the composite action, remember that `vars` and `env` are not automatically passed through to reusable
+> workflows, so they must be explicitly included in the action's `outputs` and then passed as `with` parameters to the reusable
+> workflows. See `gather-inputs/action.yaml` for the full implementation.
 
 ### Layer 2: Reusable Workflows
 
@@ -152,15 +164,17 @@ _ci.yaml ─┬─────────────────────�
 - **validate-input** — Normalizes and validates all inputs through `validate-input.sh`
 - **build** — Compiles via `_build.yaml`. Matrices over `runners-os × build-projects`. Skipped when `build-projects` is empty.
 - **test** — Runs via `_test.yaml`. Matrices over `runners-os`. Skipped when `test-projects` is empty
-- **benchmarks** — Runs via `_benchmarks.yaml`. Matrices over `runners-os × benchmark-projects`. Skipped when `benchmark-projects` is empty or the push commits contain `[skip bm]`
-- **pack** — Validates NuGet packaging via `_pack.yaml`. Matrices over `runners-os × package-projects`. Skipped when `package-projects` is empty.
+- **benchmarks** — Runs via `_benchmarks.yaml`. Matrices over `runners-os × benchmark-projects`. Skipped when `benchmark-projects`
+  is empty or the push commits contain `[skip bm]`
+- **pack** — Validates NuGet packaging via `_pack.yaml`. Matrices over `runners-os × package-projects`. Skipped when
+  `package-projects` is empty.
 
 Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on new pushes.
 
 ##### Build (`_build.yaml`)
 
 1. Checks out repository with full history (`fetch-depth: 0`) for MinVer version calculation.
-1. Restores NuGet packages (dual-layer cache — see [Caching Strategy](#2-caching-strategy)).
+1. Restores NuGet packages (dual-layer cache — see [Caching Strategy](#caching-strategy)).
 1. Calls `build.sh` to compile the project.
 1. Uploads the build outputs as a workflow artifact named `built-artifacts-{runner.os}-{run_id}-{job-index}`
    (`retention-days: 1`) for the downstream jobs of the same run.
@@ -190,9 +204,13 @@ Concurrency group `ci-${{ github.workflow_ref }}` cancels in-progress runs on ne
 
 ##### Gate Job Pattern (`postrun-ci`)
 
-With reusable workflows and matrix strategies, GitHub Actions produces check names that include the workflow prefix, matrix parameters, inner job names, and event suffixes — making them impossible to predict for branch-protection required checks. For example, a single test matrix job might appear as `Run CI: Build, Test, Benchmark, Pack / Run tests (ubuntu-latest) (pull_request)`.
+With reusable workflows and matrix strategies, GitHub Actions produces check names that include the workflow prefix, matrix
+parameters, inner job names, and event suffixes — making them impossible to predict for branch-protection required checks. For
+example, a single test matrix job might appear as `Run CI: Build, Test, Benchmark, Pack / Run tests (ubuntu-latest)
+(pull_request)`.
 
-To solve this, each consumer `CI.yaml` includes a final lightweight **gate job** that depends (wiats for) on all other jobs and reports a single, stable check name:
+To solve this, each consumer `CI.yaml` includes a final lightweight **gate job** that depends on (waits for) all other jobs and
+reports a single, stable check name:
 
 ```text
 prerun-ci ──► run-ci (calls _ci.yaml) ──► postrun-ci
@@ -276,7 +294,8 @@ If there were also a `refactor(core)!: rewrite engine`:
 
 ##### Prerelease Guard
 
-If the latest prerelease tag is `v1.5.0-preview.3` but the commit-based calculation yields `v1.3.0`, the script adopts `1.5.0` from the prerelease instead. This prevents publishing a stable version with a lower number than an already-published prerelease.
+If the latest prerelease tag is `v1.5.0-preview.3` but the commit-based calculation yields `v1.3.0`, the script adopts `1.5.0`
+from the prerelease instead. This prevents publishing a stable version with a lower number than an already-published prerelease.
 
 #### Clear Cache (`_clear_cache.yaml`)
 
@@ -312,9 +331,11 @@ The CI scripts:
 
 #### Composite Action (`action.yaml`)
 
-The file `.github/actions/scripts/action.yaml` is a composite action that adds both the scripts directory and the bash library directory to `$PATH`, and exports `$DEVOPS_SCRIPTS_DIR` and `$DEVOPS_LIB_DIR` for reference.
+The file `.github/actions/scripts/action.yaml` is a composite action that adds both the scripts directory and the bash library
+directory to `$PATH`, and exports `$DEVOPS_SCRIPTS_DIR` and `$DEVOPS_LIB_DIR` for reference.
 
-Every workflow checks out the vm2.DevOps repo (sparse-checkout of `scripts/bash/lib` and `.github/actions/scripts`) and then invokes this action, making all scripts and library functions available for the rest of the job.
+Every workflow checks out the vm2.DevOps repo (sparse-checkout of `scripts/bash/lib` and `.github/actions/scripts`) and then
+invokes this action, making all scripts and library functions available for the rest of the job.
 
 #### Bash Library (`/scripts/bash/lib/`)
 
@@ -323,7 +344,7 @@ A shared function library sourced by scripts at startup.
 | Module                 | Role                                                                                                                                                                        |
 |:-----------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `core.sh`              | General-purpose functions (logging, paths, variables) — sources every `_*.sh` module below directly                                                                         |
-| `gh_core.sh`           | GitHub Actions helpers — sources only `core.sh`; adds GH env vars and a few functions (`to_stdout`/`to_stderr`/`to_output` overrides, `gh_escape`, `args_to_github_output`) |
+| `gh_core.sh`           | GitHub Actions helpers — sources only `core.sh`; overrides `tee_*` to write to the GitHub files; `gh_escape`, `args_to_github_output`                                       |
 | `_core_args.sh`        | Argument parsing utilities                                                                                                                                                  |
 | `_constants.sh`        | Shared constants                                                                                                                                                            |
 | `_core_state.sh`       | Common state variables (quiet, verbose, dry-run, trace modes)                                                                                                               |
@@ -380,11 +401,16 @@ actually did; both are the shape of thing the CONVENTIONS.md rule exists to catc
 
 #### Design of the Library Outputs
 
-The diagnostic outputs are designed to be human-readable in the logs, but also machine-readable for automated testing. The library provides functions to dump variables, print stack traces, and log messages with different severity levels (`trace`, `info`, `warning`, `error`).
+The diagnostic outputs are designed to be human-readable in the logs, but also machine-readable for automated testing. The
+library provides functions to dump variables, print stack traces, and log messages with different severity levels (`trace`,
+`info`, `warning`, `error`).
 
 ##### Logging Functions
 
-The four logging functions (`trace`, `info`, `warning`, `error`) are designed to be used in scripts to log messages with different severity levels. Each function reads from `stdin`  or from parameters and writes to the appropriate output stream (`stdout` or `stderr`). For better comprehension and maintainability, they add log level visual emojis, dump of the call stack, etc.
+The four logging functions (`trace`, `info`, `warning`, `error`) are designed to be used in scripts to log messages with
+different severity levels. Each function reads from `stdin`  or from parameters and writes to the appropriate output stream
+(`stdout` or `stderr`). For better comprehension and maintainability, they add log level visual emojis, dump of the call stack,
+etc.
 
 ```text
 ❌  ERROR: /home/valo/repos/vm2/vm2.DevOps/scripts/bash/lib/_predicates.sh (104): 5: An argument has an invalid nameref (e.g., expected a valid variable name reference but got an invalid one).
@@ -393,38 +419,52 @@ The four logging functions (`trace`, `info`, `warning`, `error`) are designed to
     - main                 (/home/valo/repos/vm2/vm2.DevOps/.github/scripts/run-tests.sh: 169)
 ```
 
-Three of the four central logging functions (`info`, `warning`, `error`) read from `stdin` and write to `stdout`/`stderr`, and -- in GitHub Actions -- also to the step summary file, implementing a `tee`-like behavior. `trace` is the deliberate exception: it always writes straight to `stderr` only, in both contexts, and never to the step summary (see below for why). The goal of the three tee-ing functions is to abstract the logging mechanism so that scripts can log messages without worrying about the underlying output streams and at the same time satisfy the logging requirements.
+Three of the four central logging functions (`info`, `warning`, `error`) read from `stdin` and write to `stdout`/`stderr`, and --
+in GitHub Actions -- also to the step summary file, implementing a `tee`-like behavior. `trace` is the deliberate exception: it
+always writes straight to `stderr` only, in both contexts, and never to the step summary (see below for why). The goal of the
+three tee-ing functions is to abstract the logging mechanism so that scripts can log messages without worrying about the
+underlying output streams and at the same time satisfy the logging requirements.
 
-When the scripts are executing locally, the requirements are standard: log to the familiar `stdout` and `stderr` streams. But when the scripts are executing in GitHub Actions, the requirements are different: log to the GitHub Actions step summary file and to the actions logs. Yes, the logs are interleaved with GH step summary outputs, which improves the maintainability. The library logging functions handle this automatically, so that scripts can log messages without worrying about the underlying output streams. To achieve this goal, the library uses streaming helper functions, `to_stdout` and `to_stderr`, that implement their interface contracts differently depending on the execution context (local vs GitHub Actions).
+When the scripts are executing locally, the requirements are standard: log to the familiar `stdout` and `stderr` streams. But
+when the scripts are executing in GitHub Actions, the requirements are different: log to the GitHub Actions step summary file
+and to the actions logs. Yes, the logs are interleaved with GH step summary outputs, which improves the maintainability. The
+library logging functions handle this automatically, so that scripts can log messages without worrying about the underlying
+output streams. To achieve this goal, the library uses streaming helper functions, `tee_stdout` and `tee_stderr`, that implement
+their interface contracts differently depending on the execution context (local vs GitHub Actions).
 
-On the local machine, the consuming script simply sources the core `source "lib/core.sh"` and the logging functions are implemented in `_diagnostics.sh` rather trivially:
+On the local machine, the consuming script simply sources the core `source "lib/core.sh"` and the logging functions are
+implemented in `_diagnostics.sh` rather trivially:
 
 ```bash
-function to_stdout() {
+function tee_stdout() {
     local _line
     while IFS= read -r _line; do echo "$_line"; done
 }
 ```
 
-`info`/`warning`/`error` write to the appropriate helper and in turn to the appropriate output stream; `trace` writes directly to `stderr`, bypassing the helpers entirely:
+`info`/`warning`/`error` write to the appropriate helper and in turn to the appropriate output stream; `trace` writes directly
+to `stderr`, bypassing the helpers entirely:
 
 ```text
-info()    ─────► to_stdout()   ─────► stdout
-warning() ─────► to_stderr()   ─────► stderr
-error()   ─────► to_stderr()   ─────► stderr
+info()    ─────► tee_stdout()  ─────► stdout
+warning() ─────► tee_stderr()  ─────► stderr
+error()   ─────► tee_stderr()  ─────► stderr
 trace()   ─────────────────────────► stderr   (always direct -- see below)
 ```
 
-If you need to write a script for both local and GitHub Actions contexts, you must source different core file: `gh_core.sh`, which in turn sources `core.sh` and `_diagnostics.sh`. This script implements the same interface contract (overrides the `to_*` functions), but implements them differently. Now the `to_*` functions write to the GitHub Step Summary AND to the standard devices (which on GitHub are mapped to the action log files), similar to `tee`. Now the mapping of the logging functions is:
+A script that runs both locally and in GitHub Actions sources a different core file: `gh_core.sh`, which in turn sources
+`core.sh` and `_diagnostics.sh`. It keeps the same interface contract but overrides the `tee_*` functions: when `$ci_system` is
+`github`, they write each line to the GitHub step summary AND to the standard streams (which GitHub maps to the step's log),
+like `tee`. In GitHub Actions the mapping of the logging functions is:
 
 ```text
-info()    ─────► to_stdout()   ──┬──► stdout (log)
+info()    ─────► tee_stdout()  ──┬──► stdout (log)
                                  └──► GITHUB_STEP_SUMMARY
 
-warning() ─────► to_stderr()   ──┬──► stderr (log)
+warning() ─────► tee_stderr()  ──┬──► stderr (log)
                                  └──► GITHUB_STEP_SUMMARY
 
-error()   ─────► to_stderr()   ──┬──► stderr (log)
+error()   ─────► tee_stderr()  ──┬──► stderr (log)
                                  └──► GITHUB_STEP_SUMMARY
 
 trace()   ─────────────────────────► stderr (log only -- never GITHUB_STEP_SUMMARY)
@@ -433,32 +473,51 @@ trace()   ───────────────────────�
 The overriding code is:
 
 ```bash
-function to_stdout() {
+function tee_stdout() {
     local _line
     while IFS= read -r _line; do
         echo "$_line"
-        echo "$_line" >> "$GITHUB_STEP_SUMMARY"
+        if [[ $ci_system == "github" ]]; then
+            echo "$_line" >> "$GITHUB_STEP_SUMMARY"
+        fi
     done
 }
 ```
 
-It turned out that having traces in the summary was not that helpful in the long run -- too much noise for a document meant to be read quickly. Earlier revisions of this library had a `to_traceout()` helper with a `$trace_to_summary` toggle to make this optional; that was eventually simplified to the current, simpler rule instead: `trace()` always writes a plain `>&2` and never touches the step summary at all, in either context, with no toggle to configure. If you need a trace line to also show up in the summary, use `info`/`warning` instead, or `to_summary` directly (see below).
+It turned out that having traces in the summary was not that helpful in the long run -- too much noise for a document meant to
+be read quickly. Earlier revisions of this library had a `to_traceout()` helper with a `$trace_to_summary` toggle to make this
+optional; that was eventually simplified to the current, simpler rule instead: `trace()` always writes a plain `>&2` and never
+touches the step summary at all, in either context, with no toggle to configure. If you need a trace line to also show up in the summary, use `info`/`warning`
+instead, or `to_summary` directly (see below).
 
-The three tee-ing functions (`info`/`warning`/`error`) do not write to the GitHub Step Summary file directly, but to a variable `$GITHUB_STEP_SUMMARY` that is set in `gh_core.sh`. Its value depends on the context: if the script is running in GitHub Actions, it points to the GitHub Step Summary file, otherwise it points to `/dev/null`. This way the logging functions can be used in both contexts without any changes.
+The library never sets or defaults the `GITHUB_*` variables: GitHub Actions exports `$GITHUB_STEP_SUMMARY` and
+`$GITHUB_OUTPUT` for every step, and the `tee_*` functions read them only when `$ci_system` is `github`. `$ci_system` and `$ci`
+are computed once, in `_core_state.sh`, from the variables the CI system defines (`GITHUB_ACTIONS`, `TF_BUILD`, `CI`). This way
+the logging functions can be used in both contexts without any changes, and no made-up `GITHUB_*` value leaks into the child
+processes of a local run.
 
 ##### Free Form Output to the GitHub Step Summary
 
-In the same spirit the library provides a function `to_summary` that writes markdown text to the GitHub Step Summary file. The helper `to_summary` writes to either to `to_stdout` or to the `glow` application. The function is used to write free-form markdown text (e.g. tables) to the GitHub Step Summary file or render it to the console via `glow`.
+In the same spirit the library provides a function `to_summary` that writes free-form Markdown text (e.g. tables) under a
+`## Summary` heading. In a local run with `glow` installed, it renders the Markdown to the console with `glow`; otherwise it
+writes through `tee_stdout`, so in GitHub Actions the text also lands in the step summary.
 
 ##### Communicating Key-Value Pairs to Downstream Jobs via GitHub Actions Output
 
 The requirements are:
 
-1. In the GitHub Actions environment the jobs MUST be able to send key-value pairs to the downstream jobs via the GitHub Actions output stream `$GITHUB_OUTPUT`.
+1. In the GitHub Actions environment the jobs MUST be able to send key-value pairs to the downstream jobs via the GitHub Actions
+   output stream `$GITHUB_OUTPUT`.
 1. The key-value pairs need to be logged also in the action's logs or to `stdout` in the standalone case for better maintainability.
-1. If the values are stored in bash variables, the names of the variables and the keys of the corresponding key-value pairs can be different only by naming conventions: the bash variables MUST be in `snake_case`; and the keys - in `kebab-case` (see [Naming Conventions](#naming-conventions)). E.g. the var `build_projects` should be written as `build-projects` key. The mechanism MUST be able to take a list of variable names (namerefs) and write them as `<key>=<value>` to `$GITHUB_OUTPUT`.
+1. If the values are stored in bash variables, the names of the variables and the keys of the corresponding key-value pairs can
+   be different only by naming conventions: the bash variables MUST be in `snake_case`; and the keys - in `kebab-case` (see
+   [Naming Conventions](#naming-conventions)). E.g. the var `build_projects` should be written as `build-projects` key. The
+   mechanism MUST be able to take a list of variable names (namerefs) and write them as `<key>=<value>` to `$GITHUB_OUTPUT`.
 
-These requirements are implemented in the function `args_to_github_output` which takes a list of variable names, transforms the names to keys, and writes the &lt;key&gt;=&lt;variable value&gt; strings to `$GITHUB_OUTPUT`. The function also logs the key-value pairs to `stdout` for better maintainability. Both of these outputs are done via the function `to_output` which is similar to the logging `to_*` functions, but it writes to `stdout` and to `$GITHUB_OUTPUT` in GitHub Actions or to `/dev/null` if standalone.
+These requirements are implemented in the function `args_to_github_output` which takes a list of variable names, transforms the
+names to keys, and writes the &lt;key&gt;=&lt;variable value&gt; strings to `$GITHUB_OUTPUT`. The function also logs the
+key-value pairs to `stdout` for better maintainability. Both of these outputs are done via the function `tee_output`, which is
+similar to the logging `tee_*` functions: it writes to `stdout`, and in GitHub Actions also to `$GITHUB_OUTPUT`.
 
 ```bash
 source $DEVOPS_LIB_DIR/gh_core.sh
@@ -522,12 +581,18 @@ The build job archives the compiled outputs (`bin/` and `obj/` under the resolve
 download all matching artifacts by pattern (`built-artifacts-{runner.os}-{run_id}-*`) and extract each tar archive to
 avoid rebuilding.
 
-This intra-run handoff deliberately does **not** use the Actions cache: the cache service is designed for cross-run reuse and gives no read-after-write guarantee — a freshly saved entry may not be visible to a lookup seconds later (observed   2026-06-11: 4/4 deterministic restore misses ~25s after a verified save, while the same key restored fine hours later). Workflow artifacts are synchronous and scoped to the run.
+This intra-run handoff deliberately does **not** use the Actions cache: the cache service is designed for cross-run reuse and
+gives no read-after-write guarantee — a freshly saved entry may not be visible to a lookup seconds later (observed   2026-06-11:
+4/4 deterministic restore misses ~25s after a verified save, while the same key restored fine hours later). Workflow artifacts
+are synchronous and scoped to the run.
 
 ### Cache Cleanup
 
 The `_clear_cache.yaml` workflow provides emergency cleanup. It restricts deletions to three allowlisted prefixes: `nuget-`,
-`built-artifacts-`, and `bencher-cli-`. (The `built-artifacts-` *cache* prefix is legacy — these caches are no longer created; the prefix remains allowlisted only to purge leftover entries until they age out. The current build-handoff mechanism uses this same string as a workflow *artifact* name, not a cache entry — see [Build Artifact Handoff](#build-artifact-handoff-workflow-artifacts-not-cache) above — so the two are unrelated despite sharing a prefix.)
+`built-artifacts-`, and `bencher-cli-`. (The `built-artifacts-` *cache* prefix is legacy — these caches are no longer created;
+the prefix remains allowlisted only to purge leftover entries until they age out. The current build-handoff mechanism uses this
+same string as a workflow *artifact* name, not a cache entry — see [Build Artifact Handoff](#build-artifact-handoff-workflow-artifacts-not-cache)
+above — so the two are unrelated despite sharing a prefix.)
 
 ## Benchmark Threshold Management
 
@@ -590,7 +655,7 @@ The scope of "Rebuild benchmark history" depends entirely on **which repo you di
 workflows look similar (same display name family) but do very different things, and must never be confused:
 
 | Action                             | Where                                                                                   | Scope                                                                                 |
-| :--------------------------------- | :--------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
+| :--------------------------------- | :-------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
 | Rebuild **one repo's own** history | That repo -> Actions -> "Rebuild Benchmark History" -> Run workflow                     | Only that repo.                                                                       |
 | Rebuild **every** repo's history   | **vm2.DevOps only** -> Actions -> "Rebuild Benchmark History (fan-out)" -> Run workflow | Every repo in `vm2_repositories` with a top-level `benchmarks/` dir. Fire-and-forget. |
 
@@ -621,7 +686,8 @@ When a consumer repo (e.g., vm2.Glob) runs a workflow:
 ## NuGet Authentication
 
 > [!IMPORTANT]
-> As of vm2.DevOps version 5.0.0 pushing packages to nuget.org requires Trusted Publishing, while other repositories (e.g., GitHub Packages) use standard authentication via `NUGET_API_KEY`.
+> As of vm2.DevOps version 5.0.0 pushing packages to nuget.org requires Trusted Publishing, while other repositories (e.g., GitHub
+> Packages) use standard authentication via `NUGET_API_KEY`.
 
 All workflows that restore NuGet packages authenticate with GitHub Packages:
 

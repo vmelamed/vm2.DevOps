@@ -17,7 +17,7 @@ declare -x right_arrow_em
 declare -x check_em
 declare -x up_arrow_em
 
-declare -x _ignore
+declare -x noise_sink
 
 # timing variables for performance measurement. us stands for microseconds.
 declare -x search_us

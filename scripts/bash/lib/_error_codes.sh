@@ -17,7 +17,7 @@ declare -ri __VM2_LIB_ERROR_CODES_SH_LOADED=1
 # vm2 core lib exit codes: returned exit codes by the functions and scripts in the vm2 ecosystem.
 #===============================================================================================
 
-# RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
+# RETURN CODES THAT ARE REUSED FOR OTHER PURPOSES:
 declare -xri success=0                  # The command succeeded (as a predicate: true).
 declare -xri failure=1                  # The command failed with an unspecified error (as a predicate: false; or the input ended).
 
@@ -32,7 +32,7 @@ declare -xri rc_equal=0                 # akin to 0 in signed integer comparison
 declare -xri rc_greater_than=1          # akin to 1 in signed integer comparison
 declare -xri rc_less_than=255           # akin to -1 in signed integer comparison
 
-# RETURN CODES THAT SHOULD NOT BE REUSED FOR OTHER PURPOSES:
+# RETURN CODES THAT MUST NOT BE REUSED FOR OTHER PURPOSES:
 declare -xri err_invalid_arguments=2    # The arguments are invalid: the wrong number of arguments, or values that failed validation.
 declare -xri err_argument_type=3        # An argument has the wrong type.
 declare -xri err_argument_value=4       # An argument has an invalid value.
@@ -77,11 +77,11 @@ declare -xri err_repo_not_in_vm2_repos=91   # The repository is not in the vm2 r
 
 declare -xri time_out=128               # The command timed out.
 
+declare -xri err_unknown=250            # An unknown error occurred.
+
 declare -xri err_unexpected_error=252   # An unexpected error occurred.
 declare -xri err_has_errors=253         # Errors were reported above.
 declare -xri err_has_bugs=254           # Bugs (violations of a function's calling contract) were reported above.
-
-declare -xri err_unknown=255            # An unknown error occurred.
 
 # vm2 core lib constants
 declare -x bug_prefix
@@ -134,10 +134,10 @@ declare -rA __error_messages=(
 
     [$time_out]="The command timed out."
 
-    [$err_unexpected_error]="An unexpected error occurred."
-    ["$err_has_errors"]="Errors were reported above."
-    ["$err_has_bugs"]="Bugs (violations of a function's calling contract) were reported above."
     [$err_unknown]="An unknown error occurred."
+    [$err_unexpected_error]="An unexpected error occurred."
+    [$err_has_errors]="Errors were reported above."
+    [$err_has_bugs]="Bugs (violations of a function's calling contract) were reported above."
 )
 
 declare -rA __error_names=(
@@ -188,10 +188,10 @@ declare -rA __error_names=(
 
     [$time_out]="\$time_out"
 
+    [$err_unknown]="\$err_unknown"
     [$err_unexpected_error]="\$err_unexpected_error"
     [$err_has_errors]="\$err_has_errors"
     [$err_has_bugs]="\$err_has_bugs"
-    [$err_unknown]="\$err_unknown"
 )
 
 #-----------------------------------------------------------------------------------------------

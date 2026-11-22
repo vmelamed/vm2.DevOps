@@ -22,7 +22,7 @@ declare -x ci
 declare -x semverReleaseRex
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 declare -xr jq_min_version='1.8.0'
 declare -x git_min_version
@@ -50,7 +50,7 @@ function is_tool_present()
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the tool to check." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    command -v "$1" &>"$_ignore"
+    command -v "$1" &>"$noise_sink"
 }
 
 declare git_present=''
@@ -107,7 +107,7 @@ function is_gh_present()
                                     semver_gte "$_ver" "$gh_min_version";
                                 }                                               || with_error _rc "$err_tool_version" "'gh' version $gh_min_version or greater is required. Upgrade 'gh': https://cli.github.com/"
         (( _rc != success )) || execute_with_retry --query --classify gh_failure \
-                                    gh auth status &> "$_ignore"                || with_error _rc "$err_tool_unauthenticated" "'gh' is not authenticated. Run: 'gh auth login'"
+                                    gh auth status &> "$noise_sink"             || with_error _rc "$err_tool_unauthenticated" "'gh' is not authenticated. Run: 'gh auth login'"
         (( _rc == success )) && gh_present=true || gh_present=false
         readonly gh_present
     fi
@@ -231,7 +231,7 @@ function is_valid_json()
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the JSON string to validate." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    jq empty <<< "$1" &> "$_ignore" && return "$positive" || return "$negative"
+    jq empty <<< "$1" &> "$noise_sink" && return "$positive" || return "$negative"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -248,5 +248,5 @@ function is_valid_json_file()
     [[ ! -v 1 ]] || is_path "$1"                                                || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
                                                                                 exit_if_has_bugs
 
-    jq empty "$1" &> "$_ignore" && return "$positive" || return "$negative"
+    jq empty "$1" &> "$noise_sink" && return "$positive" || return "$negative"
 }

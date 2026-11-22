@@ -306,7 +306,7 @@ _run_build() {
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
     run env -i HOME="$HOME" PATH="$BATS_TEST_TMPDIR/repo/fakebin:/usr/local/bin:/usr/bin:/bin" \
         DOTNET_CALL_LOG="$BATS_TEST_TMPDIR/repo/calls.log" \
-        GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" \
+        GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" GITHUB_OUTPUT="$BATS_TEST_TMPDIR/output.txt" \
         bash -c "cd '$BATS_TEST_TMPDIR/repo' && bash '$_build' --quiet App.csproj"
     assert_success
     assert_output --partial "Build Summary"

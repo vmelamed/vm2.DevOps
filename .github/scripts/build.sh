@@ -24,7 +24,7 @@ declare -x key_artifacts_path
 # vm2 core lib defaults
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script's components
 source "$script_dir/build.args.sh"
@@ -44,4 +44,4 @@ dotnet_build "$build_project" build_info                                        
 
 # Expose the resolved ArtifactsPath (from Directory.Build.props, already captured by dotnet_build() above) so callers
 # would never need to hardcode or duplicate the "artifacts" default themselves.
-printf "artifacts-path=%s\n" "${build_info[$key_artifacts_path]:-}" | to_output
+printf "artifacts-path=%s\n" "${build_info[$key_artifacts_path]:-}" | tee_output

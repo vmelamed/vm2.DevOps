@@ -5,7 +5,7 @@
 # Characterization tests for .github/scripts/validate-commits.sh, as it behaves TODAY.
 #
 # validate-commits.sh is designed to run identically standalone and in GitHub Actions (it
-# sources gh_core.sh, whose to_stdout/to_stderr/to_output helpers write to
+# sources gh_core.sh, whose tee_stdout/tee_stderr/tee_output helpers write to
 # $GITHUB_STEP_SUMMARY/$GITHUB_OUTPUT when set, and harmlessly to /dev/null otherwise) -- so
 # these tests exercise it the same way in both "modes": every test runs under a clean
 # 'env -i HOME="$HOME" PATH=...' (no ambient GITHUB_ACTIONS/GITHUB_STEP_SUMMARY), and one test

@@ -18,7 +18,7 @@ declare -x err_tool_error
 
 declare -x ci
 
-declare -x _ignore
+declare -x noise_sink
 
 declare -x commit_sha=""
 declare -x new_branch=""
@@ -97,7 +97,7 @@ function verify_environment()
     local -i _rc=$success
 
     # Note: fetch runs directly, not through execute: it only refreshes remote-tracking refs, and the checks below need them fresh, even in a dry run.
-    git fetch origin 1>"$_ignore"                                               || with_error _rc "$err_tool_error" "Failed to fetch from remote."
+    git fetch origin 1>"$noise_sink"                                            || with_error _rc "$err_tool_error" "Failed to fetch from remote."
 
     local -A _repo_state
     (( _rc != success )) || get_repo_state "$(git rev-parse --show-toplevel)" _repo_state \
@@ -129,7 +129,8 @@ function resolve_arguments()
     # Verify we have a valid and existing SHA
     _rc=$success
     is_valid_commit_sha "$commit_sha"                                           || with_error _rc "$err_argument_value" "The '--commit-sha' is mandatory and must be a valid 4 to 64 hexadecimal digits string"
-    (( _rc != success )) || git cat-file -e "$commit_sha^{commit}" 2>"$_ignore" || with_error _rc "$err_argument_value" "Commit '$commit_sha' does not exist"
+    (( _rc != success )) || git cat-file -e "$commit_sha^{commit}" 2>"$noise_sink" \
+                                                                                || with_error _rc "$err_argument_value" "Commit '$commit_sha' does not exist"
     (( _rc != success )) || git merge-base --is-ancestor "$commit_sha" HEAD     || with_error _rc "$err_argument_value" "Commit '$commit_sha' is not on '${current_branch:-HEAD}'."
 
     # freeze the arguments

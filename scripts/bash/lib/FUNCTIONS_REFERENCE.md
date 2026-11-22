@@ -20,8 +20,8 @@
     - [set\_quiet() / unset\_quiet()](#set_quiet--unset_quiet)
     - [is\_dry\_run()](#is_dry_run)
     - [set\_dry\_run() / unset\_dry\_run()](#set_dry_run--unset_dry_run)
-    - [show\_ignored\_output()](#show_ignored_output)
-    - [hide\_ignored\_output()](#hide_ignored_output)
+    - [show\_ignored\_output()](#show_noise_sink)
+    - [hide\_ignored\_output()](#hide_noise_sink)
     - [set\_trace\_enabled()](#set_trace_enabled)
     - [unset\_trace\_enabled()](#unset_trace_enabled)
     - [is\_trace\_enabled()](#is_trace_enabled)
@@ -72,7 +72,7 @@
     - [is\_valid\_json()](#is_valid_json)
     - [is\_valid\_json\_file()](#is_valid_json_file)
   - [\_diagnostics.sh](#_diagnosticssh)
-    - [to\_stdout() / to\_stderr() / to\_output()](#to_stdout--to_stderr--to_output)
+    - [to\_stdout() / to\_stderr() / to\_output()](#tee_stdout--tee_stderr--tee_output)
     - [has\_errors()](#has_errors)
     - [get\_errors()](#get_errors)
     - [set\_errors()](#set_errors)
@@ -202,8 +202,8 @@
     - [list\_solution\_projects()](#list_solution_projects)
     - [expand\_solution\_projects()](#expand_solution_projects)
   - [gh\_core.sh](#gh_coresh)
-    - [to\_stdout() / to\_stderr() (overrides)](#to_stdout--to_stderr-overrides)
-    - [to\_output() (override)](#to_output-override)
+    - [to\_stdout() / to\_stderr() (overrides)](#tee_stdout--tee_stderr-overrides)
+    - [to\_output() (override)](#tee_output-override)
     - [gh\_escape()](#gh_escape)
     - [args\_to\_github\_output()](#args_to_github_output)
   - [Summary](#summary)
@@ -281,7 +281,7 @@ Searches a directory for the first of several file name patterns that matches an
 
 ## _core_state.sh
 
-Common state variables (`$ci`, `$debugger`, quiet/verbose/dry-run/trace modes, `$_ignore`, table format) and the functions that
+Common state variables (`$ci`, `$ci_system`, `$debugger`, quiet/verbose/dry-run/trace modes, `$noise_sink`, table format) and the functions that
 read, set, and save/restore them.
 
 ### is_verbose()
@@ -308,17 +308,17 @@ Tests whether the script is in dry-run mode.
 
 Enables / disables dry-run mode.
 
-### show_ignored_output()
+### show_noise_sink()
 
-Redirects `$_ignore` (normally `/dev/null`) to a given file, default `/dev/stderr`, for debugging.
+Redirects `$noise_sink` (normally `/dev/null`) to a given file, default `/dev/stderr`, for debugging.
 
-### hide_ignored_output()
+### hide_noise_sink()
 
-Restores `$_ignore` to `/dev/null`.
+Restores `$noise_sink` to `/dev/null`.
 
 ### set_trace_enabled()
 
-Enables trace mode: turns on verbose mode, redirects `$_ignore` to stderr, and enables `set -x`.
+Enables trace mode: turns on verbose mode, redirects `$noise_sink` to stderr, and enables `set -x`.
 
 ### unset_trace_enabled()
 
@@ -326,7 +326,7 @@ Disables trace mode: the inverse of `set_trace_enabled`.
 
 ### is_trace_enabled()
 
-Tests whether trace mode (verbose + `$_ignore` redirected + `set -x`) is currently enabled.
+Tests whether trace mode (verbose + `$noise_sink` redirected + `set -x`) is currently enabled.
 
 ### get_table_format()
 
@@ -338,7 +338,7 @@ Sets the `dump_vars` table format to "graphical" or "markdown".
 
 ### save_state()
 
-Saves quiet/verbose/dry-run/`$_ignore`/table-format/tracing state into an associative array, for later `restore_state`. For the
+Saves quiet/verbose/dry-run/`$noise_sink`/table-format/tracing state into an associative array, for later `restore_state`. For the
 shell options, use `begin_scope`/`end_scope`.
 
 ### restore_state()
@@ -530,7 +530,7 @@ Tests if the file at a given path contains valid JSON.
 Logging functions (`error`, `warning`, `info`, `trace`, `bug`), the global error/bug counters, and the
 `exit_if_has_errors`/`exit_if_has_bugs` gates.
 
-### to_stdout() / to_stderr() / to_output()
+### tee_stdout() / tee_stderr() / tee_output()
 
 Read lines from stdin and echo them to stdout / stderr / stdout, respectively — overridable abstractions (`gh_core.sh` overrides
 them to also write to GitHub Actions step summary/output files).
@@ -618,7 +618,7 @@ Prints the current call stack, one line per frame.
 ### to_summary()
 
 Logs one or more lines under a `## Summary` markdown heading, via `$__summary_output` (glow, if available and not in CI;
-otherwise `to_stdout`).
+otherwise `tee_stdout`).
 
 ### now_us()
 
@@ -1107,16 +1107,16 @@ Expands any solution-file entries in a JSON array of project/solution paths into
 
 ## gh_core.sh
 
-GitHub Actions environment integration. Sources `core.sh` and overrides its `to_*` functions to also write to the step-summary/
+GitHub Actions environment integration. Sources `core.sh` and overrides its `tee_*` functions to also write to the step-summary/
 output files.
 
-### to_stdout() / to_stderr() (overrides)
+### tee_stdout() / tee_stderr() (overrides)
 
-Send input to stdout/stderr, and (in GitHub Actions) also append to `$GITHUB_STEP_SUMMARY`.
+Send input to stdout/stderr, and (when `$ci_system` is `github`) also append to `$GITHUB_STEP_SUMMARY`.
 
-### to_output() (override)
+### tee_output() (override)
 
-Sends input to stdout, and (in GitHub Actions) also appends to `$GITHUB_OUTPUT`.
+Sends input to stdout, and (when `$ci_system` is `github`) also appends to `$GITHUB_OUTPUT`.
 
 ### gh_escape()
 
@@ -1125,7 +1125,7 @@ escaping rules.
 
 ### args_to_github_output()
 
-Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_OUTPUT`, via `to_output`.
+Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_OUTPUT`, via `tee_output`.
 
 ---
 
@@ -1156,7 +1156,7 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 | gh_core.sh           |         5 |
 
 Counts include internal (`__`-prefixed) helper functions that are not part of the public library surface but are still documented
-in their source files. The `gh_core.sh` overrides of `to_stdout`/`to_stderr`/`to_output` and the `_core_args.sh` override of
+in their source files. The `gh_core.sh` overrides of `tee_stdout`/`tee_stderr`/`tee_output` and the `_core_args.sh` override of
 `usage` are counted in both files.
 
 ### Usage Pattern
@@ -1168,8 +1168,8 @@ in their source files. The `gh_core.sh` overrides of `to_stdout`/`to_stderr`/`to
 
 ### Key Design Principles
 
-- Functions read from stdin and write to stdout/stderr where appropriate, for pipeline composition (`to_stdout`, `to_stderr`,
-- `to_output`, `to_summary`, `error`, `warning`, `info`, `trace`).
+- Functions read from stdin and write to stdout/stderr where appropriate, for pipeline composition (`tee_stdout`, `tee_stderr`,
+- `tee_output`, `to_summary`, `error`, `warning`, `info`, `trace`).
 - Global state is saved/restored cooperatively via `save_state`/`restore_state`, never mutated ad hoc.
 - Predicate functions (`is_*`, `has_*`) return `$positive`/`$negative` (0/1); they answer a yes/no question, and "no" is a
 - legitimate answer, not a failure.

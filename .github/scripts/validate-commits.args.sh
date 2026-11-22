@@ -23,7 +23,7 @@ declare -x git_remotes_ns
 declare -x vm2_repositories
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this scripts arguments
 declare -x repo_path
@@ -99,13 +99,14 @@ function resolve_arguments()
         local _default_ref=''
 
         # origin/HEAD, not @{upstream}, is the right signal
-        _default_ref=$(git -C "$repo_path" symbolic-ref --short "${git_remotes_ns}origin/HEAD" 2>"$_ignore") ||
+        _default_ref=$(git -C "$repo_path" symbolic-ref --short "${git_remotes_ns}origin/HEAD" 2>"$noise_sink") ||
             # here: @{upstream} means "the branch this one
             # pushes/pulls with," which for a normally-pushed feature branch (`git push -u origin <branch>`)
             # is a same-named remote branch, not the trunk it forked from -- its merge-base with HEAD is
             # HEAD itself, which would silently validate almost nothing. @{upstream} is only used as a
             # last-resort fallback, for a repo with no discoverable default branch at all.
-            _default_ref=$(git -C "$repo_path" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>"$_ignore") || true
+            _default_ref=$(git -C "$repo_path" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>"$noise_sink") \
+                                                                                || true
 
         [[ -n $_default_ref ]]                                                  || with_error _rc "$err_argument_value" "No base ref provided, there is no origin/HEAD default branch, and this branch has no" \
                                                                                                                         "upstream tracking branch either. Pass a base ref explicitly, or set \$BASE_REF."

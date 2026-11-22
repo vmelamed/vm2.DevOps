@@ -33,7 +33,7 @@ declare -x git_heads_ns
 declare -x git_remotes_ns
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 #-----------------------------------------------------------------------------------------------
 # @description Renames a Git branch both locally and on the 'origin' remote, and re-points the local branch's upstream

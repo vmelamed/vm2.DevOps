@@ -23,7 +23,7 @@ declare -x key_owner
 # vm2 core lib defaults
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script's constants
 declare -xri default_repeat=10

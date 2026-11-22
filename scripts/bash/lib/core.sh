@@ -70,14 +70,14 @@ declare -x err_tool_error
 
 declare -x error_em
 
-declare -x default__ignore
+declare -x default_noise_sink
 declare -x debugger
 
 # Override the default or environment values of common flags based on other flags upon sourcing.
 # Make sure that the other set_* functions are honoring the ci flag.
 if $ci; then
     # guard CI from quiet off
-    _ignore=$default__ignore
+    noise_sink=$default_noise_sink
     set_quiet
     set +x
 fi
@@ -282,7 +282,7 @@ function execute()
 
     trace "Executing (${BASH_SOURCE[1]:-} ${BASH_LINENO[0]:-}): $_command"
     if $_quiet && ! is_verbose; then
-        "$@" > "$_ignore" 2>&1
+        "$@" > "$noise_sink" 2>&1
     else
         "$@"
     fi
