@@ -20,7 +20,7 @@ declare -x ci
 declare -x git_tags_ns
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script variables
 declare -x delete_mode=false
@@ -101,7 +101,7 @@ function verify_environment
 {
     is_git_present                                                              || return "$success"
 
-    git rev-parse --git-dir &>"$_ignore"                                        || error "The current directory is not a git repository." -ec "$err_logic_error"
+    git rev-parse --git-dir &>"$noise_sink"                                     || error "The current directory is not a git repository." -ec "$err_logic_error"
 
     return "$success"
 }

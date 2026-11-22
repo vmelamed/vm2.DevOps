@@ -20,7 +20,7 @@ declare -x err_tool_unauthenticated
 declare -x ci
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this scripts arguments
 declare -x artifact_name=${ARTIFACT_NAME:-}

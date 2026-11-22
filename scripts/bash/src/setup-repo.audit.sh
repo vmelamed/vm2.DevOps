@@ -29,7 +29,7 @@ declare -x secret_str
 declare -x secret_placeholder
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this scripts
 declare -x repo_path
@@ -165,7 +165,7 @@ function compare_settings()
     local _key_values
 
     _key_values=$(execute_with_retry --query --classify gh_failure \
-                    gh api --paginate "$_gh_endpoint" --jq "$_jq_transform" 2>"$_ignore") \
+                    gh api --paginate "$_gh_endpoint" --jq "$_jq_transform" 2>"$noise_sink") \
                                                                                 ||  {
                                                                                         with_error _rc $? "Could not retrieve data from GitHub's endpoint $_gh_endpoint."
                                                                                         return "$_rc"
@@ -260,7 +260,7 @@ function get_default_branch_protection_ruleset()
     local _ruleset_id
 
     _ruleset_id=$(execute_with_retry --query --classify gh_failure \
-                    gh api --paginate "$path_rulesets" --jq "$jq_ruleset_id" 2>"$_ignore") \
+                    gh api --paginate "$path_rulesets" --jq "$jq_ruleset_id" 2>"$noise_sink") \
                                                                                 || with_error _rc $? "$failure" "Ruleset '$main_protection_rs_name' for branch '$default_branch' does not exist."
     return "$_rc"
 }
@@ -271,7 +271,7 @@ function audit_branch_ruleset()
     local _ruleset_id
 
     _ruleset_id=$(execute_with_retry --query --classify gh_failure \
-                    gh api --paginate "$path_rulesets" --jq "$jq_ruleset_id" 2>"$_ignore") \
+                    gh api --paginate "$path_rulesets" --jq "$jq_ruleset_id" 2>"$noise_sink") \
                                                                                 || with_error _rc "$failure" "Failed to get the rulesets."
     (( _rc != success )) || [[ -n "$_ruleset_id" ]]                             || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$default_branch' does not exist."
     (( _rc != success )) || echo "  $info_em  Ruleset '$main_protection_rs_name' for branch '$default_branch' (id: $_ruleset_id):"
@@ -289,7 +289,7 @@ function audit_required_status_checks()
 
     local _checks
     _checks=$(execute_with_retry --query --classify gh_failure \
-                gh api --paginate "$path_main_protection_ruleset" --jq "$jq_status_checks" 2>"$_ignore") \
+                gh api --paginate "$path_main_protection_ruleset" --jq "$jq_status_checks" 2>"$noise_sink") \
                                                                                 ||  {
                                                                                         with_error _rc $? "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
                                                                                         return "$_rc"
@@ -398,7 +398,7 @@ function audit_repo()
     for _key in "${default_local_git_settings_order[@]}"; do
         _rc=$success
         _expected="${default_local_git_settings[$_key]}"
-        _actual=$(git -C "$repo_path" config --local --get "$_key" 2>"$_ignore") || _rc=$?
+        _actual=$(git -C "$repo_path" config --local --get "$_key" 2>"$noise_sink") || _rc=$?
         if [[ $_rc -ne "$success" ]]; then
             printf "      $error_em  %-36s => %s (default: '%s')\n" "$_key" "$_actual" "$_expected"
             (( ++_results["$key_missing"] ))

@@ -35,7 +35,7 @@ declare -xr git_heads_ns='refs/heads/'
 declare -xr git_remotes_ns='refs/remotes/'                              # usage: "$git_remotes_ns$remote/$branch"
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 #-----------------------------------------------------------------------------------------------
 # @description Tests if the specified branch name is valid according to Git's rules.
@@ -56,7 +56,7 @@ function is_valid_branch_name()
     local _branch=${1#"$git_heads_ns"}
 
     [[ -n $_branch ]]                                                           || return "$negative"
-    git check-ref-format --branch "$_branch" &> "$_ignore"                      || return "$negative"
+    git check-ref-format --branch "$_branch" &> "$noise_sink"                   || return "$negative"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -79,7 +79,7 @@ function is_valid_tag_name()
     local _tag=${1#"$git_tags_ns"}
 
     [[ -n $_tag && $_tag != -* ]]                                               || return "$negative"
-    git check-ref-format "$git_tags_ns$_tag" &> "$_ignore"                      || return "$negative"
+    git check-ref-format "$git_tags_ns$_tag" &> "$noise_sink"                   || return "$negative"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -158,7 +158,8 @@ function is_inside_work_tree()
 
     # normalize to $positive/$negative -- `git rev-parse` exits 128 (its generic "fatal" code),
     # not 1, when the directory is not inside a work tree.
-    git -C "$_path" rev-parse --is-inside-work-tree &> "$_ignore" && return "$positive" || return "$negative"
+    git -C "$_path" rev-parse --is-inside-work-tree &> "$noise_sink" && return "$positive" \
+                                                                                || return "$negative"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -192,7 +193,7 @@ function root_working_tree()
 
     is_inside_work_tree "$_path"                                                || with_error _rc "$err_not_git_directory" "The directory '$_path' is not in a Git working tree."
 
-    (( _rc != success )) || __repo_root_ref=$(git -C "$_path" rev-parse --show-toplevel 2> "$_ignore")
+    (( _rc != success )) || __repo_root_ref=$(git -C "$_path" rev-parse --show-toplevel 2> "$noise_sink")
     return "$_rc"
 }
 
@@ -237,15 +238,15 @@ function should_fetch_for_latest_stable_tag()
                                                                                 exit_if_has_bugs
 
     # Shallow repositories can miss history or tags needed by release predicates - yes we need a fetch
-    [[ $(git -C "$_dir" rev-parse --is-shallow-repository 2>"$_ignore") != true ]] \
+    [[ $(git -C "$_dir" rev-parse --is-shallow-repository 2>"$noise_sink") != true ]] \
                                                                                 || return "$positive"
     local _local_sha _remote_sha
 
     # no locally-cached SHA - no fetch needed
-    _local_sha=$(git -C "$_dir" rev-parse --verify "${git_remotes_ns}origin/$_branch" 2>"$_ignore") \
+    _local_sha=$(git -C "$_dir" rev-parse --verify "${git_remotes_ns}origin/$_branch" 2>"$noise_sink") \
                                                                                 || return "$negative"
     # no remote SHA for the branch - no fetch needed
-    _remote_sha=$(git -C "$_dir" ls-remote --heads origin "$_branch" 2>"$_ignore" | awk 'NR==1 {print $1}')
+    _remote_sha=$(git -C "$_dir" ls-remote --heads origin "$_branch" 2>"$noise_sink" | awk 'NR==1 {print $1}')
     [[ -n "$_remote_sha" ]]                                                     || return "$negative"
     # SHAs are equal - no fetch needed
     [[ "$_local_sha" != "$_remote_sha" ]]                                       || return "$negative"
@@ -263,7 +264,7 @@ function should_fetch_for_latest_stable_tag()
     [[ -n "$_local_stable_tag" ]]                                               || return "$positive"
     # Get latest stable tag from remote
     _remote_stable_tag=$(
-        git -C "$_dir" ls-remote --tags --refs origin 2>"$_ignore" |
+        git -C "$_dir" ls-remote --tags --refs origin 2>"$noise_sink" |
         awk '{print $2}' |
         sed "s#${git_tags_ns}##" |
         grep -E "$semverTagReleaseRegex" |
@@ -303,7 +304,7 @@ function ensure_fresh_git_state()
 
     if (( _rc == "$positive" )); then
         trace "Git metadata of repository '$1' branch '${2:-main}' appears stale or repository is shallow. Fetching from origin..."
-        git -C "$1" fetch origin "${2:-main}" --quiet 2> "$_ignore"             || with_error _rc "$err_logic_error" "Failed to fetch from origin."
+        git -C "$1" fetch origin "${2:-main}" --quiet 2> "$noise_sink"          || with_error _rc "$err_logic_error" "Failed to fetch from origin."
     else
         _rc=$success
         trace "Git metadata of repository '$1' branch '${2:-main}' appears fresh. No fetch needed."
@@ -359,7 +360,7 @@ function get_latest_stable_tag_hash()
     [[ -n $_latest_stable_tag ]]                                                || return "$failure" # no stable tags? - return 1
 
     # get the hash of the commit of the latest stable tag
-    git -C "$_dir" rev-parse "$_latest_stable_tag^{commit}" 2>"$_ignore"
+    git -C "$_dir" rev-parse "$_latest_stable_tag^{commit}" 2>"$noise_sink"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -394,7 +395,7 @@ function is_after_latest_stable_tag()
     _latest_stable_hash=$(get_latest_stable_tag_hash "$@")                      || return $?
 
     # How many commits since the latest stable tag
-    _commits_after_latest_stable=$(git -C "${1:-$initial_cwd}" rev-list "$_latest_stable_hash..HEAD" --count 2>"$_ignore")
+    _commits_after_latest_stable=$(git -C "${1:-$initial_cwd}" rev-list "$_latest_stable_hash..HEAD" --count 2>"$noise_sink")
     (( _commits_after_latest_stable > 0 ))
 }
 
@@ -430,5 +431,5 @@ function is_on_or_after_latest_stable_tag()
 
     # Check if current commit is on or after the latest tag
     # Returns 0 if tag commit is an ancestor of HEAD (i.e., HEAD is at or after the tag)
-    git -C "${1:-$initial_cwd}" merge-base --is-ancestor "$_latest_stable_tag_hash" HEAD &> "$_ignore"
+    git -C "${1:-$initial_cwd}" merge-base --is-ancestor "$_latest_stable_tag_hash" HEAD &> "$noise_sink"
 }

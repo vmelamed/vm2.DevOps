@@ -31,13 +31,13 @@ declare -x minverTagPrefixRegex
 declare -x minverPrereleaseIdRegex
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
     lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 fi
 
-if ! declare -pF "error" > "$_ignore"; then
+if ! declare -pF "error" > "$noise_sink"; then
     source "$lib_dir/_diagnostics.sh"
 fi
 

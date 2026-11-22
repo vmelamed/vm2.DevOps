@@ -22,7 +22,7 @@ declare -ri __VM2_LIB_GIT_VM2_SH_LOADED=1
 
 declare -x script_dir
 declare -x lib_dir
-declare -x _ignore
+declare -x noise_sink
 
 # vm2 core lib exit codes
 declare -x success
@@ -88,7 +88,7 @@ function get_devops_parent()
 
         # shellcheck disable=SC2015
         root_working_tree "$lib_dir" _root &&
-        __devops_parent=$(dirname "$_root" 2> "$_ignore")                       || with_error _rc "$err_logic_error" "Failed to resolve the parent directory of the vm2.DevOps repo from the script directory '$lib_dir'." \
+        __devops_parent=$(dirname "$_root" 2> "$noise_sink")                    || with_error _rc "$err_logic_error" "Failed to resolve the parent directory of the vm2.DevOps repo from the script directory '$lib_dir'." \
                                                                                                                      "Ensure that the script is located in '$VM2_REPOS/vm2.DevOps/scripts/bash/lib' and" \
                                                                                                                      "that the repository is not in a detached HEAD state."
         (( _rc == success ))                                                    || return "$_rc"
@@ -169,14 +169,14 @@ function __validate_repo_root()
     #   try to resolve the repository path from the parameter alone
     #   i.e., the current working directory or the absolute path provided as the first argument
     #   otherwise try to resolve the repository path relative to $_vm2_repos
-    _path=$(realpath -e "$_repo" 2> "$_ignore") || _path=$(realpath -e "$_vm2_repos/${_repo#/}" 2> "$_ignore") \
+    _path=$(realpath -e "$_repo" 2> "$noise_sink") || _path=$(realpath -e "$_vm2_repos/${_repo#/}" 2> "$noise_sink") \
                                                                                 || with_error _rc "$err_not_found" "Could not find the path '$_repo' neither in the current working directory, nor in '$_vm2_repos'."
     (( _rc != success )) || trace "Resolved the path of the repository '$_repo' as '$_path' from the _repo parameter directly, or from vm2_repos/_repo"
 
     # 2) it is a root of the Git repository's working directory
     local _r
 
-    (( _rc != success )) || root_working_tree "$_path" _r 2> "$_ignore"         || with_error _rc "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' path is not a git repository." \
+    (( _rc != success )) || root_working_tree "$_path" _r 2> "$noise_sink"      || with_error _rc "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' path is not a git repository." \
                                                                                                   -ec $?
     (( _rc != success )) || [[ "$_path" == "$_r" ]]                             || with_error _rc "$err_not_git_root" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree."
 
@@ -184,7 +184,7 @@ function __validate_repo_root()
     (( _rc != success )) || [[ -d "$_path/.github/workflows" ]]                 || with_error _rc "$err_repo_with_no_ci" "The '${_repo-<missing>}' repository does not have GitHub Actions workflows in '${_path-<missing>}/.github/workflows'."
 
     # 4) it is on the specified branch (or the currently checked out branch if not specified)
-    (( _rc != success )) || [[ -z "${_branch:-}" || "$_branch" == $(git -C "$_path" branch --show-current 2>"$_ignore") ]] \
+    (( _rc != success )) || [[ -z "${_branch:-}" || "$_branch" == $(git -C "$_path" branch --show-current 2>"$noise_sink") ]] \
                                                                                 || with_error _rc "$err_invalid_branch" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not on the branch '${_branch-<missing>}'."
 
     # 5) it is at or ahead of the latest stable tag (forcing fetch) of the specified branch.
@@ -295,7 +295,7 @@ function resolve_vm2_repos()
                                                                                                                        "${vm2_repos_instructions[@]}"
 
     # ensure $vm2_repos is an existing, absolute path:
-    (( _rc != success )) || _repos=$(realpath -e "$_repos" 2> "$_ignore")       || with_error _rc "$err_not_directory" "The resolved parent directory for the vm2 repositories '$_repos' does not exist or is not a directory." \
+    (( _rc != success )) || _repos=$(realpath -e "$_repos" 2> "$noise_sink")    || with_error _rc "$err_not_directory" "The resolved parent directory for the vm2 repositories '$_repos' does not exist or is not a directory." \
                                                                                                                        "${vm2_repos_instructions[@]}"
 
     # 1) validate that $vm2_repos is the parent directory of the git repository vm2.DevOps;
@@ -395,7 +395,7 @@ function __search_repo_dir()
                   -o -name TestResults \
                   -o -name BenchmarkDotNet.Artifacts \
                   \) -prune \
-                  -o -type d -path "*/$_dir_rel_path" -print 2>"$_ignore")
+                  -o -type d -path "*/$_dir_rel_path" -print 2>"$noise_sink")
 
     (( _found_repo_dirs + _found_dirs == 0 ))                                       && return "$err_not_found"
     (( _found_repo_dirs == 1 ))                     && __result_dir="$_in_repo_dir" && return "$success"

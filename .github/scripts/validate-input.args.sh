@@ -20,7 +20,7 @@ declare -x ci
 declare -x dump_common_dotnet_args
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this scripts argument defaults
 declare -r defaultBuildProjects='[]'
@@ -223,7 +223,7 @@ function resolve_arguments()
                                         --argjson t "$test_projects" \
                                         --argjson m "$benchmark_projects" \
                                         --argjson p "$package_projects" \
-                                        '($b + $t + $m + $p)[]' 2>"$_ignore")
+                                        '($b + $t + $m + $p)[]' 2>"$noise_sink")
 
     declare candidate=''
 

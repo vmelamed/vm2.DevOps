@@ -25,7 +25,7 @@ declare -x vm2_repositories
 # vm2 core lib defaults
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # vm2 core lib constants
 declare -x key_artifacts_path

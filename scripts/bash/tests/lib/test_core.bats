@@ -675,15 +675,15 @@ _ffp() {
 # (e.g. 'printf "%s"'), so a plain 'while read' loop dropped that line. The stdin-forwarding functions guard against it
 # with '|| [[ -n $var ]]': their callers control the input.
 
-@test "to_stdout: forwards a last line without a trailing newline" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'first\nlast' | to_stdout"
+@test "tee_stdout: forwards a last line without a trailing newline" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'first\nlast' | tee_stdout"
     assert_success
     assert_line --index 0 "first"
     assert_line --index 1 "last"
 }
 
-@test "to_stderr: forwards a last line without a trailing newline" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'first\nlast' | to_stderr 2>&1"
+@test "tee_stderr: forwards a last line without a trailing newline" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'first\nlast' | tee_stderr 2>&1"
     assert_success
     assert_line --index 0 "first"
     assert_line --index 1 "last"

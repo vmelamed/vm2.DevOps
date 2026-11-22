@@ -61,7 +61,7 @@ declare project
 
 for project in "${benchmark_projects[@]}"; do
     for (( i=1; i <= repeat; i++ )); do
-        echo "▶ [$project] run $i of $repeat (Bencher branch '$bencher_branch')..." | to_stdout
+        echo "▶ [$project] run $i of $repeat (Bencher branch '$bencher_branch')..." | tee_stdout
 
         if ! run-benchmarks.sh \
                 "$project" \

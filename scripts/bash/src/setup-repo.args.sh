@@ -24,7 +24,7 @@ declare -x repo_visibilities_str
 declare -x ci
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # script constants
 

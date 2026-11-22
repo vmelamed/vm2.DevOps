@@ -194,7 +194,7 @@ All core library files live in `scripts/bash/lib/` and are sourced by scripts th
 | `_constants.sh`        | ANSI color codes and a few other constants                       |
 | `_core_state.sh`       | Common state variables (quiet, verbose, dry-run, trace modes)    |
 | `_error_codes.sh`      | Error code constants                                             |
-| `_diagnostics.sh`      | Logging (`to_stdout`, `error`, `warning`, `trace`, etc.)         |
+| `_diagnostics.sh`      | Logging (`tee_stdout`, `error`, `warning`, `trace`, etc.)        |
 | `_core_args.sh`        | Common argument parsing to initialize core state                 |
 | `_predicates.sh`       | Boolean checks (`is_array`, `is_positive`, etc.)                 |
 | `_semver.sh`           | Semantic versioning utilities                                    |
@@ -424,7 +424,7 @@ buffering, and error-propagation behavior, especially when command substitution 
 
   ```bash
   _remote_stable_tag=$(
-      git -C "$_dir" ls-remote --tags --refs origin 2>"$_ignore" |
+      git -C "$_dir" ls-remote --tags --refs origin 2>"$noise_sink" |
       awk '{print $2}' |
       sed 's#refs/tags/##' |
       grep -E "$semverTagReleaseRegex" |
@@ -497,13 +497,14 @@ also normalize their input or transform it into a canonical form.
 
 #### Functions Forwarding `stdin`
 
-These functions are reading input from `stdin` and outputting it to one or more output streams depending on the environment,
-options, or internal logic. Examples include `to_output`, `to_summary`, `to_stdout`, and `to_stderr`. E.g. `to_stdout` reads
-from `stdin` and writes to the standard output AND to a variable `GITHUB_STEP_SUMMARY` which if not defined by GitHub has value
-`/dev/null` on the local machine. `to_output` reads from `stdin` and writes to the standard output AND to a variable
-`GITHUB_OUTPUT` if not defined by GitHub Actions, has a value `/dev/null` on the local machine, etc. `trace()` is the one logging
-function that does NOT go through a `to_*` tee helper -- it always writes a plain `stderr`-only line, in every context, and
-never touches the step summary. For more information see the [ARCHITECTURE document](docs/ARCHITECTURE.md)
+These functions read `stdin` and write it to one or more destinations, depending on the environment: `tee_stdout`,
+`tee_stderr`, `tee_output`, and `to_summary`. The `tee_*` functions always write to their standard stream (`tee_output` to
+`stdout`); when `$ci_system` is `github`, they also append each line to the file that GitHub Actions names in
+`$GITHUB_STEP_SUMMARY` (`tee_stdout`, `tee_stderr`) or `$GITHUB_OUTPUT` (`tee_output`). Outside GitHub Actions those variables
+are never read. `to_summary` renders Markdown with `glow` in a local run where `glow` is installed, and goes through
+`tee_stdout` otherwise. `trace()` is the one logging function that does NOT go through a `tee_*` helper -- it always
+writes a plain `stderr`-only line, in every context, and never touches the step summary. For more information see the
+[ARCHITECTURE document](docs/ARCHITECTURE.md).
 
 #### Functions Returning Values in `stdout`
 
@@ -754,7 +755,7 @@ what is already up to date); a dry run reports the intended changes of one parti
 - **The dry-run line goes to `stderr`,** so a caller capturing `stdout` (`x=$(execute …)`, `execute … > file`) never
   receives it as data. In a dry run the capture is empty; code that depends on it is an `is_dry_run` case (below).
 - **To hide a command's noise, use `execute --quiet`**: it discards the command's `stdout` and `stderr` unless verbose
-  mode is on, and never the dry-run line. Do not redirect `execute` itself (`execute … > "$_ignore" 2>&1`): that also
+  mode is on, and never the dry-run line. Do not redirect `execute` itself (`execute … > "$noise_sink" 2>&1`): that also
   swallows the dry-run line. Do not use `--quiet` when the caller captures the output either: it discards exactly what
   the caller wants (e.g. the PR URL that `gh pr create` prints).
 - **Extend a wrapper instead of bypassing it.** If a library wrapper lacks an option a script needs, extend the wrapper
@@ -779,7 +780,7 @@ is_dry_run || [[ -s $package ]] || error "Package '$package' not found or empty.
 
 # Avoid: a query behind execute, a redirected execute, and is_dry_run as an on/off switch for a whole block
 if ! execute dotnet tool list "$tool" --global; then ...; fi                 # always "installed" in a dry run
-execute git -C "$repo" switch -c "$branch" > "$_ignore" 2>&1                 # the dry-run line is swallowed too
+execute git -C "$repo" switch -c "$branch" > "$noise_sink" 2>&1              # the dry-run line is swallowed too
 if ! is_dry_run; then
     (cd "$repo" && dotnet restore --force-evaluate)                          # bypasses the wrapper, untested path
 fi

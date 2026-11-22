@@ -26,9 +26,6 @@ declare -x err_invalid_nameref
 declare -x vm2_repositories
 declare -x nugetServersRegex
 
-# vm2 core lib variables
-declare -x _ignore
-
 declare -xr zero_rex='[+-]?0'
 declare -xr natural_rex='[1-9][0-9]*'
 declare -xr positive_rex="[+]?$natural_rex"
@@ -56,6 +53,9 @@ declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
 declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
 
 declare -xr base64_regex="^($base64_char_rex{4})*($base64_char_rex{3}=|$base64_char_rex{2}==)?\$"
+
+# vm2 core lib variables
+declare -x noise_sink
 
 #-----------------------------------------------------------------------------------------------
 # @description Checks if the shell is case-sensitive.
@@ -123,7 +123,7 @@ function is_variable()
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    is_variable_name "$1" && declare -p "$1" &> "$_ignore"
+    is_variable_name "$1" && declare -p "$1" &> "$noise_sink"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -145,15 +145,10 @@ function is_indexed_array()
 
     is_variable_name "$1" || return "$negative"
 
-    begin_scope
-    set_case_sensitive
-
     local -i _rc="$positive"
     local _decl
 
-    _decl=$(declare -p "$1" 2>"$_ignore") && [[ $_decl =~ ^declare\ -a ]] || _rc="$negative"
-
-    end_scope
+    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -a ]]    || _rc="$negative"
 
     return "$_rc"
 }
@@ -177,15 +172,10 @@ function is_associative_array()
 
     is_variable_name "$1" || return "$negative"
 
-    begin_scope
-    set_case_sensitive
-
     local -i _rc="$positive"
     local _decl
 
-    _decl=$(declare -p "$1" 2>"$_ignore") && [[ $_decl =~ ^declare\ -A ]] || _rc="$negative"
-
-    end_scope
+    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -A ]]    || _rc="$negative"
 
     return "$_rc"
 }
@@ -218,7 +208,7 @@ function is_array()
     local _decl
 
      # -a or -A case insensitive!
-    _decl=$(declare -p "$1" 2>"$_ignore") && [[ $_decl =~ ^declare\ -a ]] || _rc="$negative"
+    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -a ]]    || _rc="$negative"
 
     end_scope
 
@@ -266,7 +256,7 @@ function is_function()
 
     is_variable_name "$1" || return "$negative"
 
-    declare -pF "$1" > "$_ignore" 2>&1
+    declare -pF "$1" > "$noise_sink" 2>&1
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -590,7 +580,7 @@ function is_path()
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to test." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    pathchk -- "$1" &> "$_ignore"
+    pathchk -- "$1" &> "$noise_sink"
 }
 
 #-----------------------------------------------------------------------------------------------

@@ -31,7 +31,7 @@ declare -x ci
 # vm2 core lib defaults
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # vm2 core lib variables - dotnet
 declare -x preprocessor_symbols
@@ -197,9 +197,9 @@ fi
 trace "Generating coverage reports outside CI/CD..."
 declare -a reportgenerator_command
 
-if dotnet tool list dotnet-reportgenerator-globaltool --global > "$_ignore" 2>&1; then
+if dotnet tool list dotnet-reportgenerator-globaltool --global > "$noise_sink" 2>&1; then
     reportgenerator_command=(reportgenerator)
-elif dotnet tool list dotnet-reportgenerator-globaltool --local > "$_ignore" 2>&1; then
+elif dotnet tool list dotnet-reportgenerator-globaltool --local > "$noise_sink" 2>&1; then
     reportgenerator_command=(dotnet tool run reportgenerator --)
 else
     reportgenerator_command=(dotnet tool execute --yes dotnet-reportgenerator-globaltool --version '5.5.*' --)

@@ -25,7 +25,7 @@ declare -x git_remotes_ns
 declare -x key_default_branch
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script arguments
 declare -x old_branch_name=''
@@ -99,7 +99,7 @@ function parse_arguments()
 function verify_environment
 {
     # Note: fetch runs directly, not through execute: it only refreshes remote-tracking refs, and the checks below need them fresh, even in a dry run.
-    ! is_git_present || git fetch origin 1>"$_ignore"                           || error "Failed to fetch from remote." -ec "$err_tool_error"
+    ! is_git_present || git fetch origin 1>"$noise_sink"                        || error "Failed to fetch from remote." -ec "$err_tool_error"
     return "$success"
 }
 
@@ -128,7 +128,7 @@ function resolve_arguments()
             (( _rc != success )) || old_branch_name="${old_branch_name#"$git_heads_ns"}" # canonicalize by stripping refs/heads/
         else
             # Get the current branch name
-            old_branch_name=$(git branch --show-current 2>"$_ignore")           || with_error _rc "$err_tool_error" "Failed to get the current branch name."
+            old_branch_name=$(git branch --show-current 2>"$noise_sink")        || with_error _rc "$err_tool_error" "Failed to get the current branch name."
             (( _rc != success )) || [[ -n $old_branch_name ]]                   || with_error _rc "$err_missing_argument" "HEAD is detached, so there is no current branch to rename. Check out the branch, or pass its name as the second argument."
         fi
 
@@ -140,10 +140,10 @@ function resolve_arguments()
                                                                                 || with_error _rc "$err_argument_value" "Cannot rename the default branch '${_repo_state[$key_default_branch]}'."
 
         # Check if the old branch exists locally and remotely:
-        (( _rc != success )) || git show-ref --verify --quiet "${git_heads_ns}$old_branch_name" &>"$_ignore" \
+        (( _rc != success )) || git show-ref --verify --quiet "${git_heads_ns}$old_branch_name" &>"$noise_sink" \
                                                                                 || with_error _rc "$err_argument_value" "Branch '$old_branch_name' does not exist locally."
 
-        (( _rc != success )) || git show-ref --verify --quiet "${git_remotes_ns}origin/$old_branch_name" &>"$_ignore" \
+        (( _rc != success )) || git show-ref --verify --quiet "${git_remotes_ns}origin/$old_branch_name" &>"$noise_sink" \
                                                                                 || with_error _rc "$err_argument_value" "Branch '$old_branch_name' does not exist remotely."
     fi
 

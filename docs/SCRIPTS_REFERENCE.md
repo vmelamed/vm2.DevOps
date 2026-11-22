@@ -47,7 +47,7 @@ vm2.DevOps contains three distinct categories of scripts:
 `_dotnet.sh`, `_dotnet_args.sh`, `_git_vm2.sh`) — there is no longer a split between a "common" set sourced by
 `core.sh` and a "CI-specific" set added on top by `gh_core.sh`. `gh_core.sh` now only sources `core.sh` and adds
 GitHub Actions–specific environment variables (`GITHUB_ACTIONS`, `GITHUB_STEP_SUMMARY`, `GITHUB_OUTPUT`) and a
-handful of functions on top: it overrides `to_stdout`/`to_stderr`/`to_output` to also write to the GitHub Actions
+handful of functions on top: it overrides `tee_stdout`/`tee_stderr`/`tee_output` to also write to the GitHub Actions
 step summary/output files, and adds `gh_escape` and `args_to_github_output`.
 
 ### Common Switches

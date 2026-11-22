@@ -50,7 +50,7 @@ declare -rx dangerous_chars_regex=$'[;|&$`<>(){}\n\r]'
 declare -rx dangerous_chars_and_whitespaces_regex='[;|&$`<>(){}[:space:]]'
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 declare -x repo_owner
 
 #-----------------------------------------------------------------------------------------------

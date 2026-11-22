@@ -32,7 +32,7 @@ declare -x err_root_not_repo_name
 declare -x warn_em
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 declare -xr gh_authority_rex="github\.com"
 declare -xr gh_ssh_authority_rex="git@$gh_authority_rex"                        # OK, this is not URI authority, but here we only support GitHub SSH URLs, so we can call GitHub SSH authority. This is the part of the URL before the owner/name, e.g. "git@github.com" from "git@github.com:vmelamed/vm2.DevOps.git"
@@ -80,7 +80,7 @@ declare -xar repo_state_keys=(
 )
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 #-----------------------------------------------------------------------------------------------
 # @description Predicate - tests that the specified GitHub repository owner is valid according
@@ -369,7 +369,7 @@ function gh_failure()
     # the HTTP status: from the JSON error body of 'gh api' ('?' tolerates a non-object, e.g. the array of a partially
     # paginated response), or else from the message of any 'gh' command
     local _status
-    _status=$(jq -r '.status? // empty' "$_stdout_file" 2>"$_ignore")           || true
+    _status=$(jq -r '.status? // empty' "$_stdout_file" 2>"$noise_sink")        || true
     [[ $_status =~ ^[1-5][0-9]{2}$ ]]                                           || _status=''
     [[ -n $_status || ! $_message =~ HTTP\ ([1-5][0-9]{2})([^0-9]|$) ]]         || _status=${BASH_REMATCH[1]}
 
@@ -574,12 +574,12 @@ function get_repo_state()
 
     local _root_dir
 
-    _root_dir=$(git -C "$_root" rev-parse --show-toplevel 2>"$_ignore")         || return "$success" # no local git repo
+    _root_dir=$(git -C "$_root" rev-parse --show-toplevel 2>"$noise_sink")      || return "$success" # no local git repo
     __repo_state["$key_git_root"]=$_root_dir
 
     local _url
 
-    _url=$(git -C "$_root" remote get-url origin 2>"$_ignore")                  || return "$success" # no remote URL origin
+    _url=$(git -C "$_root" remote get-url origin 2>"$noise_sink")               || return "$success" # no remote URL origin
     [[ -n $_url && $_url =~ $github_url_regex ]]                                || return "$success" # origin remote is not a GitHub URL
 
     local _owner="${BASH_REMATCH[$url_owner]}"

@@ -67,21 +67,25 @@ declare -gx err_invalid_nameref
 
 # --- to_summary (gh_core.sh's GitHub-Actions-aware override) ---------------------------------
 
+# The GITHUB_* variables are exported, not given as 'VAR=x source …': a prefix assignment lasts only for the 'source'
+# command itself, while the tee_* functions read the variables later. GitHub Actions exports them for the whole step.
+
 @test "to_summary: writes '## Summary' plus each line to stdout, and tees to \$GITHUB_STEP_SUMMARY under GITHUB_ACTIONS" {
     local _summary="$BATS_TEST_TMPDIR/summary.md"
-    run bash -c "CI=true GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY='$_summary' source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1; printf 'hello\n' | to_summary"
+    run bash -c "export CI=true GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY='$_summary'; source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1; printf 'hello\n' | to_summary"
     assert_success
     assert_line --index 0 "## Summary"
     assert_line --index 1 "hello"
     [[ "$(cat "$_summary")" == "$(printf '## Summary\nhello')" ]]
 }
 
-@test "to_stdout, to_stderr, to_summary: forward a last line without a trailing newline, to the step summary too" {
+@test "tee_stdout, tee_stderr, to_summary: forward a last line without a trailing newline, to the step summary too" {
     local _summary="$BATS_TEST_TMPDIR/summary.md"
     run bash -c "
-        CI=true GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY='$_summary' source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1
-        printf 'out-first\nout-last' | to_stdout
-        printf 'err-first\nerr-last' | to_stderr 2>&1
+        export CI=true GITHUB_ACTIONS=true GITHUB_STEP_SUMMARY='$_summary'
+        source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1
+        printf 'out-first\nout-last' | tee_stdout
+        printf 'err-first\nerr-last' | tee_stderr 2>&1
         printf 'sum-first\nsum-last' | to_summary
     "
     assert_success
@@ -96,7 +100,7 @@ declare -gx err_invalid_nameref
 
 @test "to_summary: does not write to \$GITHUB_STEP_SUMMARY outside GITHUB_ACTIONS (local run)" {
     local _summary="$BATS_TEST_TMPDIR/summary.md"
-    run bash -c "CI=true GITHUB_ACTIONS=false GITHUB_STEP_SUMMARY='$_summary' source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1; printf 'hello\n' | to_summary"
+    run bash -c "export CI=true GITHUB_ACTIONS=false GITHUB_STEP_SUMMARY='$_summary'; source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1; printf 'hello\n' | to_summary"
     assert_success
     [[ ! -e "$_summary" ]]
 }
@@ -112,7 +116,7 @@ declare -gx err_invalid_nameref
 
 @test "args_to_github_output: also writes the same key=value pairs to \$GITHUB_OUTPUT under GITHUB_ACTIONS" {
     local _out="$BATS_TEST_TMPDIR/gh_output"
-    run bash -c "GITHUB_ACTIONS=true GITHUB_OUTPUT='$_out' source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1; build_version=1.2.3; args_to_github_output build_version"
+    run bash -c "export GITHUB_ACTIONS=true GITHUB_OUTPUT='$_out'; source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1; build_version=1.2.3; args_to_github_output build_version"
     assert_success
     [[ "$(cat "$_out")" == "build-version=1.2.3" ]]
 }

@@ -39,7 +39,7 @@ declare -x key_gh_repo_id
 declare -x key_default_branch
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script variables
 declare -x repo=''

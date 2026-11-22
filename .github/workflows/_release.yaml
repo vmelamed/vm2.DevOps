@@ -237,6 +237,6 @@ jobs:
           {
             printf "### Collected artifact IDs:\n\n"
             printf "artifact-ids=$artifact_ids\n"
-          } | to_stdout
+          } | tee_stdout
 
           args_to_github_output artifact_ids

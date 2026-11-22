@@ -29,7 +29,7 @@ declare -x allowed_commit_types_str
 declare -x allowed_commit_types_rex
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script's components
 source "$script_dir/validate-commits.usage.sh"

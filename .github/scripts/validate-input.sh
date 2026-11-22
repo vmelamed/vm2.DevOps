@@ -26,7 +26,7 @@ declare -x output_common_dotnet_args
 declare -x dump_common_dotnet_args
 
 # Declare variables defined in the core library.
-declare -x _ignore
+declare -x noise_sink
 
 source "$script_dir/validate-input.usage.sh"
 source "$script_dir/validate-input.args.sh"

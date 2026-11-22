@@ -45,7 +45,7 @@ declare -x err_tool_error
 declare -x err_logic_error
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # 2) Every _*.sh is sourced by core.sh: an active `source "$lib_dir/<file>"` line, optionally followed by a
 #    comment. A substring match would also accept a commented-out `# source ...` line.
@@ -79,8 +79,8 @@ for file in "$lib_dir"/*.sh; do
 done
 
 # 5) No function is defined in two files, except the deliberate overrides: gh_core.sh overrides
-#    the to_* functions, and _core_args.sh overrides the usage() placeholder in _diagnostics.sh.
-declare -ra known_overrides=(to_stdout to_stderr to_output usage)
+#    the tee_* functions, and _core_args.sh overrides the usage() placeholder in _diagnostics.sh.
+declare -ra known_overrides=(tee_stdout tee_stderr tee_output usage)
 declare function_name=''
 while IFS= read -r function_name; do
     is_in "$function_name" "${known_overrides[@]}" ||
@@ -143,7 +143,7 @@ info "vm2.DevOps/scripts/bash/lib/*.sh loaded fine!"
 #    Each file picks up the repository's .shellcheckrc, as in the VSCode extension, so the results match.
 #    Report only, for now: the findings do not change the exit code, so the library checks above stay
 #    usable while older findings remain. Make it an error once ShellCheck is clean.
-if command -v shellcheck > "$_ignore"; then
+if command -v shellcheck > "$noise_sink"; then
     declare -a shellcheck_files=()
     for file in "$lib_dir"/*.sh "$script_dir"/*.sh "$lib_dir"/../../../.github/scripts/*.sh; do
         [[ -f $file ]] && shellcheck_files+=("$(realpath "$file")")

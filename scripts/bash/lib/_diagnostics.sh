@@ -27,19 +27,19 @@ declare -x err_has_bugs
 declare -x err_has_errors
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
-# ║ IMPORTANT: The to_* functions are designed to be used on the RIGHT side    ║
-# ║ of a pipe. Never pipe a function that SETS VARIABLES into a to_* function. ║
+# ║ IMPORTANT: The tee_* functions are designed to be used on the RIGHT side   ║
+# ║ of a pipe. Never pipe a function that SETS VARIABLES into one of them.     ║
 # ║ The left side of a pipe runs in a subshell — all variable assignments are  ║
 # ║ lost. Use two separate lines instead.                                      ║
 # ║                                                                            ║
 # ║ DO NOT:                                                                    ║
-# ║     warning_var x "msg" "default" | to_stdout                              ║
+# ║     warning_var x "msg" "default" | tee_stdout                             ║
 # ║     # assigns "default" to x in a subshell. The side effect is lost on     ║
 # ║     #  the next line.                                                      ║
 # ║                                                                            ║
 # ║ IT IS OK:                                                                  ║
 # ║       x="default"                                                          ║
-# ║       echo "msg" | to_stdout                                               ║
+# ║       echo "msg" | tee_stdout                                              ║
 # ║                                                                            ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
@@ -59,9 +59,9 @@ declare -x err_has_errors
 # @stdout string each line read from stdin unchanged.
 #
 # @example
-#   echo "Build completed" | to_stdout
+#   echo "Build completed" | tee_stdout
 #-----------------------------------------------------------------------------------------------
-function to_stdout()
+function tee_stdout()
 {
     local _line
 
@@ -86,9 +86,9 @@ function to_stdout()
 # @stderr string each line read from stdin unchanged.
 #
 # @example
-#   echo "Warning: file not found" | to_stderr
+#   echo "Warning: file not found" | tee_stderr
 #-----------------------------------------------------------------------------------------------
-function to_stderr()
+function tee_stderr()
 {
     local _line
 
@@ -113,9 +113,9 @@ function to_stderr()
 # @stdout string each line read from stdin unchanged.
 #
 # @example
-#   echo "version=1.2.3" | to_output
+#   echo "version=1.2.3" | tee_output
 #-----------------------------------------------------------------------------------------------
-function to_output()
+function tee_output()
 {
     local _line
     while IFS= read -r _line || [[ -n $_line ]]; do
@@ -619,7 +619,7 @@ function error()
     done
     __last_error=$_error
 
-    __message "$error_prefix" "$@" > >(to_stderr); wait "$!" || true
+    __message "$error_prefix" "$@" > >(tee_stderr); wait "$!" || true
     local -i _depth=${#FUNCNAME[@]}
     (( __errors == 0 || _depth < __errors_min_depth )) && __errors_min_depth=$_depth
     (( ++__errors ))
@@ -706,7 +706,7 @@ function bug()
     done
     __last_bug=$_bug
 
-    __message "$bug_prefix" "$@" > >(to_stderr); wait "$!" || true
+    __message "$bug_prefix" "$@" > >(tee_stderr); wait "$!" || true
     local -i _depth=${#FUNCNAME[@]}
     (( __bugs == 0 || _depth < __bugs_min_depth )) && __bugs_min_depth=$_depth
     (( ++__bugs ))
@@ -787,7 +787,7 @@ function fatal_exit()
         break
     done
 
-    __message "$fatal_prefix" "$@" > >(to_stderr); wait "$!" || true
+    __message "$fatal_prefix" "$@" > >(tee_stderr); wait "$!" || true
     exit "$_exit_code"
 }
 
@@ -821,7 +821,7 @@ function fatal_exit()
 #-----------------------------------------------------------------------------------------------
 function warning()
 {
-    __message "$warning_prefix" --no-stack "$@" > >(to_stderr); wait "$!" || true
+    __message "$warning_prefix" --no-stack "$@" > >(tee_stderr); wait "$!" || true
 }
 
 
@@ -857,7 +857,7 @@ function warning()
 #-----------------------------------------------------------------------------------------------
 function info()
 {
-    __message "$info_prefix" --no-stack "$@" > >(to_stdout); wait "$!" || true
+    __message "$info_prefix" --no-stack "$@" > >(tee_stdout); wait "$!" || true
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -903,7 +903,7 @@ function trace()
 #   - The named parameters must be provided as arguments to the function - they are not
 #     expected in stdin.
 #   - This function uses a bash nameref (`local -n`) to set the variable by name. Do NOT pipe
-#     a call to this function into `to_stdout` or similar -- the left side of a pipe runs in a
+#     a call to this function into `tee_stdout` or similar -- the left side of a pipe runs in a
 #     subshell, so the variable assignment would be lost (see the file-level warning at the
 #     top of this file).
 #
@@ -982,7 +982,7 @@ function show_stack()
 #-----------------------------------------------------------------------------------------------
 # @description Determines the appropriate command to use for summary output based on the
 #   environment: outside CI, when `glow` is present, it uses `glow` for pretty printing of
-#   markdown. Otherwise (in CI, or when `glow` is absent), it uses `to_stdout`. Changes the
+#   markdown. Otherwise (in CI, or when `glow` is absent), it uses `tee_stdout`. Changes the
 #   behavior of `to_summary` without overriding it.
 #
 # Notes: consider this variable an implementation detail and never use directly. Instead
@@ -997,10 +997,9 @@ if ! $ci && is_tool_present glow; then
     # there is no $GITHUB_STEP_SUMMARY in local runs
     __summary_output=(glow -w 168)
 else
-    # redirect summary markdown to `to_stdout` (the GitHub Actions logs or the terminal output
-    # if not redirected externally) AND to the GitHub Actions step summary if present or
-    # /dev/null
-    __summary_output=(to_stdout)
+    # redirect summary markdown to `tee_stdout`: the terminal (or the GitHub Actions log) and,
+    # in GitHub Actions, also the step summary
+    __summary_output=(tee_stdout)
 fi
 
 readonly __summary_output
@@ -1008,7 +1007,7 @@ readonly __summary_output
 #-----------------------------------------------------------------------------------------------
 # @description Logs one or more summary messages with a `## Summary` markdown heading, via
 # `__summary_output` — so, if glow is installed, the summary will be pretty-printed using
-#   glow; otherwise, it will be sent to `to_stdout` as a markdown. Creates an abstraction,
+#   glow; otherwise, it will be sent to `tee_stdout` as a markdown. Creates an abstraction,
 #   designed to be overridden in other scripts to redirect to alternate destination(s), e.g.,
 #   to the GitHub Actions step summary file. Alternatively, `__summary_output` can be modified
 #   to redirect elsewhere considering more environment conditions like the CI environment

@@ -37,7 +37,7 @@ load '../helpers/setup'
     [[ $err_invalid_arguments == 2 ]]
     [[ $err_has_errors == 253 ]]
     [[ $err_has_bugs == 254 ]]
-    [[ $err_unknown == 255 ]]
+    [[ $err_unknown == 250 ]]
 }
 
 @test "bug_prefix and friends: are set to their real (non-empty) values, not stuck on a forward-declare placeholder" {

@@ -25,7 +25,7 @@ declare -x warn_em
 declare -x bug_prefix
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # vm2 core lib keys used in build info associative arrays:
 #   build keys:
@@ -155,7 +155,7 @@ function get_msbuild_property()
     convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || return $?
 
     local -n __property=$3
-    __property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore")            || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
+    __property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$noise_sink")         || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
 
     return "$_rc"
 }
@@ -233,7 +233,7 @@ function get_msbuild_properties()
     convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || return $?
 
     local _json=''
-    _json=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$_ignore")                 || return $?
+    _json=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$noise_sink")              || return $?
 
     __properties=()
 

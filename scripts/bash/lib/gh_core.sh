@@ -13,6 +13,9 @@
 (( ${__VM2_LIB_GH_CORE_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_GH_CORE_SH_LOADED=1
 
+declare -x GITHUB_STEP_SUMMARY
+declare -x GITHUB_OUTPUT
+
 declare -x script_name
 declare -x script_dir
 declare -x lib_dir
@@ -28,12 +31,9 @@ declare -x failure
 declare -x err_invalid_arguments
 declare -x err_invalid_nameref
 
+declare -x ci_system
 declare -x ci
-declare -x _ignore
-
-declare -xr GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
-declare -xr GITHUB_STEP_SUMMARY=${GITHUB_STEP_SUMMARY:-"$_ignore"}
-declare -xr GITHUB_OUTPUT=${GITHUB_OUTPUT:-"$_ignore"}
+declare -x noise_sink
 
 declare -x gh_apps_with_vars
 declare -x gh_apps_with_secrets
@@ -55,14 +55,14 @@ declare -x gh_apps_with_secrets
 # @stdout and \$GITHUB_STEP_SUMMARY string each line read from stdin unchanged.
 #
 # @example
-#   echo "Build completed successfully" | to_stdout
+#   echo "Build completed successfully" | tee_stdout
 #-----------------------------------------------------------------------------------------------
-function to_stdout()
+function tee_stdout()
 {
     local _line
     while IFS= read -r _line || [[ -n $_line ]]; do
         echo "$_line"
-        if $GITHUB_ACTIONS; then
+        if [[ $ci_system == "github" ]]; then
             echo "$_line" >> "$GITHUB_STEP_SUMMARY"
         fi
     done
@@ -85,14 +85,14 @@ function to_stdout()
 # @stderr string each line read from stdin unchanged.
 #
 # @example
-#   echo "Warning: file not found" | to_stderr
+#   echo "Warning: file not found" | tee_stderr
 #-----------------------------------------------------------------------------------------------
-function to_stderr()
+function tee_stderr()
 {
     local _line
     while IFS= read -r _line || [[ -n $_line ]]; do
         echo "$_line" >&2
-        if $GITHUB_ACTIONS; then
+        if [[ $ci_system == "github" ]]; then
             echo "$_line" >> "$GITHUB_STEP_SUMMARY"
         fi
     done
@@ -115,14 +115,14 @@ function to_stderr()
 # @stdout string each line read from stdin unchanged.
 #
 # @example
-#   echo "version=1.2.3" | to_output
+#   echo "version=1.2.3" | tee_output
 #-----------------------------------------------------------------------------------------------
-function to_output()
+function tee_output()
 {
     local _line
     while IFS= read -r _line || [[ -n $_line ]]; do
         echo "$_line"
-        if $GITHUB_ACTIONS; then
+        if [[ $ci_system == "github" ]]; then
             echo "$_line" >> "$GITHUB_OUTPUT"
         fi
     done
@@ -176,7 +176,7 @@ function gh_escape()
 #   validation gate).
 #
 # @stdout and $GITHUB_OUTPUT (if in GH actions) "key=value" for each variable, via
-#   `to_output`.
+#   `tee_output`.
 #
 # @example
 #   build_version="1.2.3"
@@ -213,5 +213,5 @@ function args_to_github_output()
 
         # output the key-value pair
         echo "$_k=$_v"
-    done | to_output
+    done | tee_output
 }

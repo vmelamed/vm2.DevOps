@@ -22,7 +22,7 @@ declare -x err_invalid_nameref
 declare -x err_tool_error
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 #-----------------------------------------------------------------------------------------------
 # @description Reads a single value out of an XML file via `yq`'s XML support, addressed by
@@ -79,7 +79,7 @@ function get_xml_value()
 
     local _result
 
-    (( _rc != success )) || _result=$(yq -p=xml -oy -r "$_query" "$_xml_file" 2>"$_ignore") \
+    (( _rc != success )) || _result=$(yq -p=xml -oy -r "$_query" "$_xml_file" 2>"$noise_sink") \
                                                                                 || with_error _rc "$err_tool_error" "Failed to query the XML file '$_xml_file' with '$_query'."
 
     # A multi-match query yields one line per match, in document order; keep only the last.

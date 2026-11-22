@@ -26,7 +26,7 @@ declare -x err_tool_error
 declare -x err_not_directory
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 source "$script_dir/add-spdx.args.sh"
 source "$script_dir/add-spdx.functions.sh"
@@ -104,7 +104,7 @@ declare -xi failed=0
 # Submodules hold third-party code: never stamp our copyright on it. Outside a git work tree there are none; inside one, a
 # failure to list them must stop the run, or their files would be treated as ours.
 declare -a submodules=()
-if git -C "$root" rev-parse --is-inside-work-tree &> "$_ignore"; then
+if git -C "$root" rev-parse --is-inside-work-tree &> "$noise_sink"; then
     # shellcheck disable=SC2016 # single quotes on purpose: 'git submodule foreach' expands $toplevel/$sm_path itself
     submodule_list=$(git -C "$root" submodule foreach --quiet --recursive 'echo "$toplevel/$sm_path"') ||
         exit_with_error "Failed to list the git submodules of '$root'; no files were changed." -ec "$err_tool_error"

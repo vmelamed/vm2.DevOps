@@ -28,7 +28,7 @@ declare -x semverTagPrereleaseRegex
 # vm2 core lib defaults
 
 # vm2 core lib variables
-declare -x _ignore
+declare -x noise_sink
 
 # this script's components
 source "$script_dir/compute-release-version.usage.sh"
@@ -80,7 +80,7 @@ fi
 
 # Auto-detect next stable version from conventional commits
 last_tag="${latest_stable_tag:-$(git rev-list --max-parents=0 HEAD)}"
-commits=$(git log "$last_tag"..HEAD --pretty=format:"%s" 2>"$_ignore" || echo "")
+commits=$(git log "$last_tag"..HEAD --pretty=format:"%s" 2>"$noise_sink" || echo "")
 
 # KEEP IN SYNC WITH vm2.DevOps/scripts/bash/lib/_constants.sh AND vm2.Templates/templates/AddNewPackage/content/.gitmessage!
 if echo "$commits" | grep -qiE '^[a-z]+(\(.+\))?!:'; then
@@ -142,7 +142,7 @@ declare -x release_tag
 declare -x needs_empty_commit
 
 # Check if tag already exists
-if git rev-parse "$release_tag" >"$_ignore" 2>&1; then
+if git rev-parse "$release_tag" >"$noise_sink" 2>&1; then
     error "Tag '$release_tag' already exists. Possible remedy: branch 'main' again, and do a new PR and release with a higher version number." -ec "$err_logic_error"
 fi
 
