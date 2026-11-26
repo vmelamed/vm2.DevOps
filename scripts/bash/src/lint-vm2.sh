@@ -29,6 +29,7 @@ declare -x lib_dir
 #    before it can say anything useful.
 declare source_output=''
 declare -i source_rc=0
+
 # shellcheck disable=SC2016 # $1 is expanded by the child shell, not here
 source_output=$(env -i HOME="$HOME" PATH="$PATH" bash -c 'set -euo pipefail; source "$1/gh_core.sh"' _ "$lib_dir" 2>&1) || source_rc=$?
 if (( source_rc != 0 )) || [[ -n $source_output ]]; then
@@ -47,11 +48,11 @@ declare -x err_logic_error
 # vm2 core lib variables
 declare -x noise_sink
 
-# 2) Every _*.sh is sourced by core.sh: an active `source "$lib_dir/<file>"` line, optionally followed by a
-#    comment. A substring match would also accept a commented-out `# source ...` line.
+# 2) Every _*.sh and core.*.sh is sourced by core.sh: an active `source "$lib_dir/<file>"` line, optionally followed
+#    by a comment. A substring match would also accept a commented-out `# source ...` line.
 declare file=''
 declare name=''
-for file in "$lib_dir"/_*.sh; do
+for file in "$lib_dir"/_*.sh "$lib_dir"/core.*.sh; do
     name=${file##*/}
     # shellcheck disable=SC2016 # '$lib_dir' is literal text to find in core.sh, not something to expand
     grep -qE '^[[:space:]]*source[[:space:]]+"\$lib_dir/'"${name//./\\.}"'"[[:space:]]*(#.*)?$' "$lib_dir/core.sh" ||
@@ -65,12 +66,13 @@ untracked=$(git -C "$lib_dir" ls-files --others --exclude-standard -- '*.sh') ||
 [[ -z $untracked ]] ||
     error "Untracked library files:" "$untracked" -ec "$err_not_file"
 
-# 4) Every include guard is named after its file: _core_args.sh -> __VM2_LIB_CORE_ARGS_SH_LOADED.
+# 4) Every include guard is named after its file: core.args.sh -> __VM2_LIB_CORE_ARGS_SH_LOADED.
 #    Two files with the same guard silently skip each other.
 declare guard='' expected=''
 for file in "$lib_dir"/*.sh; do
     expected=${file##*/}
     expected=${expected%.sh}
+    expected=${expected//./_}
     expected="__VM2_LIB_${expected#_}_SH_LOADED"
     expected=${expected^^}
     guard=$(grep -oE '__VM2_LIB_[A-Z0-9_]+_SH_LOADED' "$file" | head -n 1) || true
@@ -79,7 +81,7 @@ for file in "$lib_dir"/*.sh; do
 done
 
 # 5) No function is defined in two files, except the deliberate overrides: gh_core.sh overrides
-#    the tee_* functions, and _core_args.sh overrides the usage() placeholder in _diagnostics.sh.
+#    the tee_* functions, and core.args.sh overrides the usage() placeholder in _diagnostics.sh.
 declare -ra known_overrides=(tee_stdout tee_stderr tee_output usage)
 declare function_name=''
 while IFS= read -r function_name; do
@@ -143,13 +145,22 @@ info "vm2.DevOps/scripts/bash/lib/*.sh loaded fine!"
 #    Each file picks up the repository's .shellcheckrc, as in the VSCode extension, so the results match.
 #    Report only, for now: the findings do not change the exit code, so the library checks above stay
 #    usable while older findings remain. Make it an error once ShellCheck is clean.
+#    ShellCheck runs from the repository root, as the VSCode extension does. Its result depends on the current
+#    directory: for `source "$lib_dir/_x.sh"` it also tries `_x.sh` relative to it, so started from
+#    scripts/bash/lib it follows every source line into the whole library, for each of the ~100 files, and takes
+#    minutes instead of seconds. The timeout is the guard in case something else makes it that slow again.
+declare -ri shellcheck_timeout=120 # seconds; a normal run takes under 10
 if command -v shellcheck > "$noise_sink"; then
     declare -a shellcheck_files=()
     for file in "$lib_dir"/*.sh "$script_dir"/*.sh "$lib_dir"/../../../.github/scripts/*.sh; do
         [[ -f $file ]] && shellcheck_files+=("$(realpath "$file")")
     done
-    if shellcheck "${shellcheck_files[@]}"; then
+    declare -i shellcheck_rc=0
+    (cd "$lib_dir/../../.." && timeout "$shellcheck_timeout" shellcheck "${shellcheck_files[@]}") || shellcheck_rc=$?
+    if (( shellcheck_rc == 0 )); then
         info "ShellCheck found nothing in ${#shellcheck_files[@]} files."
+    elif (( shellcheck_rc == 124 )); then # timeout's exit code when it stops the command
+        warning "ShellCheck did not finish in ${shellcheck_timeout} seconds and was stopped."
     else
         warning "ShellCheck reported the findings above, in ${#shellcheck_files[@]} files."
     fi

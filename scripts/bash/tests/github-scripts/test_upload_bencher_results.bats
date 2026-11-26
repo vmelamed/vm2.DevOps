@@ -257,7 +257,7 @@ _run_upload() {
         --testbed ubuntu-latest --repository vmelamed/vm2.DevOps --event-name push --ref-name main \
         --max-regression-pct 150
     assert_failure
-    assert_output --partial "must be an integer number between 0 and 100"
+    assert_output --partial "use an integer from 0 to 100"
 }
 
 @test "upload-bencher-results: rejects a negative --max-gen1-collects" {

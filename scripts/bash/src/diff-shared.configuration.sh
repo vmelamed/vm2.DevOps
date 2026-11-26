@@ -266,7 +266,7 @@ function configure()
     # validate the config file and load the diff and merge tools from it:
     [[ -s "$_config_file" ]]                                                    || with_error _rc "$err_argument_value" "The configuration file '$_config_file' was not found or is empty."
     (( _rc != success )) || jq empty "$_config_file" 2>"$noise_sink"            || with_error _rc "$err_argument_value" "The configuration file '$_config_file' contains invalid JSON."
-    (( _rc != success )) || validate_json_schema "$_config_file" "$_schema_config" \
+    (( _rc != success )) || is_valid_json_with_schema "$_config_file" "$_schema_config" \
                                                                                 || with_error _rc "$err_argument_value" "The configuration file '$_config_file' does not conform to the schema '$_schema_config'."
     (( _rc == success )) || exit_if_has_errors
 
@@ -397,7 +397,7 @@ function customize()
                                                                                        "  - path to the target repository directory" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the SoT directory, to be an existing directory (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 || -d $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the target repository path, to be an existing directory (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 || -d $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the target repository path, to be an existing directory (provided '${2-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
     local _sot_path=$1
@@ -411,7 +411,7 @@ function customize()
          return "$success"
     }
     # validate the customization config file and load the diff and merge tools from it:
-    validate_json_schema "$_custom_config" "$_schema_custom"
+    is_valid_json_with_schema "$_custom_config" "$_schema_custom"
     exit_if_has_errors
 
     trace "Configuration file '$_custom_config' is valid."

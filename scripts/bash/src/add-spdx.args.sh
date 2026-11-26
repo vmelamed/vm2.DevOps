@@ -70,14 +70,14 @@ function parse_arguments()
 
 function verify_environment
 {
-    is_git_present                                                              || true
+    verify_git                                                                  || true
 
     return "$success"
 }
 
 function resolve_arguments()
 {
-    [[ -n $dir && -d $dir ]]                                                    || error "Directory not found: '$dir'" -ec "$err_not_directory"
+    [[ -n $dir && -d $dir ]]                                                    || error "Invalid directory '$dir': it does not exist." -ec "$err_not_directory"
     [[ -n $license ]]                                                           || error "The license (--license) must not be empty." -ec "$err_argument_value"
 
     readonly dir

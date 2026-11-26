@@ -17,29 +17,60 @@ declare -gx err_argument_value
 declare -gx err_invalid_arguments
 declare -gx failure
 declare -gx semverRegex
+declare -gx lib_dir
 
-# --- validate_minver_tag_components ------------------------------------------------------------
+# --- is_valid_minver_settings ------------------------------------------------------------
 
-@test "validate_minver_tag_components: accepts a plain tag prefix, with or without a prerelease id" {
-    run validate_minver_tag_components "v"
+@test "is_valid_minver_settings: accepts a plain tag prefix, with or without a prerelease id" {
+    run is_valid_minver_settings "v"
     assert_success
-    run validate_minver_tag_components "v" "preview.0"
+    run is_valid_minver_settings "v" "preview.0"
     assert_success
-    run validate_minver_tag_components "v" ""
+    run is_valid_minver_settings "v" ""
     assert_success
 }
 
-@test "validate_minver_tag_components: fails on an invalid tag prefix or prerelease id" {
+@test "is_valid_minver_settings: fails on an invalid tag prefix or prerelease id" {
     # NOTE: this used to be a bug-exit (254). Regex-format validation of a caller-supplied
     # string now goes through 'error' (err_argument_value=4) and a plain 'return', not 'bug' --
     # see the summary note on lib functions no longer calling exit_if_has_errors.
-    run validate_minver_tag_components "!!!"
+    run is_valid_minver_settings "!!!"
     assert_failure "$err_argument_value"
-    run validate_minver_tag_components "v" "!!!"
+    run is_valid_minver_settings "v" "!!!"
     assert_failure "$err_argument_value"
 }
 
 # --- get_semver_major / minor / patch / prerelease / build -------------------------------------
+
+# --- semverRegex: the semver.org BNF ------------------------------------------------------------
+
+@test "semverRegex: accepts the forms the SemVer 2.0.0 BNF allows" {
+    local _v
+    # numeric identifiers without leading zeros; alphanumeric ones may have them; build identifiers may be all digits,
+    # leading zeros included (regression: a digits-only build identifier containing a 0 was rejected)
+    for _v in 0.0.0 1.2.3 10.20.30 1.2.3-0 1.2.3-0a 1.2.3-00a 1.2.3-a-b 1.2.3-x.7.z.92 1.2.3--- \
+              1.2.3+0 1.2.3+001 1.2.3+10 1.2.3+2024 1.2.3+a1 1.2.3+--- 1.0.0-alpha+001 1.2.3-a+b.c; do
+        [[ $_v =~ $semverRegex ]] || fail "expected '$_v' to be a valid SemVer"
+    done
+}
+
+@test "semverRegex: rejects the forms the SemVer 2.0.0 BNF forbids" {
+    local _v
+    for _v in 01.2.3 1.02.3 1.2.03 1.2.3-00 1.2.3-01 1.2.3- 1.2.3+ 1.2.3-a..b 1.2.3+a..b 1.2.3.4 v1.2.3 \
+              " 1.2.3" 1.2.3_a 1.2.3-a_b 1.2.3+a_b; do
+        [[ ! $_v =~ $semverRegex ]] || fail "expected '$_v' to be an invalid SemVer"
+    done
+}
+
+@test "semverRegex: accepts only ASCII letters, in any locale" {
+    local _locale
+    # in en_US.UTF-8, bash's [A-Za-z] also matches letters like 'ä'; the regexes spell the letters out
+    for _locale in C C.UTF-8 en_US.UTF-8; do
+        run env LC_ALL="$_locale" bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                                           [[ 1.2.3-ä =~ \$semverRegex || 1.2.3+ä =~ \$semverRegex ]] && echo ACCEPTED || echo REJECTED"
+        assert_output "REJECTED"
+    done
+}
 
 @test "get_semver_major/minor/patch: extract their component from a release, a prerelease, and a version with build metadata" {
     local _version
@@ -282,7 +313,7 @@ declare -gx semverRegex
 
 @test "is_semver_tag: accepts any single alnum/underscore character as a generic tag prefix (not tied to the configured prefix)" {
     # semverTagRegex is a fixed, generic syntax check per its own docs -- it is not narrowed to
-    # whatever prefix validate_minver_tag_components was actually called with.
+    # whatever prefix is_valid_minver_settings was actually called with.
     run is_semver_tag "x1.2.3"
     assert_success
 }

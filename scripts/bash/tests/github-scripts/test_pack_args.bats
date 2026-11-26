@@ -168,7 +168,7 @@ NO_ERRORS"
              echo \"errors=\$(get_errors)\""
     assert_success
     assert_output --partial "Invalid boolean 'yes': it must be 'true' or 'false'."
-    assert_output --partial "The reason '-rf /' appears to be a command or contains unsafe characters."
+    assert_output --partial "Invalid reason '-rf /': it looks like a command, or contains unsafe characters."
     assert_output --partial "REACHED"
     assert_output --partial "errors=2"
 }

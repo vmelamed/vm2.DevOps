@@ -57,10 +57,14 @@ declare -xra valid_actions=(
     "$action_copy_shared"
     "$action_ask_to_copy_shared"
 )
-# shellcheck disable=SC2155
-declare -xr valid_actions_str=$(IFS=,; echo "${valid_actions[*]}")
-# shellcheck disable=SC2155
-declare -xr valid_actions_rex=$(IFS='|'; echo "${valid_actions[*]}")
+
+declare -x valid_actions_str
+valid_actions_str=$(IFS=,; echo "${valid_actions[*]}")
+readonly valid_actions_str
+
+declare -x valid_actions_rex
+valid_actions_rex=$(IFS='|'; echo "${valid_actions[*]}")
+readonly valid_actions_rex
 
 declare -x shared_begin_marker
 declare -x shared_end_marker
@@ -275,8 +279,8 @@ function are_different()
     if $_has_shared && get_shared_block "$LOCAL" _source_shared && get_shared_block "$REMOTE" _target_shared; then
         local _source_shared_file=''
         local _target_shared_file=''
-        _source_shared_file=$(mktemp)                                           || with_error _rc "$err_io_failure" "Failed to create a temporary file"
-        (( _rc != success )) || _target_shared_file=$(mktemp)                   || with_error _rc "$err_io_failure" "Failed to create a temporary file"
+        _source_shared_file=$(mktemp)                                           || with_error _rc "$err_io_failure" "Failed to create a temporary file."
+        (( _rc != success )) || _target_shared_file=$(mktemp)                   || with_error _rc "$err_io_failure" "Failed to create a temporary file."
         (( _rc == success ))                                                    || { rm -f "$_source_shared_file" "$_target_shared_file"
                                                                                      return "$_rc"
                                                                                 }
@@ -299,7 +303,7 @@ function are_different()
         (( ++summary_diff_count ))
     fi
 
-    $_has_shared && warning "Could not find a single, well-formed shared-content marker pair ('$shared_begin_marker' / '$shared_end_marker') in '$LOCAL' and/or '$REMOTE' -- falling back to the whole-file result."
+    $_has_shared && warning "Failed to find a single, well-formed shared-content marker pair ('$shared_begin_marker' / '$shared_end_marker') in '$LOCAL' and/or '$REMOTE' -- falling back to the whole-file result."
 
     return "$positive"
 }
@@ -388,7 +392,7 @@ function copy_file()
 
     _dest_dir=$(dirname "$_dest_file")
 
-    [[ -d "$_dest_dir" ]] || execute mkdir -p "$_dest_dir"                      || with_error _rc "$err_io_failure" "Failed to create directory '$_dest_dir'"
+    [[ -d "$_dest_dir" ]] || execute mkdir -p "$_dest_dir"                      || with_error _rc "$err_io_failure" "Failed to create the directory '$_dest_dir'."
     (( _rc != success ))  || execute cp "$_src_file" "$_dest_file"              || with_error _rc "$err_io_failure" "Failed to copy file '$_src_file' over '$_dest_file'"
     (( _rc != success ))  || trace_files "copied" "$_src_file" "$_dest_file"
     (( ++summary_copied_count ))
@@ -436,7 +440,7 @@ function copy_shared_block()
                                                                                 exit_if_has_bugs
 
     local _tmp_file=''
-    _tmp_file=$(mktemp)                                                         || with_error _rc "$err_io_failure" "Failed to create a temporary file"
+    _tmp_file=$(mktemp)                                                         || with_error _rc "$err_io_failure" "Failed to create a temporary file."
 
     (( _rc != success )) || {
                                 sed -n "1,${_dest_begin_line}p" "$_dest_file"

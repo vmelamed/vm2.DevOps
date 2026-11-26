@@ -60,7 +60,7 @@ function parse_arguments()
 
 function verify_environment
 {
-    is_dotnet_present                                                           || true
+    verify_dotnet                                                               || true
 
     return "$success"
 }

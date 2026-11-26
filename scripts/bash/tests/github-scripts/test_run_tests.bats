@@ -41,7 +41,7 @@ _install_fake_dotnet() {
     mkdir -p "$_dir"
     cat > "$_dir/dotnet" <<EOF
 #!/usr/bin/env bash
-# 'dotnet --version' (is_dotnet_present): answered before the log line, so it never shifts the logged call indices.
+# 'dotnet --version' (verify_dotnet): answered before the log line, so it never shifts the logged call indices.
 # \$dotnet_min_version is inherited from the script under test (core.sh exports it).
 [[ \$1 != --version ]] || { echo "\${FAKE_DOTNET_VERSION:-\$dotnet_min_version}"; exit 0; }
 echo "\$*" >> "\$DOTNET_CALL_LOG"
@@ -264,8 +264,8 @@ _run_run_tests() {
 
     run _run_run_tests "$BATS_TEST_TMPDIR/repo" '' tests/App.Tests/App.Tests.csproj
     assert_failure
-    assert_output --partial "Test config file not found"
-    assert_output --partial "Coverage settings file not found"
+    assert_output --partial "Failed to find the test configuration file"
+    assert_output --partial "Failed to find the coverage settings file"
 }
 
 # --- rebuild-if-missing ----------------------------------------------------------------------

@@ -33,7 +33,7 @@ _install_fake_dotnet() {
     mkdir -p "$_dir"
     cat > "$_dir/dotnet" <<EOF
 #!/usr/bin/env bash
-# 'dotnet --version' (is_dotnet_present): answered before the log line, so it never shifts the logged call indices.
+# 'dotnet --version' (verify_dotnet): answered before the log line, so it never shifts the logged call indices.
 # \$dotnet_min_version is inherited from the script under test (core.sh exports it).
 [[ \$1 != --version ]] || { echo "\${FAKE_DOTNET_VERSION:-\$dotnet_min_version}"; exit 0; }
 echo "\$*" >> "\$DOTNET_CALL_LOG"
@@ -214,7 +214,7 @@ EOF
     chmod +x "$BATS_TEST_TMPDIR/repo/bmexec.sh"
     run _run_run_benchmarks "$BATS_TEST_TMPDIR/repo" 'CI=true' benchmarks/App.Benchmarks/App.Benchmarks.csproj
     assert_failure
-    assert_output --partial "No JSON benchmark reports found"
+    assert_output --partial "Failed to find JSON benchmark reports"
 }
 
 # --- argument handling ---------------------------------------------------------------------

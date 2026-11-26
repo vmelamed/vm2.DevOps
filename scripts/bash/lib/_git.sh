@@ -25,9 +25,14 @@ declare -x err_not_directory
 declare -x err_not_git_directory
 declare -x err_root_not_repo_name
 declare -x err_tool_error
+declare -x err_invalid_branch
+declare -x err_invalid_branch_name
+declare -x err_invalid_tag
+declare -x err_invalid_sha
 
 # vm2 core lib constants
 declare -x semverTagReleaseRegex
+declare -x hex_digits_set
 
 #   Git popular namespaces
 declare -xr git_tags_ns='refs/tags/'                                    # The namespace of the tag refs: 'refs/tags/v1.2.3' is the full ref of the tag 'v1.2.3'
@@ -46,9 +51,9 @@ declare -x noise_sink
 # @exitcode negative=1: if the branch name is invalid.
 #
 # @example
-#   if is_valid_branch_name "main"; then echo "Valid branch name"; fi
+#   if is_branch_name "main"; then echo "Valid branch name"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_branch_name()
+function is_branch_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a branch name." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -69,39 +74,72 @@ function is_valid_branch_name()
 # @exitcode negative=1: if the tag name is invalid.
 #
 # @example
-#   if is_valid_tag_name "v1.2.3"; then echo "Valid tag name"; fi
+#   if is_tag_name "v1.2.3"; then echo "Valid tag name"; fi
 #-----------------------------------------------------------------------------------------------
-function is_valid_tag_name()
+function is_tag_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a tag name." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    local _tag=${1#"$git_tags_ns"}
+    local _tag=$1
 
     [[ -n $_tag && $_tag != -* ]]                                               || return "$negative"
     git check-ref-format "$git_tags_ns$_tag" &> "$noise_sink"                   || return "$negative"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if the input string can be a valid commit SHA, or an abbreviation of one:
-#   4 to 64 hexadecimal digits. Checks the format only: only git can tell if the commit exists
-#   and if an abbreviation is unique (e.g. `git cat-file -e "$sha^{commit}"`). 4 is the shortest
-#   abbreviation git accepts; 64 is the length of a SHA-256 hash, in repositories that use it.
+# @description Validates a tag name according to Git's rules, like `is_tag_name`, and reports an
+#   error when it is invalid. It also rejects a leading -, because git tag refuses it even though
+#   git check-ref-format accepts it.
 #
-# @arg $1 string The string to test.
+# @arg $1 string _tag the tag name to validate, may or may not be prefixed by 'refs/tags/'
 #
-# @exitcode positive=0: the string has the format of a commit SHA.
-# @exitcode negative=1: otherwise, including an empty string.
+# @exitcode success=0: if the tag name is valid.
+# @exitcode err_invalid_tag=94: if the tag name is invalid.
 #
 # @example
-#   is_valid_commit_sha "94f1abe56" && echo "Valid commit SHA!"
+#   is_valid_tag_name "$new_tag" || _rc=$?
+#-----------------------------------------------------------------------------------------------
+function is_valid_tag_name()
+{
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a tag name." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
+    local -i _rc=$success
+    local _tag=${1#"$git_tags_ns"}
+
+    is_tag_name "$_tag"                                                         || with_error _rc "$err_invalid_tag" "Invalid Git tag '$_tag': it cannot be empty or start with a hyphen, and it must be a valid refname." "See <https://git-scm.com/docs/git-check-ref-format>."
+
+    return "$_rc"
+}
+
+declare -r __commit_sha_regex="^[${hex_digits_set}]{4,64}$"
+
+#-----------------------------------------------------------------------------------------------
+# @description Validates that a string can be a commit SHA, or an abbreviation of one: 4 to 64
+#   hexadecimal digits, and reports an error when it cannot. Checks the format only: only git can
+#   tell if the commit exists and if an abbreviation is unique (e.g. `git cat-file -e
+#   "$sha^{commit}"`). 4 is the shortest abbreviation git accepts; 64 is the length of a SHA-256
+#   hash, in repositories that use it.
+#
+# @arg $1 string The string to validate.
+#
+# @exitcode success=0: the string has the format of a commit SHA.
+# @exitcode err_invalid_sha=95: otherwise, including an empty string.
+#
+# @example
+#   is_valid_commit_sha "$commit_sha" || _rc=$?
 #-----------------------------------------------------------------------------------------------
 function is_valid_commit_sha()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a SHA string." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
-    [[ $1 =~ ^[0-9a-fA-F]{4,64}$ ]]                                             || return "$negative"
+    local -i _rc=$success
+
+    [[ $1 =~ $__commit_sha_regex ]]                                             || with_error _rc "$err_invalid_sha" "Invalid commit SHA '$1'."
+
+    return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -115,24 +153,21 @@ function is_valid_commit_sha()
 # @arg $1 string The repository branch name to validate.
 #
 # @exitcode success=0: If the branch name is valid.
-# @exitcode err_argument_value=4: If the branch name is not a valid Git ref name.
+# @exitcode err_invalid_branch_name=93: If the branch name is not a valid Git ref name.
 #
 # @example
-#   if validate_branch_name "main"; then echo "Valid branch name"; fi
+#   if is_valid_branch_name "main"; then echo "Valid branch name"; fi
 # @example
-#   enter_value "Default branch name" branch_name "$default_default_branch" false validate_branch_name)
+#   enter_value "Default branch name" branch_name "$default_default_branch" false is_valid_branch_name)
 #-----------------------------------------------------------------------------------------------
-function validate_branch_name()
+function is_valid_branch_name()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a branch name." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
 
-    is_valid_branch_name "$1" || {
-        _rc="$err_argument_value"
-        error "${FUNCNAME[0]}() requires argument 1 to be a valid Git branch name (provided '${1-<missing>}'). See https://git-scm.com/docs/git-check-ref-format for details." -ec "$_rc"
-    }
+    is_branch_name "$1"                                                         || with_error _rc "$err_invalid_branch_name" "Invalid branch name '$1': it must be a valid refname." "See <https://git-scm.com/docs/git-check-ref-format>."
 
     return "$_rc"
 }
@@ -228,14 +263,16 @@ function should_fetch_for_latest_stable_tag()
                                                                                        "  - the branch name to compare against (optional, default: main)" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires optional argument 1 to be an existing Git repository directory (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_valid_branch_name "$2"                                   || bug "${FUNCNAME[0]}() requires optional argument 2 to be a valid Git branch name (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_branch_name "$2"                                         || bug "${FUNCNAME[0]}() requires optional argument 2 to be a valid Git branch name (provided '${2-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
     local _dir=${1:-$initial_cwd}
     local _branch=${2:-main}
 
-    is_inside_work_tree "$_dir"                                                 || bug "${FUNCNAME[0]}() requires optional argument 1, or the current directory, to be in a Git working tree (provided '${1-<missing>}')." -ec "$err_not_git_directory"
-                                                                                exit_if_has_bugs
+    is_inside_work_tree "$_dir"                                                 ||  {
+                                                                                        with_error _rc "$err_not_git_directory" "Invalid directory '$_dir': it is not in a Git working tree."
+                                                                                        return "$_rc"
+                                                                                    }
 
     # Shallow repositories can miss history or tags needed by release predicates - yes we need a fetch
     [[ $(git -C "$_dir" rev-parse --is-shallow-repository 2>"$noise_sink") != true ]] \
@@ -298,7 +335,7 @@ function should_fetch_for_latest_stable_tag()
 #-----------------------------------------------------------------------------------------------
 function ensure_fresh_git_state()
 {
-    local -i _rc=$positive
+    local -i _rc=$success
 
     should_fetch_for_latest_stable_tag "$@" || _rc=$?
 

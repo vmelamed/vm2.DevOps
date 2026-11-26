@@ -69,10 +69,10 @@ test_config_path="$repo_root/testconfig.json"
 coverage_settings_path="$repo_root/coverage.settings.xml"                       # path to coverage settings file    ~/repos/vm2.Glob/coverage.settings.xml
 
 if [[ ! -s "$test_config_path" ]]; then
-    error "Test config file not found at: $test_config_path" -ec "$err_logic_error"
+    error "Failed to find the test configuration file '$test_config_path'." -ec "$err_logic_error"
 fi
 if [[ ! -s "$coverage_settings_path" ]]; then
-    error "Coverage settings file not found at: $coverage_settings_path" -ec "$err_logic_error"
+    error "Failed to find the coverage settings file '$coverage_settings_path'." -ec "$err_logic_error"
 fi
 
 exit_if_has_errors
@@ -129,7 +129,7 @@ if [[ -d "$artifacts_test_dir" && -n "$(ls -A "$artifacts_test_dir")" ]]; then
                 execute rm -rf "$artifacts_test_dir"
                 ;;
             2)  info "Renaming the directory '$artifacts_test_dir' to '$renamed_artifacts_dir'..."
-                execute mv "$artifacts_test_dir" "$renamed_artifacts_dir"       || with_error rc "$err_io_failure" "Failed to copy '$artifacts_test_dir' to '$renamed_artifacts_dir'"
+                execute mv "$artifacts_test_dir" "$renamed_artifacts_dir"       || with_error rc "$err_io_failure" "Failed to move '$artifacts_test_dir' to '$renamed_artifacts_dir'."
                 ;;
             3)  trace "Exiting the script."
                 exit 0
@@ -218,7 +218,7 @@ execute "${reportgenerator_command[@]}" || rc=$?
 
 if [[ -s "$coverage_reports_dir/Summary.txt" ]]; then
     if is_tool_present glow; then
-        glow -w 150 "$coverage_reports_dir/SummaryGithub.md"
+        glow -w 150 < "$coverage_reports_dir/SummaryGithub.md"
     else
         cat "$coverage_reports_dir/Summary.txt"
     fi

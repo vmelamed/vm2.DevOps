@@ -61,7 +61,7 @@ _make_path_excluding() {
     echo "$_dir"
 }
 
-# A fake 'gh' that answers 'gh --version' and 'gh auth status' (needed by is_gh_present(), the
+# A fake 'gh' that answers 'gh --version' and 'gh auth status' (needed by verify_gh(), the
 # tool-prerequisite check of verify_environment()) and the three global, repository-independent app-id lookups made unconditionally by
 # resolve_github_app_ids() (apps/github-actions, apps/dependabot, apps/codespaces) -- a real,
 # authenticated 'gh' resolves these regardless of whether the target repo has a GitHub remote,
@@ -232,7 +232,7 @@ _run_setup_repo() {
     _make_target_repo "$BATS_TEST_TMPDIR/vm2repos/target"
     run _run_setup_repo "$BATS_TEST_TMPDIR/gh-bin:$_bin" --quiet --vm2-repos "$BATS_TEST_TMPDIR/vm2repos" --branch '..bad..' "$BATS_TEST_TMPDIR/vm2repos/target"
     assert_failure
-    assert_output --partial "valid Git branch name"
+    assert_output --partial "Invalid branch name '..bad..': it must be a valid refname."
 }
 
 # bats test_tags=tool-check

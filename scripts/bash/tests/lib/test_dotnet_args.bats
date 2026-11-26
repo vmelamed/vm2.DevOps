@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-# Characterization tests for scripts/bash/lib/_dotnet_args.sh, as it behaves TODAY -- written
+# Characterization tests for scripts/bash/lib/_dotnet.args.sh, as it behaves TODAY -- written
 # before the tier-4 predicate/validator convention refactor so the refactor has a safety net.
 
 bats_require_minimum_version 1.5.0
@@ -129,7 +129,7 @@ declare -gx BATS_TEST_TMPDIR
 }
 
 @test "sanitize_common_dotnet_args: resolves \$artifacts via real MSBuild ArtifactsPath evaluation, per Directory.Build.props" {
-    # NOTE: get_artifacts_path() (moved from _git_vm2.sh into _dotnet.sh) is now a thin wrapper
+    # NOTE: get_artifacts_path() (moved from _git.vm2.sh into _dotnet.sh) is now a thin wrapper
     # over get_msbuild_property() -- no bash-side "artifacts" fallback default anymore (that
     # fallback was itself wrong: without Directory.Build.props/UseArtifactsOutput, a project's
     # real outputs land in bin/<config>/... scattered per-project, not under a single artifacts/
@@ -167,7 +167,7 @@ EOF
     echo "<Project />" > "$BATS_TEST_TMPDIR/repo/project.csproj"
     run bash -c "cd '$BATS_TEST_TMPDIR/repo' && git init -q && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; artifacts=myArtifacts; sanitize_common_dotnet_args project.csproj; echo \"\$artifacts\""
     assert_output --partial "myArtifacts"
-    assert_output --partial "Failed to get correct artifacts path"
+    assert_output --partial "Failed to get the artifacts path"
 }
 
 # --- output_common_dotnet_args (requires gh_core.sh, not just core.sh) -------------------------

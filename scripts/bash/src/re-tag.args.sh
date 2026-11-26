@@ -48,7 +48,7 @@ function get_arguments()
     parse_arguments "$@"
     usage_if_requested
     verify_environment
-    exit_if_has_errors  # circuit breaker: is_valid_tag_name in resolve_arguments needs git
+    exit_if_has_errors  # circuit breaker: is_tag_name in resolve_arguments needs git
     resolve_arguments
     exit_if_has_errors
     dump_args
@@ -99,7 +99,7 @@ function parse_arguments()
 
 function verify_environment
 {
-    is_git_present                                                              || return "$success"
+    verify_git                                                                  || return "$success"
 
     git rev-parse --git-dir &>"$noise_sink"                                     || error "The current directory is not a git repository." -ec "$err_logic_error"
 
@@ -113,17 +113,18 @@ function resolve_arguments()
     if $delete_mode; then
         # test the del tag
         [[ -n $del_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required tag to delete argument."
-        (( _rc != success )) || is_valid_tag_name "$del_tag"                    || with_error _rc "$err_argument_value" "Invalid tag to delete argument: '$del_tag'."
+        (( _rc != success )) || is_valid_tag_name "$del_tag"                    || _rc=$?
         (( _rc != success )) || del_tag=${del_tag#"$git_tags_ns"}               # canonicalize by stripping refs/tags/
     else
         # test the old tag
         [[ -n $old_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required old tag argument."
-        (( _rc != success )) || is_valid_tag_name "$old_tag"                    || with_error _rc "$err_argument_value" "Invalid old tag argument: '$old_tag'."
+        (( _rc != success )) || is_valid_tag_name "$old_tag"                    || _rc=$?
         (( _rc != success )) || old_tag=${old_tag#"$git_tags_ns"}               # canonicalize by stripping refs/tags/
+        
         # test the new tag
         _rc=$success
         [[ -n $new_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required new tag argument."
-        (( _rc != success )) || is_valid_tag_name "$new_tag"                    || with_error _rc "$err_argument_value" "Invalid new tag argument: '$new_tag'."
+        (( _rc != success )) || is_valid_tag_name "$new_tag"                    || _rc=$?
         (( _rc != success )) || new_tag=${new_tag#"$git_tags_ns"}               # canonicalize by stripping refs/tags/
     fi
 

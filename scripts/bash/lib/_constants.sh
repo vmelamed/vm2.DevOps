@@ -79,10 +79,13 @@ declare -xra allowed_commit_types=(
     "ci"                # n/a    Continuous integration configuration changes that do not force client rebuild
     "chore"             # n/a    Miscellaneous tasks or maintenance that do not force client rebuild
 )
-# shellcheck disable=SC2155
-declare -xr allowed_commit_types_str=$(IFS=,; echo "${allowed_commit_types[*]}")
-# shellcheck disable=SC2155
-declare -xr allowed_commit_types_rex=$(IFS='|'; echo "${allowed_commit_types[*]}")
+declare -x allowed_commit_types_str
+allowed_commit_types_str=$(IFS=,; echo "${allowed_commit_types[*]}")
+readonly allowed_commit_types_str
+
+declare -x allowed_commit_types_rex
+allowed_commit_types_rex=$(IFS='|'; echo "${allowed_commit_types[*]}")
+readonly allowed_commit_types_rex
 
 #-----------------------------------------------------------------------------------------------
 # @description Specifies the default path to the parent directory of all vm2 repositories.
@@ -129,10 +132,13 @@ declare -xr vm2_sot_repo_name="vm2.Templates"
 declare -xra sources_of_truth=(
     "AddNewPackage"
 )
-# shellcheck disable=SC2155
-declare -xr sources_of_truth_str=$(IFS=,; echo "${sources_of_truth[*]}")
-# shellcheck disable=SC2155
-declare -xr sources_of_truth_rex=$(IFS='|'; echo "${sources_of_truth[*]}")
+declare -x sources_of_truth_str
+sources_of_truth_str=$(IFS=,; echo "${sources_of_truth[*]}")
+readonly sources_of_truth_str
+
+declare -x sources_of_truth_rex
+sources_of_truth_rex=$(IFS='|'; echo "${sources_of_truth[*]}")
+readonly sources_of_truth_rex
 
 #-----------------------------------------------------------------------------------------------
 # @description Specifies the default SOT directory to use as a source for comparison and
@@ -161,117 +167,14 @@ declare -xr shared_begin_marker='<<<==='
 declare -xr shared_end_marker='===>>>'
 
 #-----------------------------------------------------------------------------------------------
-# @description GitHub Actions runners
+# @description Locale independent letters and digits sets
 #-----------------------------------------------------------------------------------------------
-declare -xra gh_runners_os_in_use=(
-    "ubuntu-latest"
-    "ubuntu-26.04"
-    "ubuntu-24.04"
-    "ubuntu-22.04"
-    "windows-latest"
-    "windows-2025"
-    "windows-2022"
-    "macos-latest"
-    "macos-26"
-    "macos-15"
-    "macos-14"
-)
-# shellcheck disable=SC2155
-declare -xr gh_runners_os_in_use_str=$(IFS=,; echo "${gh_runners_os_in_use[*]}")
-# shellcheck disable=SC2155
-# declare -xr gh_runners_os_in_use_rex=$(IFS='|'; echo "${gh_runners_os_in_use[*]}")
-
-
-declare -xr default_repo_owner="vmelamed"
-declare -xr default_default_branch="main"
-
-#-----------------------------------------------------------------------------------------------
-# @description GitHub repository visibilities
-#-----------------------------------------------------------------------------------------------
-declare -xra repo_visibilities=(
-    "public"
-    # "internal" # only for organizations
-    "private"
-)
-# shellcheck disable=SC2155
-declare -xr repo_visibilities_str=$(IFS=,; echo "${repo_visibilities[*]}")
-# shellcheck disable=SC2155
-declare -xr repo_visibilities_rex=$(IFS='|'; echo "${repo_visibilities[*]}")
-
-declare -xr default_visibility="public"
-
-#-----------------------------------------------------------------------------------------------
-# @description dotnet build configurations
-#-----------------------------------------------------------------------------------------------
-declare -xra configurations_in_use=(
-    "Debug"
-    "Release"
-)
-# shellcheck disable=SC2155
-declare -xr configurations_in_use_str=$(IFS=,; echo "${configurations_in_use[*]}")
-# shellcheck disable=SC2155
-# declare -xr configurations_in_use_rex=$(IFS='|'; echo "${configurations_in_use[*]}")
-
-#-----------------------------------------------------------------------------------------------
-# @description dotnet target framework monikers
-#-----------------------------------------------------------------------------------------------
-declare -xr frameworks_in_use=(
-    ""
-    net9.0
-    net10.0
-)
-# shellcheck disable=SC2155
-declare -xr frameworks_in_use_str=$(IFS=,; echo "${frameworks_in_use[*]}")
-# shellcheck disable=SC2155
-# declare -xr frameworks_in_use_rex=$(IFS='|'; echo "${frameworks_in_use[*]}")
-
-#-----------------------------------------------------------------------------------------------
-# @description dotnet runtime identifiers
-#-----------------------------------------------------------------------------------------------
-declare -xr runtimes_in_use=(
-    ""
-    linux-x64
-    win-x64
-    osx-x64
-)
-# shellcheck disable=SC2155
-declare -xr runtimes_in_use_str=$(IFS=,; echo "${runtimes_in_use[*]}")
-# shellcheck disable=SC2155
-# declare -xr runtimes_in_use_rex=$(IFS='|'; echo "${runtimes_in_use[*]}")
-
-#-----------------------------------------------------------------------------------------------
-# @description GitHub Actions applications that use variables (`vars`)
-#-----------------------------------------------------------------------------------------------
-declare -xra gh_apps_with_vars=(
-    "actions"
-    "agents"
-)
-# shellcheck disable=SC2155
-declare -xr gh_apps_with_vars_str=$(IFS=,; echo "${gh_apps_with_vars[*]}")
-# shellcheck disable=SC2155
-declare -xr gh_apps_with_vars_rex=$(IFS='|'; echo "${gh_apps_with_vars[*]}")
-
-#-----------------------------------------------------------------------------------------------
-# @description GitHub Actions applications that use secrets (`secrets`)
-#-----------------------------------------------------------------------------------------------
-declare -xra gh_apps_with_secrets=(
-    "actions"
-    "dependabot"
-    "codespaces"
-    # "agents"
-)
-# shellcheck disable=SC2155
-declare -xr gh_apps_with_secrets_str=$(IFS=,; echo "${gh_apps_with_secrets[*]}")
-# shellcheck disable=SC2155
-declare -xr gh_apps_with_secrets_rex=$(IFS='|'; echo "${gh_apps_with_secrets[*]}")
-
-#-----------------------------------------------------------------------------------------------
-# @description Regular expression for validating NuGet server names or URLs.
-#    A valid NuGet server name must be either "nuget", "github", or a valid URL starting with
-#    "http://" or "https://" schema. This regex is used to validate NuGet server names or URLs
-#    passed as arguments to functions that expect a valid NuGet server name or URL.
-#-----------------------------------------------------------------------------------------------
-declare -xr nugetServersRegex="^(nuget|github|https?://[-a-zA-Z0-9._/]+)$";
+declare -xr u_letters_set='ABCDEFGHIJKLMNOPQRSTUVWXYZ' # this is locale independent
+declare -xr l_letters_set='abcdefghijklmnopqrstuvwxyz' # this is locale independent
+declare -xr letters_set="${u_letters_set}${l_letters_set}" # this is locale independent
+declare -xr nz_digits_set='123456789'
+declare -xr digits_set="0${nz_digits_set}"
+declare -xr hex_digits_set="${digits_set}ABCDEFabcdef"
 
 # characters
 declare -xr secret_str='••••••'

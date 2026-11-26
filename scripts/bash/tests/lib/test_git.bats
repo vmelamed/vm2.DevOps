@@ -23,6 +23,11 @@ declare -gx err_argument_value
 declare -gx err_argument_type
 declare -gx err_not_directory
 declare -gx err_not_git_directory
+declare -gx err_invalid_branch
+declare -gx err_invalid_branch_name
+declare -gx err_invalid_tag
+declare -gx err_invalid_sha
+declare -gx err_invalid_repo
 
 setup() {
     _repo_root="$(cd "$lib_dir/../../.." && pwd)"
@@ -32,42 +37,16 @@ setup() {
     export GIT_CONFIG_GLOBAL=/dev/null
 }
 
-# --- validate_branch_name -----------------------------------------------------------------------
+# --- is_valid_branch_name -----------------------------------------------------------------------
 
-@test "validate_branch_name: accepts a valid branch name, rejects an invalid one" {
-    run validate_branch_name "main"
+@test "is_valid_branch_name: accepts a valid branch name, rejects an invalid one" {
+    run is_valid_branch_name "main"
     assert_success
-    run validate_branch_name "feature/foo"
-    assert_success
-    run validate_branch_name "..bad..name"
-    assert_failure 4
-}
-
-@test "validate_branch_name: bug-exits with the wrong argument count" {
-    run validate_branch_name
-    assert_failure "$err_invalid_arguments"
-}
-
-# --- is_valid_branch_name -------------------------------------------------------------------
-
-@test "is_valid_branch_name: true for a valid branch name, false for an invalid one" {
     run is_valid_branch_name "feature/foo"
     assert_success
     run is_valid_branch_name "..bad..name"
-    assert_failure "$failure"
-}
-
-@test "is_valid_branch_name: validates the name without its refs/heads/ prefix" {
-    run is_valid_branch_name "refs/heads/feature/foo"
-    assert_success
-    # '-bad' is not a valid branch name, though 'refs/heads/-bad' is a valid ref
-    run is_valid_branch_name "refs/heads/-bad"
-    assert_failure
-}
-
-@test "is_valid_branch_name: false (not a bug) for an empty branch name" {
-    run is_valid_branch_name ""
-    assert_failure "$failure"
+    assert_failure "$err_invalid_branch_name"
+    assert_output --partial "Invalid branch name '..bad..name'"
 }
 
 @test "is_valid_branch_name: bug-exits with the wrong argument count" {
@@ -75,92 +54,146 @@ setup() {
     assert_failure "$err_invalid_arguments"
 }
 
-# --- is_valid_tag_name -----------------------------------------------------------------------
+# --- is_branch_name -------------------------------------------------------------------
 
-@test "is_valid_tag_name: true for ordinary tag names, including hierarchical ones" {
+@test "is_branch_name: true for a valid branch name, false for an invalid one" {
+    run is_branch_name "feature/foo"
+    assert_success
+    run is_branch_name "..bad..name"
+    assert_failure "$failure"
+}
+
+@test "is_branch_name: validates the name without its refs/heads/ prefix" {
+    run is_branch_name "refs/heads/feature/foo"
+    assert_success
+    # '-bad' is not a valid branch name, though 'refs/heads/-bad' is a valid ref
+    run is_branch_name "refs/heads/-bad"
+    assert_failure
+}
+
+@test "is_branch_name: false (not a bug) for an empty branch name" {
+    run is_branch_name ""
+    assert_failure "$failure"
+}
+
+@test "is_branch_name: bug-exits with the wrong argument count" {
+    run is_branch_name
+    assert_failure "$err_invalid_arguments"
+}
+
+# --- is_tag_name -----------------------------------------------------------------------
+
+@test "is_tag_name: true for ordinary tag names, including hierarchical ones" {
     local _tag
     for _tag in v1.2.3 v1.2.3-preview.4 v1.2.3+build.5 release/1.0 a 'ü'; do
-        run is_valid_tag_name "$_tag"
+        run is_tag_name "$_tag"
         assert_success
     done
 }
 
-@test "is_valid_tag_name: false (not a bug) for an empty name" {
-    run is_valid_tag_name ""
+@test "is_tag_name: false (not a bug) for an empty name" {
+    run is_tag_name ""
     assert_failure "$failure"
 }
 
-@test "is_valid_tag_name: false for the names git's ref-format rules reject" {
+@test "is_tag_name: false for the names git's ref-format rules reject" {
     local _tag
     for _tag in 'bad..tag' 'a b' $'a\tb' $'a\nb' 'a~b' 'a^b' 'a:b' 'a?b' 'a*b' 'a[b' 'a\b' \
                 'a@{b' '.v1' 'v1.' 'v1.lock' 'v1/' '/v1' 'a//b'; do
-        run is_valid_tag_name "$_tag"
+        run is_tag_name "$_tag"
         assert_failure "$failure"
     done
 }
 
-@test "is_valid_tag_name: false for '@{-1}' -- validated as a tag, it is not expanded to the previous branch" {
-    run is_valid_tag_name '@{-1}'
+@test "is_tag_name: false for '@{-1}' -- validated as a tag, it is not expanded to the previous branch" {
+    run is_tag_name '@{-1}'
     assert_failure "$failure"
 }
 
-@test "is_valid_tag_name: false for a name that starts with '-' -- 'git tag' refuses it, although 'git check-ref-format' accepts it" {
+@test "is_tag_name: false for a name that starts with '-' -- 'git tag' refuses it, although 'git check-ref-format' accepts it" {
     local _tag
     for _tag in -v1 --delete -; do
-        run is_valid_tag_name "$_tag"
+        run is_tag_name "$_tag"
         assert_failure "$failure"
     done
 }
 
-@test "is_valid_tag_name: true for HEAD and @ -- 'git tag' creates them; callers must address them as 'refs/tags/<name>'" {
+@test "is_tag_name: true for HEAD and @ -- 'git tag' creates them; callers must address them as 'refs/tags/<name>'" {
     local _tag
     for _tag in HEAD @; do
-        run is_valid_tag_name "$_tag"
+        run is_tag_name "$_tag"
         assert_success
     done
 }
 
-@test "is_valid_tag_name: works outside a git repository" {
+@test "is_tag_name: works outside a git repository" {
     run bash -c "cd '$BATS_TEST_TMPDIR' && source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
-                 is_valid_tag_name v1.2.3 && echo VALID
-                 is_valid_tag_name 'bad..tag' || echo INVALID"
+                 is_tag_name v1.2.3 && echo VALID
+                 is_tag_name 'bad..tag' || echo INVALID"
     assert_success
     assert_output --partial "VALID"
     assert_output --partial "INVALID"
 }
 
+@test "is_tag_name: bug-exits with the wrong argument count" {
+    run is_tag_name
+    assert_failure "$err_invalid_arguments"
+    run is_tag_name v1 v2
+    assert_failure "$err_invalid_arguments"
+}
+
+# --- is_valid_tag_name ---------------------------------------------------------------------
+
+@test "is_valid_tag_name: accepts a valid tag name, with or without 'refs/tags/', without a message" {
+    run is_valid_tag_name "v1.2.3"
+    assert_success
+    assert_output ""
+    run is_valid_tag_name "refs/tags/v1.2.3-preview.4"
+    assert_success
+    assert_output ""
+}
+
+@test "is_valid_tag_name: rejects an empty name, a leading '-', and a malformed name with err_invalid_tag and an error" {
+    local tag
+    for tag in "" "-v1.2.3" "bad..tag"; do
+        run is_valid_tag_name "$tag"
+        assert_failure "$err_invalid_tag"
+        assert_output --partial "'$tag'"
+    done
+}
+
 @test "is_valid_tag_name: bug-exits with the wrong argument count" {
     run is_valid_tag_name
-    assert_failure "$err_invalid_arguments"
-    run is_valid_tag_name v1 v2
     assert_failure "$err_invalid_arguments"
 }
 
 # --- is_valid_commit_sha ---------------------------------------------------------------------
 
-@test "is_valid_commit_sha: true for the lengths git can accept: 4 to 64 hexadecimal digits, in either case" {
-    run is_valid_commit_sha "$(printf 'a%.0s' {1..4})"
-    assert_success
-    run is_valid_commit_sha "$(printf 'a%.0s' {1..40})"
-    assert_success
-    run is_valid_commit_sha "$(printf 'a%.0s' {1..64})"
-    assert_success
-    run is_valid_commit_sha "94F1ABE56"
-    assert_success
+@test "is_valid_commit_sha: accepts the lengths git can accept: 4 to 64 hexadecimal digits, in either case, without a message" {
+    local sha
+    for sha in "$(printf 'a%.0s' {1..4})" "$(printf 'a%.0s' {1..40})" "$(printf 'a%.0s' {1..64})" "94F1ABE56"; do
+        run is_valid_commit_sha "$sha"
+        assert_success
+        assert_output ""
+    done
 }
 
-@test "is_valid_commit_sha: false outside the 4 to 64 digits range" {
-    run is_valid_commit_sha "abc"
-    assert_failure "$failure"
-    run is_valid_commit_sha "$(printf 'a%.0s' {1..65})"
-    assert_failure "$failure"
+@test "is_valid_commit_sha: rejects a SHA outside the 4 to 64 digits range with err_invalid_sha and an 'Invalid commit SHA' error" {
+    local sha
+    for sha in "abc" "$(printf 'a%.0s' {1..65})"; do
+        run is_valid_commit_sha "$sha"
+        assert_failure "$err_invalid_sha"
+        assert_output --partial "Invalid commit SHA '$sha'"
+    done
 }
 
-@test "is_valid_commit_sha: false (not a bug) for an empty string or a non-hexadecimal character" {
-    run is_valid_commit_sha ""
-    assert_failure "$failure"
-    run is_valid_commit_sha "94f1abg56"
-    assert_failure "$failure"
+@test "is_valid_commit_sha: rejects (does not bug-exit on) an empty string or a non-hexadecimal character" {
+    local sha
+    for sha in "" "94f1abg56"; do
+        run is_valid_commit_sha "$sha"
+        assert_failure "$err_invalid_sha"
+        assert_output --partial "Invalid commit SHA '$sha'"
+    done
 }
 
 @test "is_valid_commit_sha: checks the format only -- it does not ask git whether the commit exists" {

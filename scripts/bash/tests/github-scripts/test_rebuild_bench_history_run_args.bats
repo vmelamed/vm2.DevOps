@@ -38,7 +38,7 @@ _rr() {
         source '$lib_dir/gh_core.sh' --no-trap > /dev/null 2>&1
         source '$_gh_scripts_dir/rebuild-bench-history-run.usage.sh'
         source '$_gh_scripts_dir/rebuild-bench-history-run.args.sh'
-        get_artifacts_path() { local -n _stub_artifacts=\$2; _stub_artifacts=/fake/artifacts; }
+        get_artifacts_path() { local -n __stub_artifacts=\$2; __stub_artifacts=/fake/artifacts; }
         $1
     ")
 }
@@ -257,8 +257,8 @@ NO_ERRORS"
     run _rr "resolve_arguments
              echo \"errors=\$(get_errors)\""
     assert_success
-    assert_output --partial "Bencher project (--bencher-project) is required"
-    assert_output --partial "Bencher testbed (--bencher-testbed) is required"
+    assert_output --partial "The Bencher project is not set."
+    assert_output --partial "The Bencher testbed is not set."
     assert_output --partial "errors=2"
 }
 

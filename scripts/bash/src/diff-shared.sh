@@ -246,7 +246,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
             "$shared_not_equal" )
                 file_difference_txt=" $cross_ch shared different"
                 ;;
-            * ) error "Unexpected return code: $difference" -ec "$err_unexpected_error"
+            * ) error "Unexpected return code '$difference'." -ec "$err_unexpected_error"
                 ;;
         esac
 

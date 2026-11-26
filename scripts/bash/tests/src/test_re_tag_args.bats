@@ -224,7 +224,7 @@ NO_ERRORS"
              resolve_arguments
              echo \"errors=\$(get_errors)\""
     assert_success
-    assert_output --partial "Invalid tag to delete argument: '${git_tags_ns}-v1'."
+    assert_output --partial "Invalid Git tag '-v1': it cannot be empty or start with a hyphen"
     assert_output --partial "errors=1"
 }
 
@@ -255,7 +255,7 @@ NO_ERRORS"
              resolve_arguments
              echo \"errors=\$(get_errors)\""
     assert_success
-    assert_output --partial "Invalid tag to delete argument: 'bad..tag'."
+    assert_output --partial "Invalid Git tag 'bad..tag':"
     assert_output --partial "errors=1"
 }
 
@@ -286,8 +286,8 @@ NO_ERRORS"
              resolve_arguments
              echo \"errors=\$(get_errors)\""
     assert_success
-    assert_output --partial "Invalid old tag argument: "
-    assert_output --partial "Invalid new tag argument: "
+    assert_output --partial "Invalid Git tag 'bad..old'"
+    assert_output --partial "Invalid Git tag 'bad new':"
     assert_output --partial "errors=2"
 }
 

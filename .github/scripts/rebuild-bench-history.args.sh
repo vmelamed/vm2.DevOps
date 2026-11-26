@@ -92,7 +92,7 @@ function verify_environment()
     [[ -z "${BENCH_DISPATCH_PAT:-}" ]] || export GH_TOKEN="${GH_TOKEN:-$BENCH_DISPATCH_PAT}"
     [[ -n "${GH_TOKEN:-}" ]]                                                    || warning "Neither \$GH_TOKEN nor \$BENCH_DISPATCH_PAT is set; relying on the ambient 'gh auth' credentials."
 
-    is_gh_present                                                               || true
+    verify_gh                                                                   || true
 
     return "$success"
 }
@@ -113,7 +113,7 @@ function resolve_arguments()
     fi
 
     is_positive "$repeat"                                                       || error "repeat must be a positive integer (got '$repeat')." -ec "$err_argument_value"
-    [[ -n "$owner" ]]                                                           || error "Could not determine the GitHub owner. Pass --owner or set \$GITHUB_REPOSITORY_OWNER." -ec "$err_argument_value"
+    [[ -n "$owner" ]]                                                           || error "Failed to determine the GitHub owner." "Use '--owner <owner>', or set \$GITHUB_REPOSITORY_OWNER." -ec "$err_argument_value"
 
     readonly owner
     readonly repeat

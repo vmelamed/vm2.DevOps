@@ -28,14 +28,14 @@ _install_fake_gh() {
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     cat > "$BATS_TEST_TMPDIR/bin/gh" <<'EOF'
 #!/usr/bin/env bash
-# 'gh version' / 'gh --version' (is_gh_present): answered first, in gh's real two-line format (Debian's first line), and
+# 'gh version' / 'gh --version' (verify_gh): answered first, in gh's real two-line format (Debian's first line), and
 # before the call log, so it never shifts the logged calls. $gh_min_version is inherited from the script under test (core.sh
 # exports it).
 [[ ${1:-} != version && ${1:-} != --version ]] ||
     { printf 'gh version %s (2026-01-01 Debian %s-3)\nhttps://github.com/cli/cli/releases/tag/v%s\n' "$gh_min_version" "$gh_min_version" "$gh_min_version"; exit 0; }
 echo "$*" >> "$FAKE_GH_DIR/calls.log"
 case "$1 $2" in
-    "auth status" )                                           # is_gh_present (verify_environment): always authenticated
+    "auth status" )                                           # verify_gh (verify_environment): always authenticated
         exit 0
         ;;
     "repo view" )

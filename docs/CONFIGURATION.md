@@ -591,5 +591,5 @@ audit result may look like this:
     ❓  different:   0
     ❌  missing:     0
 
-ℹ️  INFO: Audit of https://github.com/vmelamed/vm2.SemVer completed.
+ℹ️  Audit of <https://github.com/vmelamed/vm2.SemVer>
 ```

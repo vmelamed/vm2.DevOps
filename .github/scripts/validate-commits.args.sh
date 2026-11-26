@@ -77,7 +77,7 @@ function parse_arguments()
 
 function verify_environment
 {
-    is_git_present                                                              || true
+    verify_git                                                                  || true
 
     return "$success"
 }
@@ -86,8 +86,8 @@ function resolve_arguments()
 {
     local -i _rc=$success
 
-    [[ -d $repo_path ]]                                                         || with_error _rc "$err_not_directory" "Invalid directory: '$repo_path'"
-    (( _rc != success )) || is_inside_work_tree "$repo_path"                    || with_error _rc "$err_not_git_directory" "The directory '$repo_path' is not inside Git repository working tree"
+    [[ -d $repo_path ]]                                                         || with_error _rc "$err_not_directory" "Invalid directory '$repo_path': it does not exist."
+    (( _rc != success )) || is_inside_work_tree "$repo_path"                    || with_error _rc "$err_not_git_directory" "Invalid directory '$repo_path': it is not in a Git working tree."
     (( _rc == success ))                                                        || return "$success"
 
     # Determine the commit range. CI always passes an explicit base ref (the PR's base branch)

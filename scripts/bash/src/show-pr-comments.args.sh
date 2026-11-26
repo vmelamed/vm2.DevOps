@@ -102,10 +102,12 @@ function parse_arguments()
 
 function verify_environment()
 {
-    is_git_present                                                              || true
-    is_gh_present                                                               || true
+    verify_git                                                                  || true
+    verify_gh                                                                   || true
     return "$success"
 }
+
+declare -r __owner_repo_regex="^[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-]+/[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-]+$"
 
 #-----------------------------------------------------------------------------------------------
 # @description Validates the arguments, resolves the repository and the pull request number when they were omitted, and
@@ -116,7 +118,7 @@ function verify_environment()
 function resolve_arguments()
 {
     [[ -z $pr_number ]] || is_natural "$pr_number"                              || error "The pull request number must be a positive integer (provided '$pr_number')." -ec "$err_argument_value"
-    [[ -z $repo || $repo =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]                || error "The repository must be given as 'owner/repo' (provided '$repo')." -ec "$err_argument_value"
+    [[ -z $repo || $repo =~ $__owner_repo_regex ]]                              || error "The repository must be given as 'owner/repo' (provided '$repo')." -ec "$err_argument_value"
     [[ -z $repo || -n $pr_number ]]                                             || error "With '--repo', the pull request number is required: the current branch belongs to the current directory's repository." -ec "$err_missing_argument"
     is_natural "$interval"                                                      || error "The interval must be a positive number of seconds (provided '$interval')." -ec "$err_argument_value"
     is_natural "$timeout"                                                       || error "The timeout must be a positive number of seconds (provided '$timeout')." -ec "$err_argument_value"

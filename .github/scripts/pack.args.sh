@@ -95,7 +95,7 @@ function parse_arguments()
 
 function verify_environment
 {
-    is_dotnet_present                                                           || true
+    verify_dotnet                                                               || true
 
     return "$success"
 }
@@ -108,7 +108,7 @@ function resolve_arguments()
     is_safe_existing_file "$package_project"                                    || true
     [[ $package_project == *.csproj ]]                                          || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
     is_valid_boolean "$build"                                                   || true
-    is_safe_reason "$reason"                                                    || true
+    is_safe_gh_reason "$reason"                                                 || true
     sanitize_common_dotnet_args "$package_project"
 
     readonly package_project

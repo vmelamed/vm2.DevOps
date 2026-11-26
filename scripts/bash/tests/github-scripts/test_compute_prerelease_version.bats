@@ -194,7 +194,7 @@ _run_compute_prerelease() {
 }
 
 @test "compute-prerelease-version: a reason containing '%' is workflow-command-escaped in the step summary" {
-    # '%' passes is_safe_reason (it is not a shell metacharacter), so it reaches the summary line
+    # '%' passes is_safe_gh_reason (it is not a shell metacharacter), so it reaches the summary line
     # unfiltered by argument validation -- gh_escape must still neutralize it there, since '%' has
     # parsing significance for GitHub Actions workflow commands.
     _make_fixture "$BATS_TEST_TMPDIR"

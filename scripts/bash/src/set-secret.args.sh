@@ -68,17 +68,17 @@ function get_arguments()
     done
 
     usage_if_requested
-    validate_arguments
+    resolve_arguments
     dump_args
 }
 
-function validate_arguments()
+function resolve_arguments()
 {
     app=${app:-$default_app}
     repo_owner=${repo_owner:-$default_repo_owner}
 
     is_in_i "$app" "${gh_apps_with_secrets[@]}"                                 || error "Invalid app specified: '$app'. Must be one of: ${gh_apps_with_secrets[*]}." -ec "$err_argument_value"
-    is_valid_secret_name "$secret_name"                                         || true
+    is_valid_gh_secret_name "$secret_name"                                         || true
     exit_if_has_errors true
 
     readonly repo_owner app secret_name

@@ -89,7 +89,7 @@ if is_semver_release "$latest_stable_ver"; then
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
     ((major > 0 && minor >= 0 && patch >= 0)) ||
-        exit_with_error "Invalid version numbers in latest stable tag '$latest_stable_ver': $major.$minor.$patch" -ec "$err_argument_value"
+        exit_with_error "Invalid latest stable tag '$latest_stable_ver': its major version must be greater than 0." -ec "$err_argument_value"
     trace "Base version from latest stable: $major.$minor.$patch"
 else
     trace "No previous stable release found; starting at 0.0.0"

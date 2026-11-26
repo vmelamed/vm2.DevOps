@@ -74,7 +74,7 @@ if [[ -d "$artifacts_benchmarks" && -n "$(ls -A "$artifacts_benchmarks")" ]]; th
                 execute rm -rf "$artifacts_benchmarks"
                 ;;
             2)  info "Renaming the directory '$artifacts_benchmarks' to '$renamed_artifacts_dir'..."
-                execute mv "$artifacts_benchmarks" "$renamed_artifacts_dir"     || with_error rc "$err_io_failure" "Failed to copy '$artifacts_benchmarks' to '$renamed_artifacts_dir'"
+                execute mv "$artifacts_benchmarks" "$renamed_artifacts_dir"     || with_error rc "$err_io_failure" "Failed to move '$artifacts_benchmarks' to '$renamed_artifacts_dir'."
                 ;;
             3)  trace "Exiting the script."
                 exit 0
@@ -88,7 +88,7 @@ fi
 exit_if_has_errors
 
 trace "Creating artifacts directory(s)..."
-execute mkdir -p "$results_dir"                                                 || with_error rc "$err_io_failure" "Failed to create the results directory '$results_dir'"
+execute mkdir -p "$results_dir"                                                 || with_error rc "$err_io_failure" "Failed to create the results directory '$results_dir'."
 
 declare -x benchmark_exec_path
 get_target_path "$benchmark_project" benchmark_exec_path
@@ -138,7 +138,7 @@ fi
 
 # Verify JSON results were created
 json_files=("$results_dir"/*-report-full-compressed.json)
-[[ -f "${json_files[0]}" ]]                                                     || exit_with_error "No JSON benchmark reports found in $results_dir" -ec "$err_tool_error"
+[[ -f "${json_files[0]}" ]]                                                     || exit_with_error "Failed to find JSON benchmark reports in '$results_dir'." -ec "$err_tool_error"
 
 trace "Benchmark tests completed successfully. Found JSON benchmark results."
 {

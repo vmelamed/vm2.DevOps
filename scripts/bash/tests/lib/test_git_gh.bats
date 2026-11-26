@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-# Tests for scripts/bash/lib/_git_gh.sh: GitHub naming rules, the repo state, get_repo_state, and the transient-failure
+# Tests for scripts/bash/lib/_git.gh.sh: GitHub naming rules, the repo state, get_repo_state, and the transient-failure
 # predicate for 'gh' (on its own, and as execute_with_retry's --classify).
 #
 # No test calls GitHub: get_repo_state runs either with full_info=false, or against a fake 'gh' on the PATH (see
@@ -19,6 +19,8 @@ load '../helpers/setup'
 # time. '-g' is required (see feedback_bats_declare_g_readonly memory for the root cause).
 declare -gx lib_dir
 declare -gx failure
+declare -gx negative
+declare -gx err_unsafe_argument
 declare -gx err_invalid_arguments
 declare -gx err_invalid_nameref
 declare -gx err_argument_value
@@ -30,6 +32,9 @@ declare -gx err_tool_error
 declare -gx err_not_found
 declare -gx err_access_denied
 declare -gx err_tool_unauthenticated
+declare -gx err_invalid_branch
+declare -gx err_invalid_repo
+declare -gx err_invalid_repo_name
 
 setup() {
     _repo_root="$(cd "$lib_dir/../../.." && pwd)"
@@ -39,37 +44,57 @@ setup() {
     export GIT_CONFIG_GLOBAL=/dev/null
 }
 
-# --- validate_gh_repo_owner / validate_gh_repo_name / validate_gh_repo_description --------------
+# --- is_valid_gh_repo_owner / is_valid_gh_repo_name / is_valid_gh_repo_description --------------
 
-@test "validate_gh_repo_owner: accepts a valid owner, rejects an empty or invalid one" {
-    run validate_gh_repo_owner ""
+@test "is_valid_gh_repo_owner: accepts a valid owner, rejects an empty or invalid one" {
+    run is_valid_gh_repo_owner ""
     assert_failure 4
-    run validate_gh_repo_owner "vmelamed"
+    run is_valid_gh_repo_owner "vmelamed"
     assert_success
-    run validate_gh_repo_owner "-leading-hyphen"
+    run is_valid_gh_repo_owner "-leading-hyphen"
     assert_failure 4
 }
 
-@test "validate_gh_repo_owner: bug-exits with the wrong argument count" {
-    run validate_gh_repo_owner
+@test "is_gh_repo_owner: 1 to 39 ASCII letters, digits, or hyphens, starting and ending with a letter or a digit" {
+    local _owner
+    for _owner in a 7 ab a-b "$(printf 'a%.0s' {1..39})"; do
+        is_gh_repo_owner "$_owner" || fail "expected '$_owner' to be a valid owner"
+    done
+    for _owner in "" - a- -a a_b a.b "$(printf 'a%.0s' {1..40})" ä; do
+        ! is_gh_repo_owner "$_owner" || fail "expected '$_owner' to be an invalid owner"
+    done
+}
+
+@test "is_valid_gh_repo_owner: bug-exits with the wrong argument count" {
+    run is_valid_gh_repo_owner
     assert_failure "$err_invalid_arguments"
 }
 
-@test "validate_gh_repo_name: rejects empty, rejects .git suffix, accepts a valid name" {
-    run validate_gh_repo_name ""
-    assert_failure 4
-    run validate_gh_repo_name "vm2.DevOps.git"
-    assert_failure 4
-    run validate_gh_repo_name "vm2.DevOps"
+@test "is_valid_gh_repo_name: rejects empty, rejects .git suffix, accepts a valid name" {
+    run is_valid_gh_repo_name ""
+    assert_failure "$err_invalid_repo_name"
+    run is_valid_gh_repo_name "vm2.DevOps.git"
+    assert_failure "$err_invalid_repo_name"
+    run is_valid_gh_repo_name "vm2.DevOps"
     assert_success
 }
 
-@test "validate_gh_repo_description: enforces the 3-350 character range" {
-    run validate_gh_repo_description "ab"
+@test "is_gh_repo_name: starts with an ASCII letter or digit, then up to 99 letters, digits, '.', '_', or '-'" {
+    local _name
+    for _name in a 2fa-tools vm2.DevOps a_b-c.d "$(printf 'a%.0s' {1..100})"; do
+        is_gh_repo_name "$_name" || fail "expected '$_name' to be a valid repository name"
+    done
+    for _name in "" vm2.DevOps.git "a b" "$(printf 'a%.0s' {1..101})" ä; do
+        ! is_gh_repo_name "$_name" || fail "expected '$_name' to be an invalid repository name"
+    done
+}
+
+@test "is_valid_gh_repo_description: enforces the 3-350 character range" {
+    run is_valid_gh_repo_description "ab"
     assert_failure 4
-    run validate_gh_repo_description "A valid description"
+    run is_valid_gh_repo_description "A valid description"
     assert_success
-    run validate_gh_repo_description "$(printf 'a%.0s' {1..351})"
+    run is_valid_gh_repo_description "$(printf 'a%.0s' {1..351})"
     assert_failure 4
 }
 
@@ -743,4 +768,89 @@ _run_get_repo_state_full() {
     assert_failure "$err_argument_value"
     run get_gh_repo_property vmelamed/vm2.Sample 'x; rm -rf'
     assert_failure "$err_argument_value"
+}
+
+# --- is_valid_gh_visibility -----------------------------------------------------------------------
+
+@test "is_valid_gh_visibility: accepts public and private, rejects any other value, capitalized ones included" {
+    run is_valid_gh_visibility "public"
+    assert_success
+    assert_output ""
+    run is_valid_gh_visibility "Public"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid repository visibility 'Public': use one of public,private."
+}
+
+# --- is_valid_gh_runner_os ------------------------------------------------------------------------
+
+@test "is_valid_gh_runner_os: accepts a known runner, rejects an unknown one with an 'Invalid runner OS' error" {
+    run is_valid_gh_runner_os "ubuntu-latest"
+    assert_success
+    assert_output ""
+    run is_valid_gh_runner_os "not-a-real-runner"
+    assert_failure "$err_argument_value"
+    assert_output --partial "Invalid runner OS 'not-a-real-runner': use one of ubuntu-latest,"
+}
+
+@test "is_valid_gh_runner_os: rejects retired runners and a capitalized label" {
+    local runner
+    for runner in "ubuntu-20.04" "windows-2019" "Ubuntu-latest"; do
+        run is_valid_gh_runner_os "$runner"
+        assert_failure "$err_argument_value"
+        assert_output --partial "Invalid runner OS '$runner'"
+    done
+}
+
+# --- is_valid_gh_reason / is_safe_gh_reason ------------------------------------------------------
+
+@test "is_valid_gh_reason: checks only the length: accepts 200 characters, even command-like text" {
+    run is_valid_gh_reason "$(printf 'a%.0s' {1..200})"
+    assert_success
+    run is_valid_gh_reason "--force"
+    assert_success
+}
+
+@test "is_valid_gh_reason: rejects a reason longer than 200 characters" {
+    run is_valid_gh_reason "$(printf 'a%.0s' {1..201})"
+    assert_failure "$err_argument_value"
+    assert_output --partial "The reason is too long."
+}
+
+@test "is_safe_gh_reason: accepts a normal sentence with spaces" {
+    run is_safe_gh_reason "Emergency hotfix release"
+    assert_success
+}
+
+@test "is_safe_gh_reason: rejects a reason that looks like a command or path" {
+    run is_safe_gh_reason "--force"
+    assert_failure "$err_unsafe_argument"
+    run is_safe_gh_reason "/etc/passwd"
+    assert_failure "$err_unsafe_argument"
+    run is_safe_gh_reason "../secrets"
+    assert_failure "$err_unsafe_argument"
+}
+
+@test "is_safe_gh_reason: rejects a reason longer than 200 characters" {
+    run is_safe_gh_reason "$(printf 'a%.0s' {1..201})"
+    assert_failure "$err_argument_value"
+}
+
+# --- is_valid_gh_secret_name ----------------------------------------------------------------------
+
+@test "is_valid_gh_secret_name: accepts letters, digits, and underscores not starting with a digit" {
+    local name
+    for name in "NUGET_API_KEY" "_private" "a1"; do
+        run is_valid_gh_secret_name "$name"
+        assert_success
+        assert_output ""
+    done
+}
+
+@test "is_valid_gh_secret_name: rejects a leading digit, other characters, and the GITHUB_ prefix in any case" {
+    local name
+    for name in "1KEY" "MY-KEY" "MY KEY" "GITHUB_TOKEN" "github_token"; do
+        run is_valid_gh_secret_name "$name"
+        assert_failure "$err_argument_value"
+        assert_output --partial "Invalid secret name '$name':"
+    done
 }

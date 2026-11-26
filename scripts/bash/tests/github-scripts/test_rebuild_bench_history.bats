@@ -57,7 +57,7 @@ _install_fake_gh() {
     mkdir -p "$_dir"
     cat > "$_dir/gh" <<'EOF'
 #!/usr/bin/env bash
-# 'gh version' / 'gh --version' (is_gh_present): answered first, in gh's real two-line format (Debian's first line), and
+# 'gh version' / 'gh --version' (verify_gh): answered first, in gh's real two-line format (Debian's first line), and
 # before the call log, so it never shifts the logged calls. $gh_min_version is inherited from the script under test (core.sh
 # exports it).
 [[ ${1:-} != version && ${1:-} != --version ]] ||

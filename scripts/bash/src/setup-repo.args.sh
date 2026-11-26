@@ -228,10 +228,10 @@ function parse_arguments()
 #-----------------------------------------------------------------------------------------------
 function verify_environment()
 {
-    is_git_present                                                              || true
-    is_gh_present                                                               || true
-    is_jq_present                                                               || true
-    is_yq_present                                                               || true
+    verify_git                                                                  || true
+    verify_gh                                                                   || true
+    verify_jq                                                                   || true
+    verify_yq                                                                   || true
 
     return "$success"
 }
@@ -261,7 +261,7 @@ function resolve_arguments()
 {
     local -i _rc=$success
 
-    validate_gh_repo_owner "$repo_owner"                                        || true
+    is_valid_gh_repo_owner "$repo_owner"                                        || true
 
     resolve_vm2_repos vm2_repos "$branches" "$branches"                         || exit_with_error "Failed to resolve the parent directory of all vm2 repositories (usually \$VM2_REPOS)." -ec $?
 
@@ -283,7 +283,7 @@ function resolve_arguments()
 
     repo_path=$_resolved
     repo_name=$(basename "$repo_path")
-    validate_gh_repo_name "$repo_name"                                          || true
+    is_valid_gh_repo_name "$repo_name"                                          || true
 
     repo="$repo_owner/$repo_name"
 
@@ -292,12 +292,12 @@ function resolve_arguments()
     [[ -s "$ci_yaml" ]]                                                         || with_error _rc "$err_logic_error" "The specified path '$repo_path' is not a valid project/repository root (missing .github/workflows/CI.yaml)." \
                                                                                                                      "Specify a valid path to the root of the project/repository as a positional parameter or use 'dotnet new vm2pkg <name>' to create a valid directory."
 
-    [[ -z $description ]] || validate_gh_repo_description "$description"        || true
+    [[ -z $description ]] || is_valid_gh_repo_description "$description"        || true
 
-    validate_branch_name "$default_branch"                                      || true
+    is_valid_branch_name "$default_branch"                                      || true
 
     visibility="${visibility,,}"
-    is_valid_visibility "$visibility"                                           || true
+    is_valid_gh_visibility "$visibility"                                        || true
 
     # shellcheck disable=SC2015 # Info: Note that A && B || C is not if-then-else. C may run when A is true.
     if $audit; then

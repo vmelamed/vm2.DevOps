@@ -237,7 +237,7 @@ _github_unreachable='get_repo_state() { return 1; }'
 @test "resolve_arguments: rejects an invalid new name" {
     _make_sandbox
     run _resolve "old bad..name"
-    assert_output --partial "Invalid branch name 'bad..name'."
+    assert_output --partial "Invalid branch name 'bad..name': it must be a valid refname."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -258,7 +258,7 @@ _github_unreachable='get_repo_state() { return 1; }'
 @test "resolve_arguments: rejects an invalid old name" {
     _make_sandbox
     run _resolve "bad..name feature/new"
-    assert_output --partial "Invalid branch name 'bad..name'."
+    assert_output --partial "Invalid branch name 'bad..name': it must be a valid refname."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -273,7 +273,7 @@ _github_unreachable='get_repo_state() { return 1; }'
 @test "resolve_arguments: refuses to rename the default branch" {
     _make_sandbox
     run _resolve "main feature/new" "$(_github_default_branch main)"
-    assert_output --partial "Cannot rename the default branch 'main'."
+    assert_output --partial "Invalid branch 'main': the default branch cannot be renamed."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -282,7 +282,7 @@ _github_unreachable='get_repo_state() { return 1; }'
     _git push -q origin "HEAD:refs/heads/develop" 2> /dev/null
     _git branch -q --track develop origin/develop
     run _resolve "develop feature/new" "$(_github_default_branch develop)"
-    assert_output --partial "Cannot rename the default branch 'develop'."
+    assert_output --partial "Invalid branch 'develop': the default branch cannot be renamed."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -291,7 +291,7 @@ _github_unreachable='get_repo_state() { return 1; }'
     run _resolve "main feature/new" "$(_github_default_branch develop)"
     assert_success
     assert_output --partial "NO_ERRORS"
-    refute_output --partial "Cannot rename the default branch"
+    refute_output --partial "the default branch cannot be renamed"
     assert_output --partial 'declare -rx old_branch_name="main"'
 }
 

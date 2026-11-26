@@ -40,8 +40,8 @@ _ds() {
     "
 }
 
-# configure()/customize() validate their JSON config against a sibling schema file (see validate_json_schema() in
-# _sanitize.sh); a directory must have this schema file present, or validate_json_schema() itself bug-exits on the
+# configure()/customize() validate their JSON config against a sibling schema file (see is_valid_json_with_schema() in
+# _sanitize.sh); a directory must have this schema file present, or is_valid_json_with_schema() itself bug-exits on the
 # missing/empty argument before configure()'s own graceful error handling for the config file ever runs. These helpers
 # place a real copy of the schema next to a test's fixture config, matching production layout.
 _stub_config_schema() {

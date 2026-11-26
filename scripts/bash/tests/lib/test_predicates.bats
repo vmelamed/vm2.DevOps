@@ -90,6 +90,22 @@ declare -gx err_argument_value
     assert_failure "$failure"
 }
 
+@test "is_indexed_array, is_associative_array: tell -a from -A even when the caller matches case-insensitively, and keep the caller's mode" {
+    # regression: under 'nocasematch', '^declare\ -a' also matched 'declare -A'
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 declare -a indexed=(a b) && declare -A assoc=([a]=1)
+                 set_case_insensitive
+                 is_indexed_array assoc     && echo 'assoc is indexed'
+                 is_associative_array indexed && echo 'indexed is associative'
+                 is_indexed_array indexed   && echo 'indexed ok'
+                 is_associative_array assoc && echo 'assoc ok'
+                 is_case_sensitive          || echo 'still case-insensitive'"
+    assert_success
+    assert_output "indexed ok
+assoc ok
+still case-insensitive"
+}
+
 @test "is_associative_array: does not recurse/hang (regression for the save_state cycle)" {
     declare -A arr=([a]=1)
     run --separate-stderr timeout 5 bash -c '
@@ -409,6 +425,11 @@ declare -gx err_argument_value
     assert_failure "$failure"
 }
 
+@test "is_windows: bug-exits when given an argument" {
+    run is_windows "Linux"
+    assert_failure "$err_invalid_arguments"
+}
+
 # --- is_filename / is_path -------------------------------------------------------------------
 
 @test "is_filename: accepts a plain filename, rejects path separators and . / .." {
@@ -432,19 +453,6 @@ declare -gx err_argument_value
     run is_path ""
     assert_failure "$negative"
     assert_output ""
-}
-
-# --- is_nuget_server -------------------------------------------------------------------------
-
-@test "is_nuget_server: accepts nuget, github, and https URLs; rejects garbage" {
-    run is_nuget_server "nuget"
-    assert_success
-    run is_nuget_server "github"
-    assert_success
-    run is_nuget_server "https://example.com/index.json"
-    assert_success
-    run is_nuget_server "ftp://example.com"
-    assert_failure
 }
 
 # --- percentage validation ---------------------------------------------------------------------

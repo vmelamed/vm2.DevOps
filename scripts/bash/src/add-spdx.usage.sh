@@ -9,7 +9,7 @@ declare -x common_args_usage
 
 #-----------------------------------------------------------------------------------------------
 # @description Prints the usage message for 'add-spdx.sh' to stdout. Does not exit; the caller
-#   ('usage()' in '_core_args.sh') is responsible for exiting after calling this function.
+#   ('usage()' in 'core.args.sh') is responsible for exiting after calling this function.
 #
 # @arg $1 bool _long_text - when 'true', appends the common switches/environment-variables
 #   section ('$common_args_usage') after the script-specific text; when 'false', prints only

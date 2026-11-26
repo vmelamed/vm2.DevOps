@@ -230,7 +230,7 @@ _run_dotnet_build_with_fake_dotnet()
     # (now 'error'-based, not 'bug'-based -- see the summary note on lib functions no longer
     # calling exit_if_has_errors) is never reached at all.
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A properties=(); dotnet_pack 'not-a-real-project.slnx' '' properties"
-    assert_failure "$err_not_file"
+    assert_failure "$err_argument_value"
 }
 
 @test "get_target_path: fails on a non-existent .csproj project (regression: was silently bypassed by a -v \$1 typo)" {
@@ -351,7 +351,7 @@ EOF
 
 # --- get_artifacts_path -------------------------------------------------------------------------
 #
-# get_artifacts_path() moved here from _git_vm2.sh: it is now a thin wrapper over
+# get_artifacts_path() moved here from _git.vm2.sh: it is now a thin wrapper over
 # get_msbuild_property(), so it needs a real MSBuild evaluation to test meaningfully -- same
 # fixture shape as the "resolves \$artifacts via real MSBuild ArtifactsPath evaluation" test in
 # test_dotnet_args.bats.
@@ -417,12 +417,13 @@ EOF
     # bare, unconditional call aborts immediately with err_argument_value instead -- the more
     # specific, correct error never gets a chance to be shadowed by this one.
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare art=''; get_artifacts_path 'totally-not-a-real-file.csproj' art"
-    assert_failure "$err_not_found"
+    assert_failure "$err_argument_value"
+    assert_output --partial "requires argument 1 to be the path to an existing project file"
 }
 
 @test "get_artifacts_path: bug-exits on an undefined output variable" {
     run get_artifacts_path "$_fake_csproj" not_a_defined_var
-    assert_failure "$err_argument_value"
+    assert_failure "$err_invalid_nameref"
 }
 
 @test "get_artifacts_path: bug-exits with the wrong argument count" {
@@ -641,7 +642,8 @@ _install_fake_dotnet_sln() {
 }
 
 @test "list_solution_projects: bug-exits with the wrong argument count" {
-    run list_solution_projects "$_fake_csproj"
+    printf '<Solution />\n' > "$BATS_TEST_TMPDIR/only.slnx" # a valid argument 1: only the count is wrong
+    run list_solution_projects "$BATS_TEST_TMPDIR/only.slnx"
     assert_failure "$err_invalid_arguments"
 }
 
@@ -686,5 +688,5 @@ _install_fake_dotnet_sln() {
 
 @test "expand_solution_projects: bug-exits on an undefined variable name" {
     run expand_solution_projects not_a_defined_var
-    assert_failure "$err_missing_argument"
+    assert_failure "$err_invalid_nameref"
 }

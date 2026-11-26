@@ -94,17 +94,17 @@ function get_arguments()
     done
 
     usage_if_requested
-    validate_arguments
+    resolve_arguments
     dump_args
 }
 
-function validate_arguments()
+function resolve_arguments()
 {
     local -i _rc=$success;
 
     [[ -n $summary_file ]] || {
         summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md") \
-                                                                                || { with_error _rc "$err_io_failure" "Failed to create a temporary file"
+                                                                                || { with_error _rc "$err_io_failure" "Failed to create a temporary file."
                                                                                      return "$_rc"
                                                                                 }
         add_trap "rm -f ${summary_file@Q}" EXIT
@@ -133,28 +133,28 @@ function validate_arguments()
         $_invalid ||
             [[ -s $_repo_path/$dpp_file_name ]]                                 || { error "Missing '$dpp_file_name' in '$_repo'. No other repositories specified." -ec "$err_invalid_file"; _invalid=true; }
         $_invalid ||
-            validate_package_lines "$_repo_path/$dpp_file_name"                 || { error "Invalid package lines in $_repo_path/$dpp_file_name." -ec $?; _invalid=true; }
+            is_valid_packages_file "$_repo_path/$dpp_file_name"                 || { error "Invalid package lines in $_repo_path/$dpp_file_name." -ec $?; _invalid=true; }
         $_invalid ||
             target_repos[$_repo]=$_repo_path
     else
         for _repo in "${!target_repos[@]}"; do
             is_in "$_repo" "${vm2_repositories[@]}"                             || { error "The specified repository '$_repo' is not in the vm2 repositories list." -ec "$err_repo_not_in_vm2_repos"; continue; }
 
-            resolve_repo_root "$vm2_repos" "$_repo" _repo_path _                || { error "Could not resolve '$_repo'" -ec $?; continue; }
+            resolve_repo_root "$vm2_repos" "$_repo" _repo_path _                || { error "Failed to resolve the repository '$_repo'." -ec $?; continue; }
 
             [[ -s "$_repo_path/$dpp_file_name" ]]                               || { warning "Missing '$dpp_file_name' in '$_repo'. Skipping the repo.";
                 unset "target_repos[$_repo]"
                 continue
             }
 
-            validate_package_lines "$_repo_path/$dpp_file_name"                 || { error "Invalid package lines in $_repo_path/$dpp_file_name." -ec $?; continue; }
+            is_valid_packages_file "$_repo_path/$dpp_file_name"                 || { error "Invalid package lines in $_repo_path/$dpp_file_name." -ec $?; continue; }
 
             target_repos[$_repo]=$_repo_path
         done
     fi
 
     ! is_in "$vm2_sot_repo_name" "${!target_repos[@]}" ||
-        validate_package_lines "$sot_path/$dpp_file_name"                       || error "Invalid package lines in $sot_path/$dpp_file_name." -ec $?
+        is_valid_packages_file "$sot_path/$dpp_file_name"                       || error "Invalid package lines in $sot_path/$dpp_file_name." -ec $?
 
     has_errors || {
         echo "# Update Packages Summary"

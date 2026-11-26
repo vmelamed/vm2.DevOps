@@ -159,7 +159,7 @@ _github_unreachable='get_repo_state() { return 1; }'
              echo REACHED
              has_errors && echo HAS_ERRORS || echo NO_ERRORS" "$_repo"
     assert_success
-    assert_output --partial "You must be on the default branch ('main'). Currently on 'feature'"
+    assert_output --partial "Invalid current branch 'feature': it must be the default branch 'main'."
     refute_output --partial "is behind"     # the branch check comes first: being behind is about the wrong branch here
     assert_output --partial "REACHED"
     assert_output --partial "HAS_ERRORS"
@@ -171,7 +171,7 @@ _github_unreachable='get_repo_state() { return 1; }'
              verify_environment
              has_errors && echo HAS_ERRORS || echo NO_ERRORS" "$_repo"
     assert_success
-    assert_output --partial "You must be on the default branch ('develop'). Currently on 'main'"
+    assert_output --partial "Invalid current branch 'main': it must be the default branch 'develop'."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -278,8 +278,8 @@ _github_unreachable='get_repo_state() { return 1; }'
              echo REACHED
              echo \"errors=\$(get_errors)\"" "$_repo"
     assert_success
-    assert_output --partial "The option '--branch' is mandatory"
-    assert_output --partial "The '--commit-sha' is mandatory"
+    assert_output --partial "The option '--branch' is mandatory."
+    assert_output --partial "The option '--commit-sha' is mandatory."
     assert_output --partial "REACHED"
     assert_output --partial "errors=2"
 }
@@ -292,7 +292,7 @@ _github_unreachable='get_repo_state() { return 1; }'
              resolve_arguments
              has_errors && echo HAS_ERRORS || echo NO_ERRORS" "$_repo"
     assert_success
-    assert_output --partial "The new branch name cannot be 'main'"
+    assert_output --partial "Invalid new branch name 'main': it cannot be the default branch."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -305,7 +305,7 @@ _github_unreachable='get_repo_state() { return 1; }'
              resolve_arguments
              has_errors && echo HAS_ERRORS || echo NO_ERRORS" "$_repo"
     assert_success
-    assert_output --partial "The new branch name cannot be 'develop'"
+    assert_output --partial "Invalid new branch name 'develop': it cannot be the default branch."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -316,7 +316,7 @@ _github_unreachable='get_repo_state() { return 1; }'
              resolve_arguments
              has_errors && echo HAS_ERRORS || echo NO_ERRORS" "$_repo"
     assert_success
-    assert_output --partial "The '--commit-sha' is mandatory"
+    assert_output --partial "Invalid commit SHA"
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -327,7 +327,7 @@ _github_unreachable='get_repo_state() { return 1; }'
              resolve_arguments
              has_errors && echo HAS_ERRORS || echo NO_ERRORS" "$_repo"
     assert_success
-    assert_output --partial "Commit 'deadbeefdeadbeef' does not exist"
+    assert_output --partial "Invalid commit 'deadbeefdeadbeef': it does not exist."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -401,9 +401,9 @@ _github_unreachable='get_repo_state() { return 1; }'
     run _mc "$(_github_default_branch main)
              get_arguments --branch main --commit-sha deadbeef; echo AFTER" "$_repo"
     assert_failure
-    assert_output --partial "Currently on 'feature'"
-    assert_output --partial "The new branch name cannot be 'main'"
-    assert_output --partial "Commit 'deadbeef' does not exist"
+    assert_output --partial "Invalid current branch 'feature': it must be the default branch 'main'."
+    assert_output --partial "Invalid new branch name 'main': it cannot be the default branch."
+    assert_output --partial "Invalid commit 'deadbeef': it does not exist."
     assert_output --partial "Usage:"
     refute_output --partial "AFTER"
 }

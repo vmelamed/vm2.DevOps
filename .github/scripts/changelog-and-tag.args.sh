@@ -86,15 +86,15 @@ function parse_arguments()
 function verify_environment()
 {
     [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "GITHUB_REPOSITORY and/or RELEASE_PAT are not set." -ec "$err_argument_value"
-    is_git_present                                                              || true
-    is_tool_present git-cliff                                                   || error "'git-cliff' is not installed. Install it first." -ec "$err_tool_not_found"
+    verify_git                                                                  || true
+    is_tool_present git-cliff                                                   || error "'git-cliff' is not installed." "Install it from <https://git-cliff.org/docs/installation>." -ec "$err_tool_not_found"
     return "$success"
 }
 
 function resolve_arguments()
 {
     # Sanitize inputs
-    validate_minver_tag_components "$minver_tag_prefix"                         || true
+    is_valid_minver_settings "$minver_tag_prefix"                               || true
 
     # Determine tag type: release or prerelease
     if is_semver_release_tag "$tag"; then
@@ -108,7 +108,7 @@ function resolve_arguments()
     fi
 
     is_valid_boolean "$needs_empty_commit"                                      || true
-    is_safe_reason "$reason"                                                    || true
+    is_safe_gh_reason "$reason"                                                 || true
 
     readonly tag
     readonly reason

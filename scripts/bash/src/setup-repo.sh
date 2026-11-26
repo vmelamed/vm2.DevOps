@@ -181,7 +181,7 @@ readonly suggested_repo_name
 has_github_remote repo_state && get_current_nuget_server
 
 # Check the integrity of the default data
-validate_defaults
+assert_defaults
 resolve_github_app_ids
 list_required_checks
 
@@ -283,7 +283,7 @@ if ! has_remote_repo repo_state; then
         "--disable-wiki"
     )
 
-    [[ -n "$description" ]] || enter_value "GitHub repository description (3-350 characters)" description "$repo_name" false validate_gh_repo_description
+    [[ -n "$description" ]] || enter_value "GitHub repository description (3-350 characters)" description "$repo_name" false is_valid_gh_repo_description
     [[ -n "$description" ]] && create_repo_params+=("--description" "$description")
 
     $use_ssh   && repo_url="git@github.com:$repo.git"

@@ -259,7 +259,7 @@ _make_vm2_repos() {
              has_errors && echo HAS_ERRORS || echo NO_ERRORS
              declare -p target_roots"
     assert_success
-    assert_output --partial "Could not resolve the Git working tree root of the target 'vm2.NotThere'"
+    assert_output --partial "Failed to resolve the Git working tree root of the target 'vm2.NotThere'"
     assert_output --partial "HAS_ERRORS"
     assert_output --partial "target_roots=([0]=\"$_vm2/vm2.Target\")"
 }
@@ -413,7 +413,7 @@ _make_vm2_repos() {
 @test "get_selector_action: fails with usage on an invalid action name" {
     run _ds "declare -A selectors_actions=(); get_selector_action '--file-bogus' 'a.txt'"
     assert_failure "$err_argument_value"
-    assert_output --partial "Invalid action: bogus"
+    assert_output --partial "Invalid action 'bogus'."
 }
 
 @test "get_selector_action: fails with usage when the file selector itself looks like an option" {

@@ -261,8 +261,8 @@ NO_ERRORS"
              resolve_arguments
              has_errors && echo HAS_ERRORS || echo NO_ERRORS"
     assert_success
-    assert_output --partial "(provided 'a b')"
-    assert_output --partial "The reason '-rf /' appears to be a command or contains unsafe characters."
+    assert_output --partial "Invalid MinVer tag prefix 'a b'"
+    assert_output --partial "Invalid reason '-rf /': it looks like a command, or contains unsafe characters."
     assert_output --partial "HAS_ERRORS"
 }
 

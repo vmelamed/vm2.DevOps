@@ -147,7 +147,7 @@ _make_ci_repo() {
              echo \"RC=\$?\""
     assert_success
     assert_output --partial "RC=0"
-    assert_output --partial "Could not find a single, well-formed shared-content marker pair"
+    assert_output --partial "Failed to find a single, well-formed shared-content marker pair"
 }
 
 @test "are_different: falls back to plain \$positive silently (no warning) when told not to warn" {

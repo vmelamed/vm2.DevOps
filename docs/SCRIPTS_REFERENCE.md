@@ -44,11 +44,11 @@ vm2.DevOps contains three distinct categories of scripts:
     Utility Scripts:     script.sh ----------→ core.sh → all _*.sh modules
 
 `core.sh` sources every component module directly, including the ones that used to be CI-only (`_sanitize.sh`,
-`_dotnet.sh`, `_dotnet_args.sh`, `_git_vm2.sh`) — there is no longer a split between a "common" set sourced by
-`core.sh` and a "CI-specific" set added on top by `gh_core.sh`. `gh_core.sh` now only sources `core.sh` and adds
-GitHub Actions–specific environment variables (`GITHUB_ACTIONS`, `GITHUB_STEP_SUMMARY`, `GITHUB_OUTPUT`) and a
+`_dotnet.sh`, `_dotnet.args.sh`, `_git.vm2.sh`) — there is no longer a split between a "common" set sourced by
+`core.sh` and a "CI-specific" set added on top by `gh_core.sh`. `gh_core.sh` now only sources `core.sh` and adds a
 handful of functions on top: it overrides `tee_stdout`/`tee_stderr`/`tee_output` to also write to the GitHub Actions
-step summary/output files, and adds `gh_escape` and `args_to_github_output`.
+step summary/output files when `$ci_system` is `github`, and adds `gh_escape` and `args_to_github_output`. It never
+sets the `GITHUB_*` variables: GitHub Actions exports them.
 
 ### Common Switches
 
@@ -75,23 +75,29 @@ Located in **`scripts/bash/lib/`**. The foundation layer sourced by all scripts.
 
     core.sh
      ├── _constants.sh
-     ├── _core_state.sh     (quiet/verbose/dry-run/trace state)
-     ├── _error_codes.sh    (error code constants)
-     ├── _predicates.sh     (boolean test functions)
-     ├── _diagnostics.sh    (info, warning, error, trace)
-     ├── _core_args.sh           (argument parsing, common switches, get_common_arg)
-     ├── _semver.sh         (semver parsing, comparison, tag validation)
-     ├── _sanitize.sh       (input sanitization: is_safe_reason, etc.)
-     ├── _dump_vars.sh      (dump_vars for debugging)
-     ├── _user.sh           (user/identity helpers)
-     ├── _git.sh            (Git repository helpers)
-     ├── _git_gh.sh         (GitHub helpers: naming rules, repo state, gh retry)
-     ├── _git_vm2.sh        (Git helpers specific to vm2 repos)
-     ├── _dotnet_args.sh    (shared dotnet CLI argument parsing/defaults)
-     └── _dotnet.sh         (.NET SDK helpers)
+     ├── core.state.sh           (quiet/verbose/dry-run/trace state, $ci_system)
+     ├── _error_codes.sh         (error code constants)
+     ├── _predicates.sh          (boolean test functions)
+     ├── _predicates.tools.sh    (tool presence and version checks)
+     ├── _predicates.json.sh     (JSON checks)
+     ├── _diagnostics.sh         (info, warning, error, trace)
+     ├── core.args.sh            (argument parsing, common switches, get_common_arg)
+     ├── _semver.sh              (semver parsing, comparison, tag validation)
+     ├── _sanitize.sh            (input sanitization: is_safe_gh_reason, etc.)
+     ├── _dump_vars.sh           (dump_vars for debugging)
+     ├── _user.sh                (user/identity helpers)
+     ├── _git.sh                 (Git repository helpers)
+     ├── _git.gh.sh              (GitHub helpers: naming rules, repo state, gh retry)
+     ├── _git.vm2.sh             (Git helpers specific to vm2 repos)
+     ├── _xml.sh                 (XML value reading via yq)
+     ├── _dotnet.constants.sh    (dotnet exit codes, build-information keys, values in use)
+     ├── _dotnet.predicates.sh   (configuration, TFM, RID, MinVer, NuGet server validation)
+     ├── _dotnet.args.sh         (shared dotnet CLI argument parsing/defaults)
+     ├── _dotnet.msbuild.sh      (MSBuild properties, build information)
+     └── _dotnet.sh              (.NET SDK helpers)
 
 `gh_core.sh` only sources `core.sh` on top of that — it no longer adds any extra component modules — and then layers
-GitHub Actions–specific environment variables and a handful of functions:
+a handful of GitHub Actions–specific functions:
 
     gh_core.sh
      └── core.sh            (everything above)
@@ -436,7 +442,7 @@ downstream jobs.
 
 Among the common dotnet options, `--define` (`-d`), `--configuration` (`-c`), `--framework` (`-tfm`), and `--runtime`
 (`-rid`) have short forms; `--minver-tag-prefix`, `--minver-prerelease-id`, and `--artifacts-path` are long-form only
-(see `get_common_dotnet_arg()` in `scripts/bash/lib/_dotnet_args.sh`). There is no `--dotnet-version` option any more
+(see `get_common_dotnet_arg()` in `scripts/bash/lib/_dotnet.args.sh`). There is no `--dotnet-version` option any more
 -- the .NET SDK version comes from `global.json`, not a CI input.
 
 | Option                         | Short  | Default             | Description                           |

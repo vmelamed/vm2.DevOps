@@ -67,7 +67,7 @@ function parse_arguments()
 
 function verify_environment
 {
-    is_git_present                                                              || true
+    verify_git                                                                  || true
 
     return "$success"
 }
@@ -75,8 +75,8 @@ function verify_environment
 function resolve_arguments()
 {
     # Sanitize inputs to prevent injection attacks
-    validate_minver_tag_components "$minver_tag_prefix"                         || true
-    is_safe_reason "$reason"                                                    || true
+    is_valid_minver_settings "$minver_tag_prefix"                               || true
+    is_safe_gh_reason "$reason"                                                 || true
 
     readonly minver_tag_prefix
     readonly reason
