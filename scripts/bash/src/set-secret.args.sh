@@ -28,6 +28,16 @@ declare -x secret_name=''
 
 function get_arguments()
 {
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
+{
     local _option
     local _option_set=false
 
@@ -54,10 +64,10 @@ function get_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                   exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "Unknown argument: $_option" -ec "$err_unknown_argument"
                 ;;
 
             * ) ! $_option_set                                                  || usage "Too many positional arguments (secret name): $_option" -ec "$err_too_many_arguments"
@@ -67,9 +77,15 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    resolve_arguments
-    dump_args
+    return "$success"
+}
+
+function verify_environment()
+{
+    verify_git                                                                  || true
+    verify_gh                                                                   || true
+
+    return "$success"
 }
 
 function resolve_arguments()
@@ -77,11 +93,13 @@ function resolve_arguments()
     app=${app:-$default_app}
     repo_owner=${repo_owner:-$default_repo_owner}
 
-    is_in_i "$app" "${gh_apps_with_secrets[@]}"                                 || error "Invalid app specified: '$app'. Must be one of: ${gh_apps_with_secrets[*]}." -ec "$err_argument_value"
-    is_valid_gh_secret_name "$secret_name"                                         || true
-    exit_if_has_errors true
+    is_valid_gh_repo_owner "$repo_owner"                                        ||true
+    is_in_i "$app" "${gh_apps_with_secrets[@]}"                                 || with_error _ "$err_argument_value" "Invalid app '$app': use one of: ${gh_apps_with_secrets[*]}."
+    is_valid_gh_secret_name "$secret_name"                                      || true
 
-    readonly repo_owner app secret_name
+    readonly repo_owner
+    readonly app
+    readonly secret_name
 }
 
 # shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.
@@ -94,9 +112,9 @@ function dump_args()
         --quiet
         --header "Arguments for $script_name:"
 
+        secret_name
         repo_owner
         app
-        secret_name
 
         --header "Core State:"
         --core-state
