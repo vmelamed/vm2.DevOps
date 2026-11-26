@@ -578,52 +578,132 @@ declare -xr trace_prefix="$trace_em  TRACE: "
 
 #-----------------------------------------------------------------------------------------------
 # @description Logs an error message to stderr (via `message`, prefixed with `$error_prefix`)
-# and increments the global error counter.
+#   and increments the global error counter.
+#
+# The error code comes first, like in `with_error`: `error "$err_not_found" "No such file."`.
+# A first argument that is an exit code (0..255) is taken as the code, not as a message part;
+# its text is printed after the message, just like a trailing `-ec <code>`. To print a message
+# that is only a number, pass the code first (`error "$err_tool_error" "$_count"`) or quote it
+# into a sentence (`"Found $_count items."`).
 #
 # Notes:
-#   - Increments the global `$errors` counter by 1, every call.
+#   - Increments the global `$__errors` counter by 1, every call.
+#   - Records the error code in `$__last_error` (default: `$failure`), which
+#     `exit_if_has_errors` uses as the exit code. With several codes, the last one wins, and a
+#     leading code counts as the last one (it is appended after all the other arguments).
 #   - The named parameters must be provided as arguments to the function - they are not
 #     expected in stdin.
 #
+# @arg $1 int The error code (optional): the `$err_*` code of the failure. Recognized only in the
+#   first position.
 # @arg $@ string Error message parts (optional -- if none are given, the message is read from
 #   stdin instead). May include the named parameters described in `message`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
+#     - `--error-code`/`-ec` followed by an error code -- the form before the leading code;
+#       translated to its error message and included in the output where it appears.
+#     - `--stack-skip`/`-ss` followed by an integer -- how many stack frames to skip before
+#       showing the stack (default: 2). If given more than once, the last occurrence takes
 #       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
+#       the message (default: 0). If given more than once, the last occurrence takes effect.
+#     - `--no-stack`/`-ns` -- do not dump the stack. Combined with `--stack-depth`/`-sd`, the
+#       last occurrence takes effect.
 #
-# @exitcode success=0: Message printed successfully.
+# @exitcode success=0: always: an error is reported, not raised; the caller decides what to do.
 #
 # @example
-#   error "File not found: $filename"
+#   error "$err_not_found" "Failed to find the file '$filename'."
 # @example
-#   error "Build failed"
+#   error "Failed to build '$project'." -ec "$err_tool_error"       # the form before the leading code
 #-----------------------------------------------------------------------------------------------
 function error()
 {
-    # scan the parameters for --error-code to record it in __last_error
-    local -i _error=$failure
+    # scan the arguments for the last --error-code to record it in __last_error
+    local -a _args=()
+
+    if is_exit_code "${1-}"; then
+        _args=("${@:2}" -ec "$1")
+    else
+        _args=("$@")
+    fi
+
+    __last_error=$failure
     local -i _i
-
-    for (( _i=1; _i<=$#; _i++ )); do
-        if [[ ${!_i} == "-ec" || ${!_i} == "--error-code" ]]; then
-            (( ++_i <= $# )) && _error=${!_i}
-            break
-        fi
+    for (( _i = 0; _i < ${#_args[@]}; _i++ )); do
+        [[ ${_args[_i]} == "-ec" || ${_args[_i]} == "--error-code" ]] || continue
+        (( _i + 1 < ${#_args[@]} )) && is_exit_code "${_args[_i + 1]}" && __last_error=${_args[_i + 1]}
     done
-    __last_error=$_error
 
-    __message "$error_prefix" "$@" > >(tee_stderr); wait "$!" || true
+    __message "$error_prefix" "${_args[@]}" > >(tee_stderr); wait "$!" || true
+
     local -i _depth=${#FUNCNAME[@]}
     (( __errors == 0 || _depth < __errors_min_depth )) && __errors_min_depth=$_depth
     (( ++__errors ))
+
     return "$success"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Switches a chain of fallible steps to the error track (railway-oriented
+#   programming by hand): records a vm2 `$err_*` code in the caller's variable and reports the
+#   failure with `error`. Meant to be called right after the failed command, as
+#   `cmd || with_error ...`: it captures `$?` first thing, and appends it to the message as
+#   "Exit code: N" when non-zero, so the log shows both the logical vm2 code and the tool's (or
+#   the OS's) own exit status. The steps after it are guarded by `(( rc != success )) ||` and
+#   are skipped once the variable holds the error code. See CLAUDE.md, "Chaining Fallible Steps
+#   with `with_error`".
+#
+#   The stack dump and the `@ file (line)` location skip this function and start at its caller.
+#
+#   The output variable comes first, against the usual rule (outputs after inputs), so that a
+#   call reads like the assignment it performs: `with_error _rc "$err_x" ...` sets `_rc` to
+#   `$err_x`, the way `readarray -t arr < <(...)` puts its target before its source.
+#
+# @arg $1 string The name of a declared integer variable that receives the code from `$2`.
+# @arg $2 integer The vm2 error code (`$err_*`) to record and report, in the range [1, 255].
+# @arg $@ string The message parts for `error`; MAY include `error`'s named parameters.
+#
+# @set The variable named in `$1` is set to `$2`. Also everything `error` sets: the global error
+#   counter and the last error code.
+#
+# @exitcode success=0: Always, so that `cmd || with_error ...` does not trip `errexit`. The
+#   failure is carried in the variable named in `$1`.
+#
+# @example
+#   declare -i rc=$success
+#   declare results_text=''
+#   declare -a results=()
+#   results_text=$(get_results)                                || with_error rc "$err_tool_error" "Failed to get the results."
+#   (( rc != success )) || [[ -z $results_text ]] || readarray -t results <<< "$results_text"
+#   (( rc != success )) || some_tool --input "$input_file"     || with_error rc "$err_tool_error" "some_tool failed."
+#   (( rc == success ))                                        || return "$rc"   # or, in a top-level script: exit_if_has_errors
+#-----------------------------------------------------------------------------------------------
+function with_error()
+{
+    local -i _prev_error=$? # capture the previous command's exit code immediately
+
+    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
+                                                                                       "  - the name of a variable to receive the error code" \
+                                                                                       "  - the error code to record and report" \
+                                                                                       -ec "$err_invalid_arguments"
+    [[ ! -v 1 ]] || is_variable  "$1"                                           || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 2 ]] || { is_exit_code "$2" && (( $2 > 0 )); }                      || bug "${FUNCNAME[0]}() requires argument 2 to be a valid return code in the range [1, 255] (provided '${2-<missing>}')." -ec "$err_argument_value"
+                                                                                exit_if_has_bugs
+
+    local -n __err_code_var=$1
+    local -i __err_code=$2
+    shift 2
+
+    __err_code_var=$__err_code
+    if (( _prev_error != 0 )); then
+        error "$@" "Exit code: $_prev_error" -ec "$__err_code" -ss 3 # 3 skips this function in the stack dump
+    else
+        error "$@" -ec "$__err_code" -ss 3
+    fi
+
+    local -i _depth=${#FUNCNAME[@]}
+    (( __errors_min_depth <= _depth )) || __errors_min_depth=$_depth   # the error belongs to the caller, not to with_error
+
+    return "$success"   # __err_code_var carries the actual failure
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -664,49 +744,65 @@ function exit_with_error()
 
 #-----------------------------------------------------------------------------------------------
 # @description Logs a bug message to stderr (via `message`, prefixed with `$bug_prefix`)
-# and increments the global bug counter. Should be used when there is an obvious bug in
-# the code.
+#   and increments the global bug counter. Use it for a broken contract: the calling code is
+#   wrong (e.g. a wrong argument count, or an argument of the wrong type), not the user's input
+#   or the environment -- that is what `error` is for.
+#
+# The error code comes first, like in `error` and `with_error`:
+# `bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the path."`.
+# A first argument that is an exit code (0..255) is taken as the code, not as a message part;
+# its text is printed after the message, just like a trailing `-ec <code>`.
 #
 # Notes:
 #   - Increments the global `$__bugs` counter by 1, every call.
+#   - Records the error code in `$__last_bug` (default: `$failure`), which `exit_if_has_bugs`
+#     and `exit_with_bug` use as the exit code (`$err_has_bugs` if the code is 0). With several
+#     codes, the last one wins, and a leading code counts as the last one (it is appended after
+#     all the other arguments).
 #   - The named parameters must be provided as arguments to the function - they are not
 #     expected in stdin.
 #
-# @arg $@ string Error message parts (optional -- if none are given, the message is read from
+# @arg $1 int The error code (optional): the `$err_*` code of the broken contract. Recognized
+#   only in the first position.
+# @arg $@ string Bug message parts (optional -- if none are given, the message is read from
 #   stdin instead). May include the named parameters described in `message`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
+#     - `--error-code`/`-ec` followed by an error code -- the form before the leading code;
+#       translated to its error message and included in the output where it appears.
+#     - `--stack-skip`/`-ss` followed by an integer -- how many stack frames to skip before
+#       showing the stack (default: 2). If given more than once, the last occurrence takes
 #       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
+#       the message (default: 0). If given more than once, the last occurrence takes effect.
+#     - `--no-stack`/`-ns` -- do not dump the stack. Combined with `--stack-depth`/`-sd`, the
+#       last occurrence takes effect.
 #
-# @exitcode success=0: Message printed successfully.
+# @exitcode success=0: always: a bug is reported, not raised; `exit_if_has_bugs` ends the run.
 #
 # @example
-#   error "File not found: $filename"
+#   (( $# == 1 )) || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the path."
+#   exit_if_has_bugs
 # @example
-#   error "Build failed"
+#   bug -sd 3 "${FUNCNAME[0]}() requires argument 1 to be a file (provided '${1-<missing>}')." -ec "$err_not_file"   # the form before the leading code
 #-----------------------------------------------------------------------------------------------
 function bug()
 {
-    # scan the parameters for --error-code to record it in __last_bug
-    local -i _bug=$failure
+    # scan the arguments for --error-code to record it in __last_bug
+    local -a _args=()
+
+    if is_exit_code "${1-}"; then
+        _args=("${@:2}" -ec "$1")
+    else
+        _args=("$@")
+    fi
+
+    __last_bug=$failure
     local -i _i
-
-    for (( _i=1; _i<=$#; _i++ )); do
-        if [[ ${!_i} == "-ec" || ${!_i} == "--error-code" ]]; then
-            (( ++_i <= $# )) && _bug=${!_i}
-            break
-        fi
+    for (( _i = 0; _i < ${#_args[@]}; _i++ )); do
+        [[ ${_args[_i]} == "-ec" || ${_args[_i]} == "--error-code" ]] || continue
+        (( _i + 1 < ${#_args[@]} )) && is_exit_code "${_args[_i + 1]}" && __last_bug=${_args[_i + 1]}
     done
-    __last_bug=$_bug
 
-    __message "$bug_prefix" "$@" > >(tee_stderr); wait "$!" || true
+    __message "$bug_prefix" "${_args[@]}" > >(tee_stderr); wait "$!" || true
     local -i _depth=${#FUNCNAME[@]}
     (( __bugs == 0 || _depth < __bugs_min_depth )) && __bugs_min_depth=$_depth
     (( ++__bugs ))
@@ -714,28 +810,20 @@ function bug()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Logs a bug message to stderr (via `message`, prefixed with `$bug_prefix`)
-# and exits immediately with the last error code or `$err_has_bugs`.
+# @description Logs a bug message to stderr (via `bug`) and exits immediately: for a broken
+#   contract that the code cannot go past, where `bug` followed by `exit_if_has_bugs` would only
+#   add a line.
 #
-# @arg $@ string Error message parts (optional -- if none are given, the message is read from
-#   stdin instead). May include the named parameters described in `message`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
-#       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
+# @arg $@ The same arguments as `bug`, including the optional leading error code.
 #
-# @exitcode N: Never returns -- always exits the script, with the error code recorded by
-#   `bug()` from `-ec`/`--error-code` (default `$failure` if that flag was not given), or
-#   `$err_has_bugs` in the unlikely case that recorded code is itself 0.
+# @exitcode N: never returns -- always exits the script with the code that `bug` recorded in
+#   `$__last_bug` (a leading code, or the last `-ec`/`--error-code`; `$failure` if there is
+#   none), or `$err_has_bugs` if that code is 0.
 #
 # @example
-#   exit_with_bug -ns "Invalid file specified." -ec "$err_not_file"
+#   exit_with_bug "$err_logic_error" "The case for '$_kind' is not implemented."
+# @example
+#   exit_with_bug --no-stack "Invalid file specified." -ec "$err_not_file"   # the form before the leading code
 #-----------------------------------------------------------------------------------------------
 function exit_with_bug()
 {
@@ -1054,68 +1142,4 @@ function to_summary()
 function now_us()
 {
     echo "${EPOCHREALTIME//[!0-9]/}"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Switches a chain of fallible steps to the error track (railway-oriented
-#   programming by hand): records a vm2 `$err_*` code in the caller's variable and reports the
-#   failure with `error`. Meant to be called right after the failed command, as
-#   `cmd || with_error ...`: it captures `$?` first thing, and appends it to the message as
-#   "Exit code: N" when non-zero, so the log shows both the logical vm2 code and the tool's (or
-#   the OS's) own exit status. The steps after it are guarded by `(( rc != success )) ||` and
-#   are skipped once the variable holds the error code. See CLAUDE.md, "Chaining Fallible Steps
-#   with `with_error`".
-#
-#   The stack dump and the `@ file (line)` location skip this function and start at its caller.
-#
-#   The output variable comes first, against the usual rule (outputs after inputs), so that a
-#   call reads like the assignment it performs: `with_error _rc "$err_x" ...` sets `_rc` to
-#   `$err_x`, the way `readarray -t arr < <(...)` puts its target before its source.
-#
-# @arg $1 string The name of a declared integer variable that receives the code from `$2`.
-# @arg $2 integer The vm2 error code (`$err_*`) to record and report, in the range [1, 255].
-# @arg $@ string The message parts for `error`; MAY include `error`'s named parameters.
-#
-# @set The variable named in `$1` is set to `$2`. Also everything `error` sets: the global error
-#   counter and the last error code.
-#
-# @exitcode success=0: Always, so that `cmd || with_error ...` does not trip `errexit`. The
-#   failure is carried in the variable named in `$1`.
-#
-# @example
-#   declare -i rc=$success
-#   declare results_text=''
-#   declare -a results=()
-#   results_text=$(get_results)                                || with_error rc "$err_tool_error" "Failed to get the results."
-#   (( rc != success )) || [[ -z $results_text ]] || readarray -t results <<< "$results_text"
-#   (( rc != success )) || some_tool --input "$input_file"     || with_error rc "$err_tool_error" "some_tool failed."
-#   (( rc == success ))                                        || return "$rc"   # or, in a top-level script: exit_if_has_errors
-#-----------------------------------------------------------------------------------------------
-function with_error()
-{
-    local -i _prev_error=$? # capture the previous command's exit code immediately
-
-    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
-                                                                                       "  - the name of a variable to receive the error code" \
-                                                                                       "  - the error code to record and report" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable  "$1"                                           || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 2 ]] || { is_exit_code "$2" && (( $2 > 0 )); }                      || bug "${FUNCNAME[0]}() requires argument 2 to be a valid return code in the range [1, 255] (provided '${2-<missing>}')." -ec "$err_argument_value"
-                                                                                exit_if_has_bugs
-
-    local -n __err_code_var=$1
-    local -i __err_code=$2
-    shift 2
-
-    __err_code_var=$__err_code
-    if (( _prev_error != 0 )); then
-        error "$@" "Exit code: $_prev_error" -ec "$__err_code" -ss 3 # 3 skips this function in the stack dump
-    else
-        error "$@" -ec "$__err_code" -ss 3
-    fi
-
-    local -i _depth=${#FUNCNAME[@]}
-    (( __errors_min_depth <= _depth )) || __errors_min_depth=$_depth   # the error belongs to the caller, not to with_error
-
-    return "$success"   # __err_code_var carries the actual failure
 }
