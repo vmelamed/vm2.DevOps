@@ -24,20 +24,21 @@ declare -x err_invalid_nameref
 
 # vm2 core lib constants
 declare -x vm2_repositories
-declare -x nugetServersRegex
+declare -x u_letters_set
+declare -x l_letters_set
+declare -x letters_set
+declare -x nz_digits_set
+declare -x digits_set
 
 declare -xr zero_rex='[+-]?0'
-declare -xr natural_rex='[1-9][0-9]*'
+declare -xr natural_rex="[${nz_digits_set}][${digits_set}]*"
 declare -xr positive_rex="[+]?$natural_rex"
 declare -xr negative_rex="-$natural_rex"
 declare -xr integer_rex="[+-]?(0|$natural_rex)"
-declare -xr decimal_rex="$integer_rex(\.[0-9]*)?|(($integer_rex)?\.[0-9]+)"
+declare -xr decimal_rex="$integer_rex(\.[${digits_set}]*)?|(($integer_rex)?\.[${digits_set}]+)"
 declare -xr bool_rex='(true|false)'
-declare -xr base64_char_rex='[A-Za-z0-9+/]'
-declare -xr varNameRex="[A-Za-z_][A-Za-z0-9_]*"
-declare -xr minverTagPrefixRex='[0-9A-Za-z_]([-0-9A-Za-z._/]*[-A-Za-z_])?'
-declare -xr minverPrereleaseIdentifierRex='([-0-9A-Za-z]*[-A-Za-z][-0-9A-Za-z]*|[1-9][0-9]*|0)'
-declare -xr minverPrereleaseIdRex="($minverPrereleaseIdentifierRex(\.$minverPrereleaseIdentifierRex)*)"
+declare -xr base64_char_rex="[${letters_set}${digits_set}+/]"
+declare -xr varNameRex="[${letters_set}_][${letters_set}${digits_set}_]*"
 
 declare -xr zero_regex="^$zero_rex\$"
 declare -xr natural_regex="^$natural_rex\$"
@@ -49,8 +50,6 @@ declare -xr integer_regex="^$integer_rex\$"
 declare -xr decimal_regex="^($decimal_rex)\$"
 declare -xr bool_regex="^$bool_rex\$"
 declare -xr varNameRegex="^$varNameRex\$"
-declare -xr minverTagPrefixRegex="^$minverTagPrefixRex$"
-declare -xr minverPrereleaseIdRegex="^$minverPrereleaseIdRex$"
 
 declare -xr base64_regex="^($base64_char_rex{4})*($base64_char_rex{3}=|$base64_char_rex{2}==)?\$"
 
@@ -58,7 +57,7 @@ declare -xr base64_regex="^($base64_char_rex{4})*($base64_char_rex{3}=|$base64_c
 declare -x noise_sink
 
 #-----------------------------------------------------------------------------------------------
-# @description Checks if the shell is case-sensitive.
+# @description Tests if the shell is case-sensitive.
 #
 # @exitcode positive=0: The shell is case-sensitive.
 # @exitcode negative=1: The shell is case-insensitive.
@@ -89,38 +88,38 @@ function set_case_sensitive()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a valid variable name.
+# @description Tests if a string is a variable name.
 #
 # @arg $1 string variable_name - the name of the variable to test
 #
-# @exitcode positive=0: the string is a valid variable name
-# @exitcode negative=1: otherwise
+# @exitcode positive=0: the string is a variable name
+# @exitcode negative=1: the string is not a variable name
 #
 # @example
 #   if is_variable_name "MY_VAR"; then echo "Valid variable name"; fi
 #-----------------------------------------------------------------------------------------------
 function is_variable_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires argument 1 to be the name of the variable to test (provided $#)." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     [[ $1 =~ $varNameRegex ]]
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if a variable is defined.
+# @description Tests if the specified variable is defined.
 #
 # @arg $1 string variable_name - name of the variable to test
 #
 # @exitcode positive=0: the variable is defined
-# @exitcode negative=1: otherwise
+# @exitcode negative=1: the variable is not defined
 #
 # @example
 #   if is_variable MY_VAR; then echo "MY_VAR is defined"; fi
 #-----------------------------------------------------------------------------------------------
 function is_variable()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires argument 1 to be the name of the variable to test (provided $#)." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1" && declare -p "$1" &> "$noise_sink"
@@ -140,7 +139,7 @@ function is_variable()
 #-----------------------------------------------------------------------------------------------
 function is_indexed_array()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the indexed array variable to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires argument 1 the name of the indexed array variable to test (provided $#)." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1" || return "$negative"
@@ -148,7 +147,12 @@ function is_indexed_array()
     local -i _rc="$positive"
     local _decl
 
+    begin_scope
+    set_case_sensitive
+
     _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -a ]]    || _rc="$negative"
+
+    end_scope
 
     return "$_rc"
 }
@@ -175,7 +179,12 @@ function is_associative_array()
     local -i _rc="$positive"
     local _decl
 
+    begin_scope
+    set_case_sensitive
+
     _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -A ]]    || _rc="$negative"
+
+    end_scope
 
     return "$_rc"
 }
@@ -218,7 +227,7 @@ function is_array()
 #-----------------------------------------------------------------------------------------------
 # @description Tests if an array (indexed or associative) is empty.
 #
-# @arg $1 string array_name - name of the array variable to test
+# @arg $1 string nameref __array - name of the array variable to test
 #
 # @exitcode positive=0: the array is empty
 # @exitcode negative=1: otherwise
@@ -239,12 +248,12 @@ function is_empty_array()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if a function is defined.
+# @description Tests if a function with the specified name is defined.
 #
 # @arg $1 string name of the function to test
 #
 # @exitcode positive=0: the function is defined
-# @exitcode negative=1: otherwise
+# @exitcode negative=1: the function is not defined
 #
 # @example
 #   if is_function MY_FUNC; then echo "MY_FUNC is defined"; fi
@@ -260,7 +269,7 @@ function is_function()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if the string matches the provided regular expression.
+# @description Tests if a specified string matches the specified regular expression.
 #   For internal use only!
 #
 # @arg $1 string value - the string to test
@@ -451,7 +460,7 @@ function is_base64()
 #-----------------------------------------------------------------------------------------------
 # @description Tests if the first parameter equals one of the following parameters.
 #
-# @arg $1 string value - value to search for
+# @arg $1 string value - value to test
 # @arg $@ string options - zero or more valid options to compare against
 #
 # @exitcode positive=0: the value was found among the options
@@ -481,14 +490,14 @@ function is_in()
 # @description Tests if the first parameter equals one of the following parameters case
 #   insensitively.
 #
-# @arg $1 string value - value to search for
+# @arg $1 string value - value to test
 # @arg $@ string options - zero or more valid options to compare against
 #
 # @exitcode positive=0: the value was found among the options
 # @exitcode negative=1: otherwise
 #
 # @example
-#   if is_in_i "$color" "red" "green" "blue"; then echo "Valid color"; fi
+#   if is_in_i "$color" "Red" "GREEN" "blue"; then echo "Valid color"; fi
 #-----------------------------------------------------------------------------------------------
 function is_in_i()
 {
@@ -532,6 +541,9 @@ declare -x __is_windows=''
 #-----------------------------------------------------------------------------------------------
 function is_windows()
 {
+    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
+                                                                                exit_if_has_bugs
+
     if [[ -z $__is_windows ]]; then
         __os_name="$(uname -s)"
         [[ "$__os_name" == "Windows_NT" || "$__os_name" == *MINGW* || "$__os_name" == *MSYS* ]] &&
@@ -585,7 +597,7 @@ function is_path()
 
 #-----------------------------------------------------------------------------------------------
 # @description Tests whether a candidate secret value is safe to send to the GitHub API --
-# i.e. it contains no control characters.
+#   i.e. it contains no control characters.
 #
 # @arg $1 string Candidate secret value to validate.
 #
@@ -601,7 +613,7 @@ function is_secret()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if a given value is a valid percentage (0-100).
+# @description Tests if a given value is a valid percentage number (0-100).
 #
 # Notes:
 #   - Must be an integer between 0 and 100, inclusive.
@@ -620,62 +632,4 @@ function is_percentage()
                                                                                 exit_if_has_bugs
 
     is_non_negative "$1" && (( $1 <= 100 ))
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a MinVer Git tag prefix (e.g. `v` as in `v1.2.3`).
-#
-# Notes:
-#   - Must match `$minverTagPrefixRegex` (`$minverTagPrefixRex` in `_semver.sh`): starts and
-#     ends with an alphanumeric or `_`, with `-`, `.`, `/` allowed in between.
-#
-# @arg $1 string The MinVer tag prefix to validate.
-#
-# @exitcode positive=0: If the tag prefix is valid.
-# @exitcode negative=1: If the tag prefix is invalid.
-#
-# @example
-#   if is_minverTagPrefix "v"; then echo "Valid tag prefix"; fi
-#-----------------------------------------------------------------------------------------------
-function is_minverTagPrefix()
-{
-    __test_with_regex "$@" "$minverTagPrefixRegex"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a MinVer prerelease identifier format.
-#
-# Notes:
-#   - Must match `$minverPrereleaseIdRegex` (the same as the SemVer prerelease label format).
-#
-# @arg $1 string The MinVer prerelease ID to validate.
-#
-# @exitcode positive=0: If the prerelease ID is valid.
-# @exitcode negative=1: If the prerelease ID is invalid.
-#
-# @example
-#   if is_minverPrereleaseId "alpha.1"; then echo "Valid prerelease ID"; fi
-#-----------------------------------------------------------------------------------------------
-function is_minverPrereleaseId()
-{
-    __test_with_regex "$@" "$minverPrereleaseIdRegex"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests if a string is a valid NuGet server URL or a known server name.
-#
-# Notes:
-#   - Accepts `nuget`, `github`, or a valid http(s) URL matching `$nugetServersRegex`.
-#
-# @arg $1 string The NuGet server URL or name to test.
-#
-# @exitcode positive=0: If the server can be a valid NuGet server.
-# @exitcode negative=1: If the server is not a valid NuGet server.
-#
-# @example
-#   if is_nuget_server "nuget"; then echo "Valid server"; fi
-#-----------------------------------------------------------------------------------------------
-function is_nuget_server()
-{
-    __test_with_regex "$@" "$nugetServersRegex"
 }

@@ -663,7 +663,7 @@ GH
     run _sr "repo_owner=acme; repo_name=myrepo
              export FAKE_GH_OUT='{\"message\":\"Resource not accessible by integration\",\"status\":\"403\"}' FAKE_GH_RC=1
              get_current_nuget_server; echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin" "$BATS_TEST_TMPDIR/calls.log"
-    assert_output --partial "Could not read the variable NUGET_SERVER of the repository 'acme/myrepo'"
+    assert_output --partial "Failed to read the variable 'NUGET_SERVER' of the repository 'acme/myrepo'."
     assert_output --partial "RC=$err_access_denied"
 }
 

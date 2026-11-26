@@ -17,6 +17,7 @@ declare -x err_tool_error
 declare -x err_not_found
 declare -x err_logic_error
 declare -x err_io_failure
+declare -x err_invalid_nameref
 
 # vm2 core lib constants
 declare -x question_em
@@ -370,7 +371,7 @@ function get_current_nuget_server()
                   gh api "repos/$_repo_owner/$repo_name/actions/variables/NUGET_SERVER" --jq .value 2>"$noise_sink") \
                                                                                 || _rc=$?
     (( _rc == success || _rc == err_not_found ))                                ||  {
-                                                                                        with_error _rc "$_rc" "Could not read the variable NUGET_SERVER of the repository '$_repo_owner/$repo_name'."
+                                                                                        with_error _rc "$_rc" "Failed to read the variable 'NUGET_SERVER' of the repository '$_repo_owner/$repo_name'."
                                                                                         return "$_rc"
                                                                                     }
     (( _rc == success )) && nuget_server=$_result || nuget_server=$default_nuget_server
@@ -435,7 +436,7 @@ function configure_default_repo_settings()
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         execute_with_retry --quiet --classify gh_failure \
             gh api -X PATCH "$path_repo" "${_rs[@]}" 2>"$noise_sink" &&
-            info "...repository settings configured." ||                        warning "Could not configure repository settings. Run the script with '--verbose' to see more details and troubleshoot."
+            info "...repository settings configured." ||                        warning "Failed to configure the repository settings." "Run the script with '--verbose' for the details."
     else
         info "...repository settings configured."
     fi
@@ -493,7 +494,7 @@ function configure_actions_permissions()
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         execute_with_retry --quiet --classify gh_failure \
             gh api -X PUT "$path_permissions" -H "Accept: application/vnd.github+json" "${_rs[@]}" 2>"$noise_sink" &&
-            info "...actions workflow permissions configured."                  || warning "Could not configure Actions workflow permissions. Run the script with '--verbose' to see more details and troubleshoot."
+            info "...actions workflow permissions configured."                  || warning "Failed to configure the Actions workflow permissions." "Run the script with '--verbose' for the details."
     else
         info "...actions workflow permissions configured."
     fi
@@ -712,7 +713,7 @@ function get_var()
                                                                                        "  - the variable value." \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the name of the GitHub Actions variable whose value is to be requested, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a variable to receive the value of the GitHub Actions variable (provided '${2-<missing>}')." -ec "$err_missing_argument"
+    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a variable to receive the value of the GitHub Actions variable (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
     local _name="$1"

@@ -363,10 +363,10 @@ _make_vm2_repos() {
     run _sr "parse_arguments --vm2-repos '$_vm2' --owner '-bad-' --branch '..bad..' --visibility bogus --description ab vm2.Target
              resolve_arguments
              echo \"returned \$? with \$(get_errors) errors\""
-    assert_output --partial "valid GitHub repository owner (provided '-bad-')"
-    assert_output --partial "valid Git branch name (provided '..bad..')"
-    assert_output --partial "Invalid repository visibility 'bogus'"
-    assert_output --partial "3 and 350 characters (provided 'ab')"
+    assert_output --partial "Invalid GitHub repository owner '-bad-': use 2 to 39 letters, digits, or hyphens"
+    assert_output --partial "Invalid branch name '..bad..': it must be a valid refname."
+    assert_output --partial "Invalid repository visibility 'bogus': use one of public,private."
+    assert_output --partial "Invalid repository description 'ab': use 3 to 350 characters."
     assert_output --partial "returned 0 with 4 errors"
 }
 
@@ -376,7 +376,7 @@ _make_vm2_repos() {
              resolve_arguments
              echo \"errors=\$(get_errors)\""
     assert_success
-    refute_output --partial "between 3 and 350 characters"
+    refute_output --partial "use 3 to 350 characters"
     assert_output --partial "errors=0"
 }
 
@@ -437,7 +437,7 @@ _make_vm2_repos() {
     run _sr "get_arguments --vm2-repos '$_vm2' --branch '..bad..' --visibility bogus vm2.Target
              echo 'still running'"
     assert_failure
-    assert_output --partial "valid Git branch name"
-    assert_output --partial "Invalid repository visibility 'bogus'"
+    assert_output --partial "Invalid branch name '..bad..': it must be a valid refname."
+    assert_output --partial "Invalid repository visibility 'bogus': use one of public,private."
     refute_output --partial "still running"
 }

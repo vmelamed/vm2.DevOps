@@ -10,7 +10,6 @@ declare -ri __VM2_LIB_DOTNET_CONSTANTS_SH_LOADED=1
 # vm2 core lib exit codes
 declare -x success
 declare -x err_invalid_arguments
-declare -x err_argument_value
 declare -x err_argument_type
 
 # vm2 core lib constants
@@ -333,4 +332,66 @@ build_info_keys+=("${build_keys[@]}")
 build_info_keys+=("${result_keys[@]}")
 build_info_keys+=("${version_keys[@]}")
 build_info_keys+=("${package_keys[@]}")
-declare -x build_info_keys
+readonly build_info_keys
+
+declare -x u_letters_set
+declare -x l_letters_set
+declare -x letters_set
+declare -x nz_digits_set
+declare -x digits_set
+
+#-----------------------------------------------------------------------------------------------
+# @description C# preprocessor symbol regular expression
+#-----------------------------------------------------------------------------------------------
+declare -xr preprocessorSymbolRegex="^[${letters_set}_][${digits_set}${letters_set}_]*$"
+
+#-----------------------------------------------------------------------------------------------
+# @description dotnet build configurations
+#-----------------------------------------------------------------------------------------------
+declare -xra configurations_in_use=(
+    "Debug"
+    "Release"
+)
+
+declare -x configurations_in_use_str
+configurations_in_use_str=$(IFS=,; echo "${configurations_in_use[*]}")
+readonly configurations_in_use_str
+
+#-----------------------------------------------------------------------------------------------
+# @description dotnet target framework monikers
+#-----------------------------------------------------------------------------------------------
+declare -xr frameworks_in_use=(
+    ""
+    net9.0
+    net10.0
+)
+
+declare -x frameworks_in_use_str
+frameworks_in_use_str=$(IFS=,; echo "${frameworks_in_use[*]}")
+readonly frameworks_in_use_str
+
+#-----------------------------------------------------------------------------------------------
+# @description dotnet runtime identifiers
+#-----------------------------------------------------------------------------------------------
+declare -xr runtimes_in_use=(
+    ""
+    linux-x64
+    win-x64
+    osx-x64
+)
+
+declare -x runtimes_in_use_str
+runtimes_in_use_str=$(IFS=,; echo "${runtimes_in_use[*]}")
+readonly runtimes_in_use_str
+
+#-----------------------------------------------------------------------------------------------
+# @description Regular expression for validating NuGet server names or URLs.
+#    A valid NuGet server name must be either "nuget", "github", or a valid URL starting with
+#    "http://" or "https://" schema. This regex is used to validate NuGet server names or URLs
+#    passed as arguments to functions that expect a valid NuGet server name or URL.
+#-----------------------------------------------------------------------------------------------
+declare -xr nugetServersRegex="^(nuget|github|https://[-${letters_set}${digits_set}._/]+)$"
+
+declare -x prereleaseLabelRex
+declare -xr minverPrereleaseIdRex="${prereleaseLabelRex}"
+declare -xr minverPrereleaseIdRegex="^${minverPrereleaseIdRex}$"

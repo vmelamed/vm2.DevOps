@@ -92,7 +92,7 @@ function parse_arguments()
 
 function verify_environment()
 {
-    is_git_present                                                              || exit_if_has_errors   # short circuit it right here: nothing can be done without Git!
+    verify_git                                                                  || exit_if_has_errors   # short circuit it right here: nothing can be done without Git!
 
     local -i _rc=$success
 
@@ -107,7 +107,7 @@ function verify_environment()
 
     # Verify we're on the default branch (main)
     (( _rc != success )) || current_branch=$(git branch --show-current)         || with_error _rc "$err_tool_error" "Failed to get the current branch."
-    (( _rc != success )) || [[ "$current_branch" == "$default_branch" ]]        || with_error _rc "$err_argument_value" "You must be on the default branch ('$default_branch'). Currently on '$current_branch'"
+    (( _rc != success )) || [[ "$current_branch" == "$default_branch" ]]        || with_error _rc "$err_argument_value" "Invalid current branch '$current_branch': it must be the default branch '$default_branch'."
 
     (( _rc != success )) || git merge-base --is-ancestor "origin/$default_branch" HEAD \
                                                                                 || with_error _rc "$err_logic_error" "Local '$default_branch' is behind 'origin/$default_branch'. Pull first."
@@ -123,14 +123,16 @@ function resolve_arguments()
     local -i _rc=$success
 
     # validate we have a valid branch name != default_branch
-    is_valid_branch_name "$new_branch"                                          || with_error _rc "$err_argument_value" "The option '--branch' is mandatory and must have a valid value"
-    (( _rc != success )) || [[ "$new_branch" != "$default_branch" ]]            || error "The new branch name cannot be '$default_branch'" -ec "$err_argument_value"
+    [[ -n $new_branch ]]                                                        || with_error _rc "$err_missing_argument" "The option '--branch' is mandatory."
+    (( _rc != success )) || is_valid_branch_name "$new_branch"                  || _rc=$?
+    (( _rc != success )) || [[ "$new_branch" != "$default_branch" ]]            || error "Invalid new branch name '$new_branch': it cannot be the default branch." -ec "$err_argument_value"
 
     # Verify we have a valid and existing SHA
     _rc=$success
-    is_valid_commit_sha "$commit_sha"                                           || with_error _rc "$err_argument_value" "The '--commit-sha' is mandatory and must be a valid 4 to 64 hexadecimal digits string"
+    [[ -n $commit_sha ]]                                                        || with_error _rc "$err_missing_argument" "The option '--commit-sha' is mandatory."
+    (( _rc != success )) || is_valid_commit_sha "$commit_sha"                   || _rc=$?
     (( _rc != success )) || git cat-file -e "$commit_sha^{commit}" 2>"$noise_sink" \
-                                                                                || with_error _rc "$err_argument_value" "Commit '$commit_sha' does not exist"
+                                                                                || with_error _rc "$err_argument_value" "Invalid commit '$commit_sha': it does not exist."
     (( _rc != success )) || git merge-base --is-ancestor "$commit_sha" HEAD     || with_error _rc "$err_argument_value" "Commit '$commit_sha' is not on '${current_branch:-HEAD}'."
 
     # freeze the arguments

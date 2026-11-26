@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-# Tests for the predicates in scripts/bash/lib/_predicates_tools.sh: the ones that probe external tools (presence,
-# version, authentication) or delegate to one (jq for JSON validation).
+# Tests for the predicates in scripts/bash/lib/_predicates.tools.sh: the ones that probe external tools (presence,
+# version, authentication). The JSON predicates are tested in test_predicates_json.bats.
 #
 # The is_<tool>_present tests never depend on what is installed on the machine: each one puts a FAKE tool in a
 # directory at the head of PATH (shadowing the real one), or runs with a PATH that holds no such tool at all.
@@ -21,6 +21,8 @@ declare -gx lib_dir
 declare -gx failure
 declare -gx err_invalid_arguments
 declare -gx err_invalid_path
+declare -gx err_argument_value
+
 declare -gx  dotnet_min_version
 declare -gx  jq_min_version
 declare -gx  git_min_version
@@ -89,7 +91,7 @@ _without_tools() {
     assert_success
 }
 
-# --- is_git_present ------------------------------------------------------------------------------
+# --- verify_git ------------------------------------------------------------------------------
 
 # A fake git that answers its version query (both '-v' and '--version', so the tests do not pin which one the predicate
 # uses) with "git version $1" plus the optional suffix $2, and fails everything else.
@@ -97,52 +99,52 @@ _fake_git() {
     _fake_tool git "[[ \$1 == -v || \$1 == --version ]] && { echo 'git version $1${2:+ $2}'; exit 0; }; exit 99"
 }
 
-@test "is_git_present: true when git reports exactly the minimum version" {
+@test "verify_git: true when git reports exactly the minimum version" {
     _fake_git "$git_min_version"
 
-    run _with_fakes is_git_present
+    run _with_fakes verify_git
     assert_success
     assert_output ''
 }
 
-@test "is_git_present: true when git reports a newer version than the minimum" {
+@test "verify_git: true when git reports a newer version than the minimum" {
     _fake_git 99.0.0
 
-    run _with_fakes is_git_present
+    run _with_fakes verify_git
     assert_success
 }
 
-@test "is_git_present: true for the macOS form of the version ('git version 99.0.0 (Apple Git-154)')" {
+@test "verify_git: true for the macOS form of the version ('git version 99.0.0 (Apple Git-154)')" {
     _fake_git 99.0.0 '(Apple Git-154)'
 
-    run _with_fakes is_git_present
+    run _with_fakes verify_git
     assert_success
 }
 
-@test "is_git_present: false, with an upgrade hint, when git reports an older version than the minimum" {
+@test "verify_git: false, with an upgrade hint, when git reports an older version than the minimum" {
     _fake_git 2.0.0
 
-    run _with_fakes is_git_present
+    run _with_fakes verify_git
     assert_failure "$failure"
-    assert_output --partial "'git' version $git_min_version or greater is required."
+    assert_output --partial "Invalid 'git' version '2.0.0': use '$git_min_version' or greater."
 }
 
-@test "is_git_present: false, with an upgrade hint, when the version query itself fails (e.g. an old git without '-v')" {
+@test "verify_git: false, with an upgrade hint, when the version query itself fails (e.g. an old git without '-v')" {
     _fake_tool git 'echo "unknown option: -v" >&2; exit 129'
 
-    run _with_fakes is_git_present
+    run _with_fakes verify_git
     assert_failure "$failure"
-    assert_output --partial "'git' version $git_min_version or greater is required."
+    assert_output --partial "Invalid 'git' version '': use '$git_min_version' or greater."
 }
 
-@test "is_git_present: false, with an install hint, when git is not on PATH (and never checks the version)" {
-    run _without_tools is_git_present
+@test "verify_git: false, with an install hint, when git is not on PATH (and never checks the version)" {
+    run _without_tools verify_git
     assert_failure "$failure"
     assert_output --partial "'git' is not installed"
     refute_output --partial "'git' version"
 }
 
-# --- is_gh_present -------------------------------------------------------------------------------
+# --- verify_gh -------------------------------------------------------------------------------
 
 # A fake gh. Its version query ('gh version' or 'gh --version', so the tests do not pin which one the predicate uses)
 # prints gh's real two-line format, with the first line in the Debian package's form:
@@ -158,185 +160,151 @@ _fake_gh() {
 exit 99"
 }
 
-@test "is_gh_present: true when gh reports exactly the minimum version and is authenticated" {
+@test "verify_gh: true when gh reports exactly the minimum version and is authenticated" {
     _fake_gh 'exit 0'
 
-    run _with_fakes is_gh_present
+    run _with_fakes verify_gh
     assert_success
     assert_output ''
 }
 
-@test "is_gh_present: true when gh reports a newer version than the minimum" {
+@test "verify_gh: true when gh reports a newer version than the minimum" {
     _fake_gh 'exit 0' 99.0.0
 
-    run _with_fakes is_gh_present
+    run _with_fakes verify_gh
     assert_success
 }
 
-@test "is_gh_present: takes the FIRST version in the output, not any other one on the same line or the next" {
+@test "verify_gh: takes the FIRST version in the output, not any other one on the same line or the next" {
     # Regression: 'head -n1 | grep -o' still returned two versions from the Debian form of the first line. Here the
     # later occurrence is older than the minimum, so taking it -- or passing all of them on -- fails the check.
     _fake_gh 'exit 0' 99.0.0 1.0.0
 
-    run _with_fakes is_gh_present
+    run _with_fakes verify_gh
     assert_success
 }
 
-@test "is_gh_present: false, with an upgrade hint, when gh reports an older version (and never asks for the auth status)" {
+@test "verify_gh: false, with an upgrade hint, when gh reports an older version (and never asks for the auth status)" {
     _fake_gh 'echo AUTH-STATUS-CALLED >&2; exit 0' 2.0.0
 
-    run _with_fakes is_gh_present
+    run _with_fakes verify_gh
     assert_failure "$failure"
-    assert_output --partial "'gh' version $gh_min_version or greater is required."
+    assert_output --partial "Invalid 'gh' version '2.0.0': use '$gh_min_version' or greater."
     refute_output --partial "AUTH-STATUS-CALLED"
 }
 
-@test "is_gh_present: false, with an upgrade hint, when the version query itself fails" {
+@test "verify_gh: false, with an upgrade hint, when the version query itself fails" {
     _fake_tool gh 'exit 1'
 
-    run _with_fakes is_gh_present
+    run _with_fakes verify_gh
     assert_failure "$failure"
-    assert_output --partial "'gh' version $gh_min_version or greater is required."
+    # with pipefail the failed 'gh --version' fails the capture; without it, the empty version fails the release check
+    assert_output --regexp "Failed to get the version of 'gh'\\.|Invalid 'gh' version '': use a release version\\."
 }
 
-@test "is_gh_present: false, with a login hint, when gh is recent enough but not authenticated" {
+@test "verify_gh: false, with a login hint, when gh is recent enough but not authenticated" {
     _fake_gh 'exit 1'
 
-    run _with_fakes is_gh_present
+    run _with_fakes verify_gh
     assert_failure "$failure"
     assert_output --partial "'gh' is not authenticated"
 }
 
-@test "is_gh_present: false, with an install hint, when gh is not on PATH (and never checks the version or the auth status)" {
-    run _without_tools is_gh_present
+@test "verify_gh: false, with an install hint, when gh is not on PATH (and never checks the version or the auth status)" {
+    run _without_tools verify_gh
     assert_failure "$failure"
     assert_output --partial "'gh' is not installed"
     refute_output --partial "'gh' version"
     refute_output --partial "not authenticated"
 }
 
-# --- is_jq_present -------------------------------------------------------------------------------
+# --- verify_jq -------------------------------------------------------------------------------
 
-@test "is_jq_present: true for jq 1.8.x" {
+@test "verify_jq: true for jq 1.8.x" {
     _fake_tool jq 'echo jq-1.8.1'
 
-    run _with_fakes is_jq_present
+    run _with_fakes verify_jq
     assert_success
 }
 
-@test "is_jq_present: true for jq newer than 1.8 (1.9, 2.0)" {
+@test "verify_jq: true for jq newer than 1.8 (1.9, 2.0)" {
     # Regression: the version check was the regex 'jq-1\.8\.[0-9]+', which rejected every later release
     _fake_tool jq 'echo jq-1.9.0'
-    run _with_fakes is_jq_present
+    run _with_fakes verify_jq
     assert_success
 
     _fake_tool jq 'echo jq-2.0.0'
-    run _with_fakes is_jq_present
+    run _with_fakes verify_jq
     assert_success
 }
 
-@test "is_jq_present: false, with an upgrade hint, for jq older than 1.8" {
+@test "verify_jq: false, with an upgrade hint, for jq older than 1.8" {
     _fake_tool jq 'echo jq-1.7.1'
 
-    run _with_fakes is_jq_present
+    run _with_fakes verify_jq
     assert_failure "$failure"
-    assert_output --partial "'jq' version $jq_min_version or greater is required."
+    assert_output --partial "Invalid 'jq' version '1.7.1': use '$jq_min_version' or greater."
 }
 
-@test "is_jq_present: false, with an install hint, when jq is not on PATH (and never checks the version)" {
-    run _without_tools is_jq_present
+@test "verify_jq: false, with an install hint, when jq is not on PATH (and never checks the version)" {
+    run _without_tools verify_jq
     assert_failure "$failure"
     assert_output --partial "'jq' is not installed"
-    refute_output --partial "'jq' version $jq_min_version or greater is required."
+    refute_output --partial "Invalid 'jq' version"
 }
 
-# --- is_yq_present -------------------------------------------------------------------------------
+# --- verify_yq -------------------------------------------------------------------------------
 
-@test "is_yq_present: true for Mike Farah's yq" {
+@test "verify_yq: true for Mike Farah's yq" {
     _fake_tool yq 'echo "yq (https://github.com/mikefarah/yq/) version v4.53.6"'
 
-    run _with_fakes is_yq_present
+    run _with_fakes verify_yq
     assert_success
 }
 
-@test "is_yq_present: false, with a pointer to Mike Farah's yq, for a different yq (e.g. the Python one)" {
+@test "verify_yq: false, with a pointer to Mike Farah's yq, for a different yq (e.g. the Python one)" {
     _fake_tool yq 'echo "yq 3.4.3"'
 
-    run _with_fakes is_yq_present
+    run _with_fakes verify_yq
     assert_failure "$failure"
-    assert_output --partial "requires 'yq' by Mike Farah"
+    assert_output --partial "it is not Mike Farah's 'yq'."
 }
 
-@test "is_yq_present: false, with an install hint, when yq is not on PATH (and never checks the flavor)" {
-    run _without_tools is_yq_present
+@test "verify_yq: false, with an install hint, when yq is not on PATH (and never checks the flavor)" {
+    run _without_tools verify_yq
     assert_failure "$failure"
     assert_output --partial "'yq' is not installed"
-    refute_output --partial "requires 'yq' by Mike Farah"
+    refute_output --partial "it is not Mike Farah's 'yq'."
 }
 
-# --- is_dotnet_present ---------------------------------------------------------------------------
+# --- verify_dotnet ---------------------------------------------------------------------------
 
-@test "is_dotnet_present: true when dotnet reports exactly the minimum version" {
+@test "verify_dotnet: true when dotnet reports exactly the minimum version" {
     _fake_tool dotnet "echo $dotnet_min_version"
 
-    run _with_fakes is_dotnet_present
+    run _with_fakes verify_dotnet
     assert_success
     assert_output ''
 }
 
-@test "is_dotnet_present: true when dotnet reports a newer major version than the minimum" {
+@test "verify_dotnet: true when dotnet reports a newer major version than the minimum" {
     _fake_tool dotnet 'echo 99.0.100'
 
-    run _with_fakes is_dotnet_present
+    run _with_fakes verify_dotnet
     assert_success
 }
 
-@test "is_dotnet_present: false when 'dotnet --version' itself fails (e.g. global.json pins an SDK that is not installed)" {
+@test "verify_dotnet: false when 'dotnet --version' itself fails (e.g. global.json pins an SDK that is not installed)" {
     _fake_tool dotnet 'echo "A compatible .NET SDK was not found." >&2; exit 145'
 
-    run _with_fakes is_dotnet_present
+    run _with_fakes verify_dotnet
     assert_failure "$failure"
-    assert_output --partial "The .NET SDK required in this directory is not installed"
+    assert_output --partial "Failed to find the .NET SDK that this directory requires."
 }
 
-@test "is_dotnet_present: false, with an install hint, when dotnet is not on PATH (and never checks the version)" {
-    run _without_tools is_dotnet_present
+@test "verify_dotnet: false, with an install hint, when dotnet is not on PATH (and never checks the version)" {
+    run _without_tools verify_dotnet
     assert_failure "$failure"
     assert_output --partial "'dotnet' is not installed"
     refute_output --partial "requires 'dotnet' version"
-}
-
-# --- is_valid_json / is_valid_json_file ----------------------------------------------------------
-
-@test "is_valid_json: accepts a well-formed JSON string, rejects garbage" {
-    run is_valid_json '{"a":1}'
-    assert_success
-    run is_valid_json 'not json'
-    assert_failure "$failure"
-}
-
-@test "is_valid_json: bug-exits with the wrong argument count" {
-    run is_valid_json
-    assert_failure "$err_invalid_arguments"
-}
-
-@test "is_valid_json_file: accepts a file with well-formed JSON, rejects one with malformed JSON" {
-    echo '{"a":1}' > "$BATS_TEST_TMPDIR/valid.json"
-    echo 'not json' > "$BATS_TEST_TMPDIR/invalid.json"
-    run is_valid_json_file "$BATS_TEST_TMPDIR/valid.json"
-    assert_success
-    run is_valid_json_file "$BATS_TEST_TMPDIR/invalid.json"
-    assert_failure "$failure"
-}
-
-@test "is_valid_json_file: fails for a non-existent file" {
-    run is_valid_json_file "$BATS_TEST_TMPDIR/does-not-exist.json"
-    assert_failure "$failure"
-}
-
-@test "is_valid_json_file: bug-exits on the wrong argument count or an invalid path" {
-    run is_valid_json_file
-    assert_failure "$err_invalid_arguments"
-    run is_valid_json_file ""
-    assert_failure "$err_invalid_path"
 }

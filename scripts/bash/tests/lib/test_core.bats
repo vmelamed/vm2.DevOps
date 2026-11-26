@@ -138,7 +138,7 @@ declare -gx err_tool_error
     run env -i HOME="$HOME" PATH="$PATH" bash -c "
         set -euo pipefail
         source '$lib_dir/core.sh' > /dev/null 2>&1
-        source '$lib_dir/_core_args.sh'
+        source '$lib_dir/core.args.sh'
         add_trap 'echo cleanup' EXIT
         usage -ec 6 'Unknown option: --bogus'
     "

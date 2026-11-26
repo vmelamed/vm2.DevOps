@@ -134,9 +134,9 @@ function compare_settings()
     [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7"                        || bug "${FUNCNAME[0]}() requires optional argument 7 to name an indexed array containing the display order (provided '${7-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
-    local -n _expected_key_values="$5"
+    local -n __expected_key_values="$5"
 
-    (( ${#_expected_key_values[@]} > 0 ))                                       || return "$success"
+    (( ${#__expected_key_values[@]} > 0 ))                                       || return "$success"
 
     local _gh_endpoint="$1"
     local _jq_transform=$2
@@ -147,10 +147,10 @@ function compare_settings()
 
     if [[ -n "${7:-}" ]]; then
         # use the keys in the provided display order
-        local -n _keys_in_order="$7"
-        _keys=("${_keys_in_order[@]}")
+        local -n __keys_in_order="$7"
+        _keys=("${__keys_in_order[@]}")
         # make sure that all expected keys are included in the display order
-        for _var in "${!_expected_key_values[@]}"; do
+        for _var in "${!__expected_key_values[@]}"; do
             is_in "$_var" "${_keys[@]}" || {
                                                 warning "The variable '$_var' is not listed in the display order. Appending it at the end of the array."
                                                 _keys+=("$_var")
@@ -158,7 +158,7 @@ function compare_settings()
         done
     else
         # otherwise put the keys in the array in sorted order
-        readarray -t _keys < <(printf '%s\n' "${!_expected_key_values[@]}" | sort)
+        readarray -t _keys < <(printf '%s\n' "${!__expected_key_values[@]}" | sort)
     fi
 
     # query the GitHub API and transform the JSON response into key=value pairs using the provided jq query, then...
@@ -167,7 +167,7 @@ function compare_settings()
     _key_values=$(execute_with_retry --query --classify gh_failure \
                     gh api --paginate "$_gh_endpoint" --jq "$_jq_transform" 2>"$noise_sink") \
                                                                                 ||  {
-                                                                                        with_error _rc $? "Could not retrieve data from GitHub's endpoint $_gh_endpoint."
+                                                                                        with_error _rc $? "Failed to get the data from the GitHub endpoint '$_gh_endpoint'."
                                                                                         return "$_rc"
                                                                                     }
     # read the key=value pairs into $actual_key_values
@@ -177,7 +177,7 @@ function compare_settings()
     local _key='' _value=''
     [[ -n $_key_values ]] &&
     while IFS='=' read -r _key _value; do
-        [[ -v _expected_key_values["$_key"] ]] &&
+        [[ -v __expected_key_values[$_key] ]] &&
             _known_key_values["$_key"]="$_value" ||
             _unknown_key_values["$_key"]="$_value"
     done <<< "$_key_values"
@@ -189,12 +189,12 @@ function compare_settings()
             printf "    ➡️  %-38s %s\n" "${_key#--}" "────────────────────────────────────────────────────────────────────────"
             continue
         fi
-        if [[ ! -v _expected_key_values["$_key"] ]]; then
+        if [[ ! -v __expected_key_values[$_key] ]]; then
             trace "Skipping unknown key '$_key'."
             continue
         fi
 
-        _expected_value="${_expected_key_values[$_key]}"
+        _expected_value="${__expected_key_values[$_key]}"
         if [[ $_expected_value == "$secret_placeholder" ]]; then
             _expected_value=$undefined_default # mask as undefined expected value (which it is)
             [[ -v _known_key_values[$_key] ]] &&
@@ -346,7 +346,7 @@ function audit_repo()
         [$key_unknowns]=0
     )
 
-    echo "$info_em  Audit of https://github.com/$repo"
+    echo "$info_em  Audit of <https://github.com/$repo>"
 
     # --- Repo settings ---
     echo "  $info_em  Repository settings:"

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-# Characterization tests for scripts/bash/lib/_git_vm2.sh, as it behaves TODAY -- written before
+# Characterization tests for scripts/bash/lib/_git.vm2.sh, as it behaves TODAY -- written before
 # the tier-4 predicate/validator convention refactor so the refactor has a safety net.
 #
 # __validate_repo_root/resolve_vm2_repos chain into ensure_fresh_git_state, which can perform a
@@ -27,6 +27,7 @@ declare -gx err_invalid_nameref
 declare -gx err_invalid_path
 declare -gx err_not_directory
 declare -gx err_invalid_branch
+declare -gx err_invalid_branch_name
 declare -gx err_not_found
 declare -gx err_repo_with_no_ci
 declare -gx err_repo_not_in_vm2_repos
@@ -71,7 +72,7 @@ _make_local_repo() {
 
 @test "__validate_repo_root: bug-exits on an invalid branch name" {
     run __validate_repo_root "vm2.DevOps" "$_repo_root/.." "..bad..branch.."
-    assert_failure "$err_invalid_branch"
+    assert_failure "$err_invalid_branch_name"
 }
 
 @test "__validate_repo_root: fails with err_not_found for a repo that doesn't exist anywhere" {
@@ -135,19 +136,19 @@ _make_local_repo() {
 @test "resolve_vm2_repos: accepts 2 or 3 arguments without an arity bug" {
     # an invalid branch name still fails for the branch-validation reason, not an arity mismatch --
     # proving 2 and 3 arguments are both within the valid 1-3 range.
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '..bad..branch..'"
-    assert_failure "$err_invalid_branch"
-    assert_output --partial "requires optional argument 2 to be a valid branch name (provided '..bad..branch..')"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git.vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '..bad..branch..'"
+    assert_failure "$err_invalid_branch_name"
+    assert_output --partial "Invalid branch name '..bad..branch..': it must be a valid refname."
 
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '' '..bad..branch..'"
-    assert_failure "$err_invalid_branch"
-    assert_output --partial "requires optional argument 3 to be a valid branch name (provided '..bad..branch..')"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git.vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '' '..bad..branch..'"
+    assert_failure "$err_invalid_branch_name"
+    assert_output --partial "Invalid branch name '..bad..branch..': it must be a valid refname."
 }
 
 @test "resolve_vm2_repos: fails when the pre-set directory value does not exist" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos='/definitely/not/a/real/path'; resolve_vm2_repos vm2_repos"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git.vm2.sh'; declare vm2_repos='/definitely/not/a/real/path'; resolve_vm2_repos vm2_repos"
     assert_failure "$err_not_directory"
-    assert_output --partial "requires optional argument 1 to hold an existing directory"
+    assert_output --partial "Invalid vm2 repositories directory '/definitely/not/a/real/path': it does not exist."
 }
 
 @test "resolve_vm2_repos: bug-exits on an undefined output variable name" {
@@ -156,23 +157,23 @@ _make_local_repo() {
 }
 
 @test "resolve_vm2_repos: rejects an invalid branch name in argument 2 (devops branch)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '..bad..branch..'"
-    assert_failure "$err_invalid_branch"
-    assert_output --partial "requires optional argument 2 to be a valid branch name (provided '..bad..branch..')"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git.vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '..bad..branch..'"
+    assert_failure "$err_invalid_branch_name"
+    assert_output --partial "Invalid branch name '..bad..branch..': it must be a valid refname."
 }
 
 @test "resolve_vm2_repos: rejects an invalid branch name in argument 3 (SoT/vm2.Templates branch)" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '' '..bad..branch..'"
-    assert_failure "$err_invalid_branch"
-    assert_output --partial "requires optional argument 3 to be a valid branch name (provided '..bad..branch..')"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git.vm2.sh'; declare vm2_repos=''; resolve_vm2_repos vm2_repos '' '..bad..branch..'"
+    assert_failure "$err_invalid_branch_name"
+    assert_output --partial "Invalid branch name '..bad..branch..': it must be a valid refname."
 }
 
 @test "resolve_vm2_repos: an empty branch name in argument 2 or 3 is accepted (means 'current branch')" {
-    # empty string is explicitly allowed (skips validate_branch_name) -- only reaches the directory
+    # empty string is explicitly allowed (skips is_valid_branch_name) -- only reaches the directory
     # error, never a branch-related error.
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git_vm2.sh'; declare vm2_repos='/definitely/not/a/real/path'; resolve_vm2_repos vm2_repos '' ''"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/_git.vm2.sh'; declare vm2_repos='/definitely/not/a/real/path'; resolve_vm2_repos vm2_repos '' ''"
     assert_failure "$err_not_directory"
-    assert_output --partial "requires optional argument 1 to hold an existing directory"
+    assert_output --partial "Invalid vm2 repositories directory '/definitely/not/a/real/path': it does not exist."
     refute_output --partial "valid branch name"
 }
 
@@ -310,7 +311,7 @@ _make_local_repo() {
     assert_failure "$err_invalid_arguments"
 }
 
-# get_artifacts_path() no longer lives in _git_vm2.sh -- it moved to _dotnet.sh as a thin wrapper
+# get_artifacts_path() no longer lives in _git.vm2.sh -- it moved to _dotnet.sh as a thin wrapper
 # over get_msbuild_property() (see test_dotnet_args.bats and test_dotnet.bats for its coverage).
 
 # --- get_devops_parent -----------------------------------------------------------------------

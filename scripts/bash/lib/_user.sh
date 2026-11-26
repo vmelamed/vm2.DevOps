@@ -134,9 +134,9 @@ function enter_value()
                                                                                        "  - the name of a validation function (optional, default: true)" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the entered value, to be defined (provided '${2-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the entered value, to be defined (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 4 ]] || is_boolean "$4"                                             || bug "${FUNCNAME[0]}() requires optional argument 4, the secret-input flag, to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
-    [[ ! -v 5 ]] || is_function "$5" || is_boolean "$5"                         || bug "${FUNCNAME[0]}() requires optional argument 5 to name a defined value validation function (provided '${5-<missing>}')." -ec "$err_argument_type"
+    [[ ! -v 5 ]] || is_function "$5" || is_boolean "$5"                         || bug "${FUNCNAME[0]}() requires optional argument 5 to name a defined value validation function (provided '${5-<missing>}')." -ec "$err_invalid_nameref"
 
     local _default=${3:-}
     local _validate_fn=${5:-true}
@@ -256,7 +256,7 @@ function choose()
         fi
         (( __selection == 0 )) && __selection=1 && break
         (( __selection >= 1    && __selection <= ${#_options[@]} )) && break
-        warning "Invalid choice: $__selection"
+        warning "Invalid choice '$__selection'."
     done
     return "$success"
 }

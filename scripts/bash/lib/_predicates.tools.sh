@@ -16,6 +16,7 @@ declare -x err_invalid_path
 declare -x err_tool_not_found
 declare -x err_tool_unauthenticated
 declare -x err_tool_version
+declare -x err_tool_error
 
 # vm2 core lib constants
 declare -x ci
@@ -63,7 +64,7 @@ declare git_present=''
 # @exitcode positive=0: 'git' is present.
 # @exitcode negative=1: 'git' is not present.
 #-----------------------------------------------------------------------------------------------
-function is_git_present()
+function verify_git()
 {
     (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -72,9 +73,10 @@ function is_git_present()
         local -i _rc=$success
         local _ver=''
 
-        is_tool_present git                                                     || with_error _rc "$err_tool_not_found" "'git' is not installed. Install it: https://github.com/git-guides/install-git"
-        (( _rc != success ))  || { _ver=$(git --version | grep -Eo "$semverReleaseRex") && \
-                                semver_gte "$_ver" "$git_min_version"; }        || with_error _rc "$err_tool_version" "'git' version $git_min_version or greater is required. Upgrade 'git': https://github.com/git-guides/install-git"
+        is_tool_present git                                                     || with_error _rc "$err_tool_not_found" "'git' is not installed." "Install it from <https://github.com/git-guides/install-git>."
+        (( _rc != success ))  || {
+                                    _ver=$(git --version | grep -Eo "$semverReleaseRex") &&
+                                    semver_gte "$_ver" "$git_min_version"; }    || with_error _rc "$err_tool_version" "Invalid 'git' version '$_ver': use '$git_min_version' or greater." "Upgrade it from <https://github.com/git-guides/install-git>."
         (( _rc == success )) && git_present=true || git_present=false
         readonly git_present
     fi
@@ -92,7 +94,7 @@ declare gh_present=''
 # @exitcode positive=0: 'gh' is present.
 # @exitcode negative=1: 'gh' is not present.
 #-----------------------------------------------------------------------------------------------
-function is_gh_present()
+function verify_gh()
 {
     (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -101,13 +103,13 @@ function is_gh_present()
         local -i _rc=$success
         local _ver=''
 
-        is_tool_present gh                                                      || with_error _rc "$err_tool_not_found" "'gh' is not installed. Install it: https://cli.github.com/"
-        (( _rc != success )) || {
-                                    _ver=$(gh --version | grep -Eo "$semverReleaseRex" | head -n1) &&
-                                    semver_gte "$_ver" "$gh_min_version";
-                                }                                               || with_error _rc "$err_tool_version" "'gh' version $gh_min_version or greater is required. Upgrade 'gh': https://cli.github.com/"
+        is_tool_present gh                                                      || with_error _rc "$err_tool_not_found" "'gh' is not installed." "Install it from <https://cli.github.com/>."
+        (( _rc != success )) || _ver=$(gh --version | grep -Eo "$semverReleaseRex" | head -n1) \
+                                                                                || with_error _rc "$err_tool_error" "Failed to get the version of 'gh'." "Reinstall it from <https://cli.github.com/>."
+        (( _rc != success )) || is_semver_release "$_ver"                       || with_error _rc "$err_tool_version" "Invalid 'gh' version '$_ver': use a release version." "Install one from <https://cli.github.com/>."
+        (( _rc != success )) || semver_gte "$_ver" "$gh_min_version"            || with_error _rc "$err_tool_version" "Invalid 'gh' version '$_ver': use '$gh_min_version' or greater." "Upgrade it from <https://cli.github.com/>."
         (( _rc != success )) || execute_with_retry --query --classify gh_failure \
-                                    gh auth status &> "$noise_sink"             || with_error _rc "$err_tool_unauthenticated" "'gh' is not authenticated. Run: 'gh auth login'"
+                                    gh auth status &> "$noise_sink"             || with_error _rc "$err_tool_unauthenticated" "'gh' is not authenticated." "Run 'gh auth login'."
         (( _rc == success )) && gh_present=true || gh_present=false
         readonly gh_present
     fi
@@ -125,7 +127,7 @@ declare jq_present=''
 # @exitcode positive=0: 'jq' is present.
 # @exitcode negative=1: 'jq' is not present.
 #-----------------------------------------------------------------------------------------------
-function is_jq_present()
+function verify_jq()
 {
     (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -134,9 +136,9 @@ function is_jq_present()
         local -i _rc=$success
         local _ver=''
 
-        is_tool_present jq                                                      || with_error _rc "$err_tool_not_found" "'jq' is not installed. Install it: https://jqlang.org/download/"
+        is_tool_present jq                                                      || with_error _rc "$err_tool_not_found" "'jq' is not installed." "Install it from <https://jqlang.org/download/>."
         (( _rc != success )) || { _ver=$(jq --version | grep -Eo "$semverReleaseRex") && \
-                                semver_gte "$_ver" "$jq_min_version"; }         || with_error _rc "$err_tool_version" "'jq' version $jq_min_version or greater is required. Upgrade 'jq': https://jqlang.org/download/"
+                                semver_gte "$_ver" "$jq_min_version"; }         || with_error _rc "$err_tool_version" "Invalid 'jq' version '$_ver': use '$jq_min_version' or greater." "Upgrade it from <https://jqlang.org/download/>."
         (( _rc == success )) && jq_present=true || jq_present=false
         readonly jq_present
     fi
@@ -153,7 +155,7 @@ declare check_jsonschema_present=''
 # @exitcode positive=0: 'check-jsonschema' is present.
 # @exitcode negative=1: 'check-jsonschema' is not present.
 #-----------------------------------------------------------------------------------------------
-function is_check_jsonschema_present()
+function verify_check_jsonschema()
 {
     (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -163,7 +165,7 @@ function is_check_jsonschema_present()
             check_jsonschema_present=true
         else
             check_jsonschema_present=false
-            warning "'check-jsonschema' is not installed. Install it with: pip install check-jsonschema" -ec "$err_tool_not_found"
+            warning "'check-jsonschema' is not installed." "Install it: 'pip install check-jsonschema'." -ec "$err_tool_not_found"
         fi
         readonly check_jsonschema_present
     fi
@@ -180,7 +182,7 @@ declare yq_present=''
 # @exitcode positive=0: 'yq' is present.
 # @exitcode negative=1: 'yq' is not present.
 #-----------------------------------------------------------------------------------------------
-function is_yq_present()
+function verify_yq()
 {
     (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -188,9 +190,9 @@ function is_yq_present()
     if [[ -z $yq_present ]]; then
         local -i _rc=$success
 
-        is_tool_present yq                                                      || with_error _rc "$err_tool_not_found" "'yq' is not installed. Install 'yq' by Mike Farah: 'wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 && chmod +x ~/.local/bin/yq4'"
+        is_tool_present yq                                                      || with_error _rc "$err_tool_not_found" "'yq' is not installed." "Install Mike Farah's 'yq': 'wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq && chmod +x ~/.local/bin/yq'."
         (( _rc != success )) || [[ $(yq --version) =~ https://github\.com/mikefarah/yq/ ]] \
-                                                                                || with_error _rc "$err_tool_version" "This script requires 'yq' by Mike Farah, e.g., 'wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq4 && chmod +x ~/.local/bin/yq4'"
+                                                                                || with_error _rc "$err_tool_version" "Invalid 'yq': it is not Mike Farah's 'yq'." "Install it: 'wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O ~/.local/bin/yq && chmod +x ~/.local/bin/yq'."
         (( _rc == success )) && yq_present=true || yq_present=false
         readonly yq_present
     fi
@@ -205,7 +207,7 @@ function is_yq_present()
 # @exitcode positive=0: 'dotnet' is present.
 # @exitcode negative=1: 'dotnet' is not present.
 #-----------------------------------------------------------------------------------------------
-function is_dotnet_present()
+function verify_dotnet()
 {
     (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
                                                                                 exit_if_has_bugs
@@ -213,40 +215,7 @@ function is_dotnet_present()
     local -i _rc=$success
     local _output
 
-    is_tool_present dotnet                                                      || with_error _rc "$err_tool_not_found" "'dotnet' is not installed. Install it: https://dotnet.microsoft.com/en-us/download"
-    (( _rc != success )) || _output=$(dotnet --version 2>&1)                    || with_error _rc "$err_tool_version" "The .NET SDK required in this directory is not installed:" "$_output"
+    is_tool_present dotnet                                                      || with_error _rc "$err_tool_not_found" "'dotnet' is not installed." "Install it from <https://dotnet.microsoft.com/en-us/download>."
+    (( _rc != success )) || _output=$(dotnet --version 2>&1)                    || with_error _rc "$err_tool_version" "Failed to find the .NET SDK that this directory requires." "$_output"
     (( _rc == success ))
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Checks if a given string is valid JSON.
-#
-# @arg $1 string The JSON string to validate.
-#
-# @exitcode positive=0: The string is valid JSON.
-# @exitcode negative=1: The string is not valid JSON.
-#-----------------------------------------------------------------------------------------------
-function is_valid_json()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the JSON string to validate." -ec "$err_invalid_arguments"
-                                                                                exit_if_has_bugs
-
-    jq empty <<< "$1" &> "$noise_sink" && return "$positive" || return "$negative"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Checks if the file at a given path contains valid JSON.
-#
-# @arg $1 string Path to the file to validate.
-#
-# @exitcode positive=0: The file contains valid JSON.
-# @exitcode negative=1: The file does not contain valid JSON.
-#-----------------------------------------------------------------------------------------------
-function is_valid_json_file()
-{
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the JSON file to validate." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_path "$1"                                                || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
-                                                                                exit_if_has_bugs
-
-    jq empty "$1" &> "$noise_sink" && return "$positive" || return "$negative"
 }

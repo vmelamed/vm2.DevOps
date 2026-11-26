@@ -80,7 +80,7 @@ if [[ -z "$workflow_id" ]]; then
 
     _workflows=$(execute_with_retry --query --classify gh_failure \
                     gh workflow list --repo "$repository" --json "id,name,path") \
-                                                                                || exit_with_error "Could not list the workflows of '$repository'." -ec $?
+                                                                                || exit_with_error "Failed to list the workflows of '$repository'." -ec $?
 
     declare _workflows_ids_result
     _workflows_ids_result=$(jq -r --arg n "$workflow_name" --arg p "$workflow_path" "$query" <<< "$_workflows")
@@ -95,7 +95,7 @@ if [[ -z "$workflow_id" ]]; then
             ;;
         1)  workflow_id="${workflow_ids[0]}"
             ;;
-        *)  exit_with_error "Multiple workflows found: ${workflow_ids[*]}" -ec "$err_argument_value"
+        *)  exit_with_error "Found more than one workflow: '${workflow_ids[*]}'." -ec "$err_argument_value"
             ;;
     esac
 fi
@@ -121,7 +121,7 @@ if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
             execute rm -rf "$artifacts"
             ;;
         2)  info "Renaming the directory '$artifacts' to '$renamed_artifacts_dir'..."
-            execute mv "$artifacts" "$renamed_artifacts_dir"                    || with_error rc "$err_io_failure" "Failed to copy '$artifacts' to '$renamed_artifacts_dir'"
+            execute mv "$artifacts" "$renamed_artifacts_dir"                    || with_error rc "$err_io_failure" "Failed to move '$artifacts' to '$renamed_artifacts_dir'."
             ;;
         3)  trace "Exiting the script."
             exit 0
@@ -148,8 +148,8 @@ runs_text=$(execute_with_retry --query --classify gh_failure \
                 --status success \
                 --limit 100 \
                 --json databaseId \
-                --jq '.[].databaseId')                                          || with_error rc "$err_tool_error" "Query for successful runs of workflow '$workflow_id' failed ('gh run list...')."
-[[ $rc -ne $success || -z $runs_text ]] || readarray -t runs <<< "$runs_text"   || with_error rc "$err_io_failure" "'readarray' failed"
+                --jq '.[].databaseId')                                          || with_error rc "$err_tool_error" "Failed to list the successful runs of the workflow '$workflow_id'."
+[[ $rc -ne $success || -z $runs_text ]] || readarray -t runs <<< "$runs_text"   || with_error rc "$err_io_failure" "Failed to read the list of runs."
 (( rc == success ))                                                             || exit_with_error "Failed to retrieve the list of successful runs of the workflow '$workflow_id' in the repository '$repository'." -ec "$rc"
 (( ${#runs[@]} > 0 ))                                                           || exit_with_error "No successful runs found for the workflow '$workflow_id' in the repository '$repository'." -ec "$err_not_found"
 
@@ -162,7 +162,7 @@ for run in "${runs[@]}"; do
     rc=$success
     artifact_present=false
     artifacts_list=$(execute_with_retry --query --classify gh_failure \
-                        gh api "repos/$repository/actions/runs/$run/artifacts") || with_error rc "$err_tool_error" "Could not list the artifacts of run $run."
+                        gh api "repos/$repository/actions/runs/$run/artifacts") || with_error rc "$err_tool_error" "Failed to list the artifacts of the run '$run'."
     (( rc != success )) || artifact_present=$(jq -r --arg n "$artifact_name" 'any (.artifacts[]; .name==$n)' <<< "$artifacts_list")
     (( rc == success ))                                                         || continue
     if ! $artifact_present; then
@@ -180,7 +180,7 @@ for run in "${runs[@]}"; do
                             gh run download "$run" \
                             --repo "$repository" \
                             --name "$artifact_name" \
-                            --dir "$artifacts" 2>&1)                            || exit_with_error "Error while downloading '$artifact_name': $download_result" -ec "$err_tool_error"
+                            --dir "$artifacts" 2>&1)                            || exit_with_error "Failed to download the artifact '$artifact_name'." "$download_result" -ec "$err_tool_error"
     # the above capture also swallowed execute's dry-run$ line: show it, it is the point of a dry run
     if is_dry_run; then
         printf '%s\n' "$download_result" >&2

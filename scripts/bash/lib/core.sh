@@ -33,23 +33,25 @@ readonly lib_dir
 
 # source the components of the core library
 source "$lib_dir/_constants.sh"
-source "$lib_dir/_core_state.sh"
+source "$lib_dir/core.state.sh"
 source "$lib_dir/_error_codes.sh"
 source "$lib_dir/_predicates.sh"
-source "$lib_dir/_predicates_tools.sh"
+source "$lib_dir/_predicates.tools.sh"
+source "$lib_dir/_predicates.json.sh"
 source "$lib_dir/_diagnostics.sh"
-source "$lib_dir/_core_args.sh"
+source "$lib_dir/core.args.sh"
 source "$lib_dir/_semver.sh"
 source "$lib_dir/_sanitize.sh"
 source "$lib_dir/_dump_vars.sh"
 source "$lib_dir/_user.sh"
 source "$lib_dir/_git.sh"
-source "$lib_dir/_git_gh.sh"
-source "$lib_dir/_git_vm2.sh"
+source "$lib_dir/_git.gh.sh"
+source "$lib_dir/_git.vm2.sh"
 source "$lib_dir/_xml.sh"
-source "$lib_dir/_dotnet_constants.sh"
-source "$lib_dir/_dotnet_args.sh"
-source "$lib_dir/_dotnet_msbuild.sh"
+source "$lib_dir/_dotnet.constants.sh"
+source "$lib_dir/_dotnet.predicates.sh"
+source "$lib_dir/_dotnet.args.sh"
+source "$lib_dir/_dotnet.msbuild.sh"
 source "$lib_dir/_dotnet.sh"
 
 declare -x ci
@@ -231,7 +233,7 @@ function add_trap()
     return "$success"
 }
 
-# Report the shell-option scopes left open at exit, and fail (see begin_scope in _core_state.sh). Not
+# Report the shell-option scopes left open at exit, and fail (see begin_scope in core.state.sh). Not
 # tied to the debugger/CI exceptions above: it does nothing unless a scope leaked, and CI is where a
 # leak matters most. add_trap keeps it the last command of the EXIT trap.
 $__no_traps || add_trap report_open_scopes EXIT
@@ -316,7 +318,7 @@ function execute()
 #       1 if the failure is persistent: execute_with_retry returns $err_tool_error
 #       any other vm2 code if the failure is persistent: execute_with_retry returns that code,
 #         e.g. $err_not_found, so the caller can tell an expected "no" from a failure
-#   Default `true`: every failure is transient. For `gh`, use `gh_failure` (_git_gh.sh).
+#   Default `true`: every failure is transient. For `gh`, use `gh_failure` (_git.gh.sh).
 # @arg $@ string The command to execute, and its arguments.
 #
 # @stdout The command's stdout; nothing with `--quiet`, or for a non-query in a dry run.
@@ -408,8 +410,8 @@ function execute_with_retry()
     # stdout and stderr go to these temp. files to preserve output fidelity, yet still allow us to process them separately
     local _stderr_file=''
     local _stdout_file=''
-    _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file (mktemp: $?)"
-    (( _rc != success )) || _stdout_file=$(mktemp)                              || with_error _rc "$err_io_failure" "Failed to create a temporary file (mktemp: $?)"
+    _stderr_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary file."
+    (( _rc != success )) || _stdout_file=$(mktemp)                              || with_error _rc "$err_io_failure" "Failed to create a temporary file."
     (( _rc == success ))                                                        || {
                                                                                         rm -f "$_stderr_file" "$_stdout_file"
                                                                                         return "$_rc"
@@ -579,13 +581,16 @@ function find_files_by_precedence()
 
     local _dir=$1
     local -n __file_names=$2
-    local __patterns=("${@:3}")
-    local __pattern
+    local _patterns=("${@:3}")
+    local _pattern
 
     __file_names=()
 
-    for __pattern in "${__patterns[@]}"; do
-        readarray -t __file_names < <(find "$_dir" -mindepth 1 \( -name .git -o -name bin -o -name obj -o -name templates \) -prune -o -type f -name "$__pattern" -print)
+    for _pattern in "${_patterns[@]}"; do
+        readarray -t __file_names < <(find "$_dir" -mindepth 1 \( -name .git -o \
+                                                                  -name bin -o \
+                                                                  -name obj -o \
+                                                                  -name templates \) -prune -o -type f -name "$_pattern" -print)
         (( ${#__file_names[@]} == 0 )) || return "$success"
     done
 

@@ -202,7 +202,7 @@ NO_ERRORS"
              resolve_arguments
              has_errors && echo HAS_ERRORS || echo NO_ERRORS"
     assert_success
-    assert_output --partial "Invalid directory: '$_tmp/not-there'"
+    assert_output --partial "Invalid directory '$_tmp/not-there': it does not exist."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -213,7 +213,7 @@ NO_ERRORS"
              resolve_arguments
              has_errors && echo HAS_ERRORS || echo NO_ERRORS"
     assert_success
-    assert_output --partial "The directory '$_tmp/plain' is not inside Git repository working tree"
+    assert_output --partial "Invalid directory '$_tmp/plain': it is not in a Git working tree."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -241,7 +241,7 @@ NO_ERRORS"
     mkdir -p "$_tmp/plain"
     run _vc "get_arguments --repo-dir '$_tmp/plain'; echo AFTER"
     assert_failure
-    assert_output --partial "is not inside Git repository working tree"
+    assert_output --partial "is not in a Git working tree."
     assert_output --partial "Usage:"
     refute_output --partial "AFTER"
 }

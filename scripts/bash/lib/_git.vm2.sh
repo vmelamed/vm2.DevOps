@@ -50,6 +50,8 @@ declare -x err_invalid_path
 declare -x err_unknown
 declare -x err_unexpected_error
 declare -x err_repo_not_in_vm2_repos
+declare -x err_invalid_repo_name
+declare -x err_invalid_branch_name
 
 # vm2 core lib constants
 declare -x default_vm2_repos_path
@@ -149,7 +151,7 @@ function __validate_repo_root()
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the repository name or path, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
     [[ ! -v 2 || -d $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the vm2 repositories parent, to be a path to a directory resolved by 'resolve_vm2_repos()' (provided '${2-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 3 || -z $3 ]] || is_valid_branch_name "$3"                          || bug "${FUNCNAME[0]}() requires optional argument 3 to be a valid Git branch name (provided '${3-<missing>}')." -ec "$err_invalid_branch"
+    [[ ! -v 3 || -z $3 ]] || is_branch_name "$3"                                || bug "${FUNCNAME[0]}() requires optional argument 3 to be a valid Git branch name (provided '${3-<missing>}')." -ec "$err_invalid_branch_name"
     [[ ! -v 4 ]] || is_boolean "$4"                                             || bug "${FUNCNAME[0]}() requires optional argument 4 to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
                                                                                 exit_if_has_bugs
 
@@ -162,23 +164,25 @@ function __validate_repo_root()
     local _should_fetch=${4:-true}
     local _path # the full repo path
     local -i _rc=$success
+    local _root
 
     # try to resolve repo_path relative to $_vm2_repos
 
     # 1) the specified directory exists
-    #   try to resolve the repository path from the parameter alone
-    #   i.e., the current working directory or the absolute path provided as the first argument
-    #   otherwise try to resolve the repository path relative to $_vm2_repos
-    _path=$(realpath -e "$_repo" 2> "$noise_sink") || _path=$(realpath -e "$_vm2_repos/${_repo#/}" 2> "$noise_sink") \
-                                                                                || with_error _rc "$err_not_found" "Could not find the path '$_repo' neither in the current working directory, nor in '$_vm2_repos'."
-    (( _rc != success )) || trace "Resolved the path of the repository '$_repo' as '$_path' from the _repo parameter directly, or from vm2_repos/_repo"
+    #    - try to resolve the repository path from the parameter alone,
+    #      i.e., the current working directory or the absolute path provided as the first argument
+    #    - or try to resolve the repository path relative to $_vm2_repos
+                            _path=$(realpath -e "$_repo" 2> "$noise_sink") ||
+                            _path=$(realpath -e "$_vm2_repos/${_repo#/}" 2> "$noise_sink") \
+                                                                                || with_error _rc "$err_not_found" "Failed to find the repository '$_repo' in the current directory or in '$_vm2_repos'."
+    (( _rc == success ))                                                        || return "$_rc"
+
+    trace "Resolved the path of the repository '$_repo' as '$_path' from the _repo parameter directly, or from vm2_repos/_repo"
 
     # 2) it is a root of the Git repository's working directory
-    local _r
-
-    (( _rc != success )) || root_working_tree "$_path" _r 2> "$noise_sink"      || with_error _rc "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' path is not a git repository." \
-                                                                                                  -ec $?
-    (( _rc != success )) || [[ "$_path" == "$_r" ]]                             || with_error _rc "$err_not_git_root" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree."
+    (( _rc != success )) || root_working_tree "$_path" _root 2> "$noise_sink"   || with_error _rc "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' path is not a git repository."
+    (( _rc != success )) || [[ "$_path" == "$_root" ]]                          || with_error _rc "$err_not_git_root" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree."
+    (( _rc == success ))                                                        || return "$_rc"
 
     # 3) it has GitHub Actions workflows in the .github/workflows directory
     (( _rc != success )) || [[ -d "$_path/.github/workflows" ]]                 || with_error _rc "$err_repo_with_no_ci" "The '${_repo-<missing>}' repository does not have GitHub Actions workflows in '${_path-<missing>}/.github/workflows'."
@@ -186,13 +190,11 @@ function __validate_repo_root()
     # 4) it is on the specified branch (or the currently checked out branch if not specified)
     (( _rc != success )) || [[ -z "${_branch:-}" || "$_branch" == $(git -C "$_path" branch --show-current 2>"$noise_sink") ]] \
                                                                                 || with_error _rc "$err_invalid_branch" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not on the branch '${_branch-<missing>}'."
-
     # 5) it is at or ahead of the latest stable tag (forcing fetch) of the specified branch.
-    (( _rc == success )) || return "$_rc"
+    (( _rc != success )) || is_on_or_after_latest_stable_tag "$_path" "$_should_fetch" \
+                                                                                || _rc="$err_behind_latest_stable_tag"
 
-    is_on_or_after_latest_stable_tag "$_path" "$_should_fetch" &&
-        return "$success" ||
-        return "$err_behind_latest_stable_tag"
+    return "$_rc"
 }
 
 declare -a vm2_repos_instructions=(
@@ -259,9 +261,9 @@ function resolve_vm2_repos()
     local _repos=$__vm2_repos
     local -i _rc="$success"
 
-    [[ -z "$_repos" || -d "$_repos" ]]                                          || with_error _rc "$err_not_directory"  "${FUNCNAME[0]}() requires optional argument 1 to hold an existing directory (provided '${_repos-<missing>}')."
-    [[ -z ${2:-} ]] || validate_branch_name "$2"                                || with_error _rc "$err_invalid_branch" "${FUNCNAME[0]}() requires optional argument 2 to be a valid branch name (provided '${2-<missing>}')."
-    [[ -z ${3:-} ]] || validate_branch_name "$3"                                || with_error _rc "$err_invalid_branch" "${FUNCNAME[0]}() requires optional argument 3 to be a valid branch name (provided '${3-<missing>}')."
+    [[ -z "$_repos" || -d "$_repos" ]]                                          || with_error _rc "$err_not_directory"  "Invalid vm2 repositories directory '${_repos-<missing>}': it does not exist."
+    [[ -z ${2:-} ]] || is_valid_branch_name "$2"                                || _rc=$?
+    [[ -z ${3:-} ]] || is_valid_branch_name "$3"                                || _rc=$?
     (( _rc == success ))                                                        || return "$_rc"
 
     local _devops_branch=${2:-}
@@ -285,13 +287,13 @@ function resolve_vm2_repos()
         trace "vm2_repos='$_repos' from the location of $vm2_devops_repo_name."
     # #4: the hardcoded default location ${HOME}/repos/vm2_repos
     else
-        [[ -d $default_vm2_repos_path ]]                                        || with_error _rc "$err_not_directory" "Cannot resolve the parent directory of the vm2 repositories." \
+        [[ -d $default_vm2_repos_path ]]                                        || with_error _rc "$err_not_directory" "Failed to resolve the parent directory of the vm2 repositories." \
                                                                                                                        "${vm2_repos_instructions[@]}"
         (( _rc != success )) || _repos=$default_vm2_repos_path
         (( _rc != success )) || trace "vm2_repos='$_repos' from the default location '$default_vm2_repos_path'"
     fi
 
-    (( _rc == success ))                                                        || with_error _rc "$err_not_directory" "Cannot resolve the parent directory of the vm2 repositories." \
+    (( _rc == success ))                                                        || with_error _rc "$err_not_directory" "Failed to resolve the parent directory of the vm2 repositories." \
                                                                                                                        "${vm2_repos_instructions[@]}"
 
     # ensure $vm2_repos is an existing, absolute path:
@@ -464,7 +466,7 @@ function resolve_repo_root()
 
     local -i _rc="$success"
 
-    [[ ! -v 1 || -d $1 ]]                                                       || with_error _rc "$err_not_directory" "${FUNCNAME[0]}() requires argument 1, the path to the parent of all vm2 repositories, to be a an existing directory path (provided '${1-<missing>}')."
+    [[ ! -v 1 || -d $1 ]]                                                       || with_error _rc "$err_not_directory" "Invalid path to the parent of all vm2 repositories '${1-<missing>}'."
     (( _rc == success ))                                                        || return "$_rc"
 
     local _repos=$1
@@ -539,12 +541,12 @@ function resolve_repo_root()
                     _in_repo_dir="$_dir"
                     ;;
 
-                * ) exit_with_bug "Unexpected error code '$_rc' caught in ${FUNCNAME[0]}() function." -ec "$err_unexpected_error"
+                * ) exit_with_bug "${FUNCNAME[0]}() caught the unexpected error code '$_rc'." -ec "$err_unexpected_error"
             esac
             ;;
 
         "$err_not_found" )
-            error "Could not find the repository directory '${_dir_path-<missing>}' neither under '${_repos-<missing>}' nor under '\$HOME'." -ec "$_rc"
+            error "Failed to find the repository directory '${_dir_path-<missing>}' under '${_repos-<missing>}' or under '\$HOME'." -ec "$_rc"
             return "$_rc"
             ;;
 

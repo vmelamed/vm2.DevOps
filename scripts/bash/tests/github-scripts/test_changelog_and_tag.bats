@@ -168,7 +168,7 @@ _run_changelog_and_tag() {
 # --- happy path ---------------------------------------------------------------------------
 
 @test "changelog-and-tag: creates a prerelease tag and updates the changelog" {
-    # Also a regression test: validate_arguments calls validate_minver_tag_components with one argument only, which once
+    # Also a regression test: validate_arguments calls is_valid_minver_settings with one argument only, which once
     # crashed the script under set -u (the optional $2 was read unguarded; _semver.sh now uses '${2:-}').
     _make_fixture "$BATS_TEST_TMPDIR"
     run _run_changelog_and_tag "$BATS_TEST_TMPDIR/repo" '' --quiet --tag v0.2.0-preview.1

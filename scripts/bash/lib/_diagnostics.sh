@@ -923,8 +923,7 @@ function warning_var()
                                                                                        "  - warning message" \
                                                                                        "  - default value" \
                                                                                        -ec "$err_invalid_arguments"
-    # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-    [[ ! -v 1 ]] || is_variable_name "$1"                                       || bug "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the warning message, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 
@@ -992,7 +991,7 @@ declare -a __summary_output
 
 declare -x ci
 
-if ! $ci && is_tool_present glow; then
+if ! $ci && [[ -t 1 ]] &&is_tool_present glow; then
     # redirect summary markdown to glow for pretty printing on the console
     # there is no $GITHUB_STEP_SUMMARY in local runs
     __summary_output=(glow -w 168)
@@ -1100,7 +1099,7 @@ function with_error()
                                                                                        "  - the name of a variable to receive the error code" \
                                                                                        "  - the error code to record and report" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable  "$1"                                           || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')." -ec "$err_argument_value"
+    [[ ! -v 1 ]] || is_variable  "$1"                                           || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
     [[ ! -v 2 ]] || { is_exit_code "$2" && (( $2 > 0 )); }                      || bug "${FUNCNAME[0]}() requires argument 2 to be a valid return code in the range [1, 255] (provided '${2-<missing>}')." -ec "$err_argument_value"
                                                                                 exit_if_has_bugs
 

@@ -74,6 +74,10 @@ declare -xri err_not_repos_parent=88    # The directory is not the parent direct
 declare -xri err_not_current_commit=89  # The repository is not at the expected commit.
 declare -xri err_root_not_repo_name=90  # The repository's directory name is not its GitHub repository name.
 declare -xri err_repo_not_in_vm2_repos=91   # The repository is not in the vm2 repositories directory.
+declare -xri err_invalid_repo_name=92   # The specified string is not a valid repository name.
+declare -xri err_invalid_branch_name=93 # The specified string is not a valid branch name.
+declare -xri err_invalid_tag=94         # The specified string is not a valid tag.
+declare -xri err_invalid_sha=95         # The specified string is not a valid commit SHA.
 
 declare -xri time_out=128               # The command timed out.
 
@@ -131,6 +135,10 @@ declare -rA __error_messages=(
     [$err_not_current_commit]="The repository is not at the expected commit."
     [$err_root_not_repo_name]="The repository's directory name is not its GitHub repository name."
     [$err_repo_not_in_vm2_repos]="The repository is not in the vm2 repositories directory."
+    [$err_invalid_repo_name]="The specified string is not a valid repository name."
+    [$err_invalid_branch_name]="The specified string is not a valid branch name."
+    [$err_invalid_tag]="The specified string is not a valid tag."
+    [$err_invalid_sha]="The specified string is not a valid commit SHA."
 
     [$time_out]="The command timed out."
 
@@ -185,6 +193,10 @@ declare -rA __error_names=(
     [$err_not_current_commit]="\$err_not_current_commit"
     [$err_root_not_repo_name]="\$err_root_not_repo_name"
     [$err_repo_not_in_vm2_repos]="\$err_repo_not_in_vm2_repos"
+    [$err_invalid_repo_name]="\$err_invalid_repo_name"
+    [$err_invalid_branch_name]="\$err_invalid_branch_name"
+    [$err_invalid_tag]="\$err_invalid_tag"
+    [$err_invalid_sha]="\$err_invalid_sha"
 
     [$time_out]="\$time_out"
 
@@ -290,7 +302,7 @@ function error_name()
 
 #-----------------------------------------------------------------------------------------------
 # HTTP status codes -> vm2 codes, for the classifiers of `execute_with_retry --classify` (e.g.
-# `gh_failure` in `_git_gh.sh`). Only the statuses a caller may want to tell apart have
+# `gh_failure` in `_git.gh.sh`). Only the statuses a caller may want to tell apart have
 # a row; any other status maps to $err_tool_error. `0` (`$positive`) means "transient": the
 # request may succeed if it is retried.
 #-----------------------------------------------------------------------------------------------

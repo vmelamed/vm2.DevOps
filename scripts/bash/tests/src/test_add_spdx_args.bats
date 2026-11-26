@@ -150,7 +150,7 @@ NO_ERRORS"
              echo REACHED
              echo \"errors=\$(get_errors)\""
     assert_success
-    assert_output --partial "Directory not found: '$_tmp/not-there'"
+    assert_output --partial "Invalid directory '$_tmp/not-there': it does not exist."
     assert_output --partial "The license (--license) must not be empty."
     assert_output --partial "REACHED"
     assert_output --partial "errors=2"
@@ -162,7 +162,7 @@ NO_ERRORS"
              resolve_arguments
              has_errors && echo HAS_ERRORS || echo NO_ERRORS"
     assert_success
-    assert_output --partial "Directory not found: '$_tmp/file.txt'"
+    assert_output --partial "Invalid directory '$_tmp/file.txt': it does not exist."
     assert_output --partial "HAS_ERRORS"
 }
 
@@ -189,7 +189,7 @@ NO_ERRORS"
 @test "get_arguments: reports a missing directory, then exits with the usage" {
     run _as "get_arguments /definitely/not/there; echo AFTER"
     assert_failure
-    assert_output --partial "Directory not found: '/definitely/not/there'"
+    assert_output --partial "Invalid directory '/definitely/not/there': it does not exist."
     assert_output --partial "Usage:"
     refute_output --partial "AFTER"
 }

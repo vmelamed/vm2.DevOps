@@ -139,7 +139,7 @@ function parse_arguments()
 
 function verify_environment
 {
-    is_git_present                                                              || true
+    verify_git                                                                  || true
 
     return "$success"
 }
@@ -162,7 +162,7 @@ function resolve_arguments()
     is_in "$sot" "${sources_of_truth[@]}"                                       || usage "Invalid source of truth '$sot'. Valid values are: $sources_of_truth_str." -ec "$err_argument_value"
 
     # resolve and validate sot_path
-    get_vm2_sot_path "$vm2_repos" sot_path "$sot"                               || with_error _rc $? "Could not find the source of truth directory for the specified template '$sot' in the expected location in '$vm2_repos'."
+    get_vm2_sot_path "$vm2_repos" sot_path "$sot"                               || with_error _rc $? "Failed to find the source-of-truth directory of the template '$sot' in '$vm2_repos'."
 
     # if no repos were specified as arguments, use the current directory as the only target repo:
     ! is_empty_array target_repos || target_repos+=("$(pwd)")
@@ -173,7 +173,7 @@ function resolve_arguments()
     local _target_path
     for _target in "${target_repos[@]}"; do
         _rc=$success
-        resolve_target "$vm2_repos" "$_target" _target_root _target_path        || with_error _rc $? "Could not resolve the Git working tree root of the target '$_target'. Ensure that it exists and is a valid directory."
+        resolve_target "$vm2_repos" "$_target" _target_root _target_path        || with_error _rc $? "Failed to resolve the Git working tree root of the target '$_target'." "Make sure that it exists and is a directory."
         (( _rc == success )) || continue
 
         target_roots+=("$_target_root")
@@ -191,7 +191,7 @@ function resolve_arguments()
         local _temp_file_template
 
         _temp_file_template="diff-shared-log-$(date +%Y%m%d-%H%M%S)-XXXXXX.md"
-        summary_file=$(mktemp -p /tmp "$_temp_file_template")                   || with_error _rc "$err_io_failure"  "Failed to create a temporary file"
+        summary_file=$(mktemp -p /tmp "$_temp_file_template")                   || with_error _rc "$err_io_failure"  "Failed to create a temporary file."
         (( _rc != success )) || add_trap "rm -f ${summary_file@Q}" EXIT
     }
 
@@ -267,7 +267,7 @@ function get_selector_action()
         "cs" | "$action_copy_shared"        ) _action="$action_copy_shared" ;;
         "acs"| "$action_ask_to_copy_shared" ) _action="$action_ask_to_copy_shared" ;;
         ""                                  ) ;;
-        *                                   ) error "Invalid action: $_action. Valid actions are: $valid_actions_str"  -ec "$err_argument_value" ;;
+        *                                   ) error "Invalid action '$_action'." "Use one of: $valid_actions_str."  -ec "$err_argument_value" ;;
     esac
 
     [[ $_file_selector != -* ]] ||

@@ -114,7 +114,7 @@ declare -gx err_invalid_nameref
 
 @test "enter_value: bug-exits on an undefined output variable" {
     run enter_value "Name" not_a_defined_var
-    assert_failure "$err_argument_value"
+    assert_failure "$err_invalid_nameref"
 }
 
 @test "enter_value: bug-exits on a non-boolean secret flag" {

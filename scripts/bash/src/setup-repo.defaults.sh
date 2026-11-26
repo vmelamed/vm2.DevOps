@@ -34,8 +34,6 @@ declare -x repo_name
 declare -x nuget_server
 
 # variables defined below:
-declare -x defaults_validated=false
-
 declare -x default_repo_settings
 declare -x default_repo_settings_order
 
@@ -248,7 +246,7 @@ declare -xA agents_vars_validators=()
 #   aborts the process via 'exit_if_has_bugs' -- this function never returns a non-zero code
 #   to a caller.
 #-----------------------------------------------------------------------------------------------
-function validate_app_default_vars()
+function assert_app_default_vars()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                        "  - the name of the application (e.g., actions)" \
@@ -267,32 +265,32 @@ function validate_app_default_vars()
     is_associative_array "$_vars_validators_name"                               || bug "${FUNCNAME[0]}() requires the associative array '$_vars_validators_name' to be defined." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
-    local -n _app_vars_defaults=$_vars_defaults_name
-    local -n _app_vars_order=$_vars_order_name
-    local -n _app_vars_validators=$_vars_validators_name
+    local -n __app_vars_defaults=$_vars_defaults_name
+    local -n __app_vars_order=$_vars_order_name
+    local -n __app_vars_validators=$_vars_validators_name
 
     ! is_empty_array "$_vars_defaults_name"                                     || return "$success"
 
     # make sure that default values, and display order are consistent: there is an entry for each default variable in the display order.
-    if [[ "${#_app_vars_order}" < ${#_app_vars_defaults[@]} ]]; then
-        warning "The number of elements in '$_vars_order_name' (${#_app_vars_order}) is less than the number of elements in '$_vars_defaults_name' (${#_app_vars_defaults}), assuming sorted order."
-        readarray -t "$_vars_order_name" < <(printf "%s\n" "${!_app_vars_defaults[@]}" | sort)
+    if (( "${#__app_vars_order[@]}" < ${#__app_vars_defaults[@]} )); then
+        warning "The number of elements in '$_vars_order_name' (${#__app_vars_order[@]}) is less than the number of elements in '$_vars_defaults_name' (${#__app_vars_defaults[@]}), assuming sorted order."
+        readarray -t "$_vars_order_name" < <(printf "%s\n" "${!__app_vars_defaults[@]}" | sort)
     else
-        for _var in "${!_app_vars_defaults[@]}"; do
-            is_in "$_var" "${_app_vars_order[@]}" || {
+        for _var in "${!__app_vars_defaults[@]}"; do
+            is_in "$_var" "${__app_vars_order[@]}" || {
                 warning "The variable '$_var' is not listed in the display order. Appending it at the end of the array."
-                _app_vars_order+=("$_var")
+                __app_vars_order+=("$_var")
             }
         done
     fi
 
     # make sure that each default variable has a corresponding validator
     local _validator _default_value
-    for _var in "${!_app_vars_defaults[@]}"; do
+    for _var in "${!__app_vars_defaults[@]}"; do
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-        [[ -v _app_vars_validators[$_var] ]] && {
-            _validator=${_app_vars_validators[$_var]}
-            _default_value=${_app_vars_defaults[$_var]}
+        [[ -v __app_vars_validators[$_var] ]] && {
+            _validator=${__app_vars_validators[$_var]}
+            _default_value=${__app_vars_defaults[$_var]}
             is_function "$_validator" || [[ $_validator == "true" ]]            || { bug "${FUNCNAME[0]}() requires the validator '$_validator' to be a defined function." -ec "$err_invalid_item"; continue; }
             $_validator "$_default_value"                                       || bug "${FUNCNAME[0]}() requires the default value '$_default_value' of the variable '$_var' to pass the validator '$_validator'." -ec "$err_invalid_item"
         } \
@@ -384,20 +382,20 @@ function get_vars_defaults()
 
     # copy the default vars display order
     local _vars_order_name="${_app,,}_vars_order"
-    local -n _app_vars_order=$_vars_order_name
+    local -n __app_vars_order=$_vars_order_name
 
-    __vars_order=("${_app_vars_order[@]}")
+    __vars_order=("${__app_vars_order[@]}")
 
     if [[ -v 4 ]]; then
         # copy the _vars_validators
         local _vars_validators_name="${_app,,}_vars_validators"
-        local -n _app_vars_validators=$_vars_validators_name
+        local -n __app_vars_validators=$_vars_validators_name
 
         local -n __vars_validators=$4
 
         __vars_validators=()
-        for _var in "${!_app_vars_validators[@]}"; do
-            __vars_validators[$_var]=${_app_vars_validators[$_var]}
+        for _var in "${!__app_vars_validators[@]}"; do
+            __vars_validators[$_var]=${__app_vars_validators[$_var]}
         done
     fi
 }
@@ -449,7 +447,7 @@ declare -xra codespaces_secrets_order=()
 
 #-----------------------------------------------------------------------------------------------
 # @description Validates that one application's secrets display-order table
-#   ('<app>_secrets_order') is defined. Unlike 'validate_app_default_vars', there are
+#   ('<app>_secrets_order') is defined. Unlike 'assert_app_default_vars', there are
 #   no default values or per-secret validators for secrets (secret values are never defaulted
 #   in source -- see 'get_secrets_defaults'), so there is nothing to backfill or freeze here
 #   beyond the existence check.
@@ -463,7 +461,7 @@ declare -xra codespaces_secrets_order=()
 #   reported via 'bug' and aborts the process via 'exit_if_has_bugs' -- this function never
 #   returns a non-zero code to a caller.
 #-----------------------------------------------------------------------------------------------
-function validate_app_default_secrets()
+function assert_app_default_secrets()
 {
     (( $# == 1 ))                                                               || bug  "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
                                                                                         "  - the name of the application (e.g., actions)" \
@@ -524,10 +522,10 @@ function get_secrets_defaults()
 
     ! is_empty_array "$_app_secrets_order_name"                                 || return "$success"
 
-    local -n _app_secrets_order=$_app_secrets_order_name
+    local -n __app_secrets_order=$_app_secrets_order_name
 
     local _secret
-    for _secret in "${_app_secrets_order[@]}"; do
+    for _secret in "${__app_secrets_order[@]}"; do
 
         # NUGET_API_KEY is used for non-NuGet and non-GitHub Packages
         [[ $_app == "actions" && $_secret == "NUGET_API_KEY" ]] &&
@@ -543,16 +541,18 @@ function get_secrets_defaults()
         __secrets[$_secret]=$secret_placeholder
     done
 
-    __secrets_order=("${_app_secrets_order[@]}")
+    __secrets_order=("${__app_secrets_order[@]}")
 
     if [[ -v 4 ]]; then
         local -n __secrets_validators=$4
 
-        for _secret in "${_app_secrets_order[@]}"; do
+        for _secret in "${__app_secrets_order[@]}"; do
             __secrets_validators[$_secret]=is_secret
         done
     fi
 }
+
+declare -x defaults_validated=false
 
 #-----------------------------------------------------------------------------------------------
 # @description Validates the integrity of the default values for the applications' variables
@@ -563,19 +563,19 @@ function get_secrets_defaults()
 #
 # @exitcode success=0: Always (validation failures are reported via 'bug' and abort the
 #   process directly via 'exit_if_has_bugs' inside the called
-#   'validate_app_default_vars'/'validate_app_default_secrets').
+#   'assert_app_default_vars'/'assert_app_default_secrets').
 #-----------------------------------------------------------------------------------------------
-function validate_defaults()
+function assert_defaults()
 {
     ! $defaults_validated || return "$success"
 
-    validate_app_default_vars actions
-    validate_app_default_vars agents         # agents are not used yet
+    assert_app_default_vars actions
+    assert_app_default_vars agents         # agents are not used yet
 
-    validate_app_default_secrets actions
-    validate_app_default_secrets dependabot
-    validate_app_default_secrets codespaces  # codespaces are not used yet
-    # validate_app_default_secrets agents      # agents are not used yet
+    assert_app_default_secrets actions
+    assert_app_default_secrets dependabot
+    assert_app_default_secrets codespaces  # codespaces are not used yet
+    # assert_app_default_secrets agents      # agents are not used yet
 
     defaults_validated=true
     readonly defaults_validated

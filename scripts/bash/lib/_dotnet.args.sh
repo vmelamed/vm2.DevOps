@@ -39,43 +39,47 @@ declare -xr default_minver_tag_prefix='v'
 #-----------------------------------------------------------------------------------------------
 declare -xr default_minver_prerelease_id="preview.0"
 
-# reference variables common for most vm2.DevOps scripts that are
-# set usually from CLI arguments (below), environment variables, or defaults
-# consider the following variables a contract for the names of the named options acquired by
-# get_common_gh_action_arg
+# vm2 core lib variables
+#-----------------------------------------------------------------------------------------------
+# vm2 core lib variables definitions common for most vm2.DevOps scripts that are set usually from
+# CLI arguments, environment variables, or defaults.
+#
+# Consider the following variables a contract for the names of the named options acquired by
+# get_common_gh_action_arg!
+#-----------------------------------------------------------------------------------------------
 declare -x preprocessor_symbols=${PREPROCESSOR_SYMBOLS:-}
-declare -x minver_tag_prefix=${MINVERTAGPREFIX:-$default_minver_tag_prefix}                     # from GitHub Actions vars (MINVERTAGPREFIX)
-declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-}                         # from GitHub Actions vars (MINVERDEFAULTPRERELEASEIDENTIFIERS); may be empty for release, so do not put here $default_minver_prerelease_id. The value must come from CLI.
-declare -x gh_nuget_username=${GH_ACTOR:-}                                                      # from GitHub Actions actor   github.actor -> GH_ACTOR
-declare -x gh_nuget_password=${GH_TOKEN:-}                                                      # from GitHub Actions secrets github.token -> GH_TOKEN
 declare -x configuration=${CONFIGURATION:-}                                                     # from Directory.Build.props
 declare -x framework=${FRAMEWORK:-}                                                             # from Directory.Build.props
 declare -x runtime=${RUNTIME:-}                                                                 # from Directory.Build.props
 declare -x artifacts=${ARTIFACTS_PATH:-}                                                        # from Directory.Build.props
+declare -x minver_tag_prefix=${MINVERTAGPREFIX:-$default_minver_tag_prefix}                     # from MinVer settings (MINVERTAGPREFIX)
+declare -x minver_prerelease_id=${MINVERDEFAULTPRERELEASEIDENTIFIERS:-}                         # from MinVer settings (MINVERDEFAULTPRERELEASEIDENTIFIERS); may be empty for release, so do not put here $default_minver_prerelease_id. The value must come from CLI.
+declare -x gh_nuget_username=${GH_ACTOR:-}                                                      # from GitHub Actions actor   github.actor -> GH_ACTOR
+declare -x gh_nuget_password=${GH_TOKEN:-}                                                      # from GitHub Actions secrets github.token -> GH_TOKEN
 
  # common dotnet arguments array, ready to put into dump_vars directly or into a larger array
 declare -xra dump_common_dotnet_args=(
     --header "Common Dotnet CLI Arguments:"
     preprocessor_symbols
-    minver_tag_prefix
-    minver_prerelease_id
-    gh_nuget_username
-    --secret gh_nuget_password
     configuration
     framework
     runtime
     artifacts
+    minver_tag_prefix
+    minver_prerelease_id
+    gh_nuget_username
+    --secret gh_nuget_password
 )
 
 # for use in args_to_github_output() as "${output_common_dotnet_args[@]}"
 declare -xra output_common_dotnet_args=(
     preprocessor_symbols
-    minver_tag_prefix
-    minver_prerelease_id
     configuration
     framework
     runtime
     artifacts
+    minver_tag_prefix
+    minver_prerelease_id
 )
 
 #-----------------------------------------------------------------------------------------------
@@ -183,7 +187,7 @@ function sanitize_common_dotnet_args()
 
     # ignore all returned validation errors - they've been reported already and this is all that we need here
     validate_preprocessor_symbols preprocessor_symbols                          || true
-    validate_minver_tag_components "$minver_tag_prefix" "$minver_prerelease_id" || true
+    is_valid_minver_settings "$minver_tag_prefix" "$minver_prerelease_id" || true
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     [[ -v gh_nuget_username ]] && {
         is_safe_input "$gh_nuget_username"                                      || true
@@ -207,7 +211,7 @@ function sanitize_common_dotnet_args()
     # (validate-input.sh, the one caller that doesn't want that override forced downstream, never actually forwards this
     # resolved value to any dotnet invocation in the first place, so there's nothing to protect there.)
     [[ -z $artifacts ]] || is_safe_path "$artifacts"                            || true
-    
+
     is_safe_existing_path "$_project" && get_artifacts_path "$_project" artifacts \
                                                                                 || true
 

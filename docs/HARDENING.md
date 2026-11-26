@@ -83,17 +83,17 @@ Build the test suite bottom-up, from pure leaf modules to orchestrators:
 
 ### Layer 2 — I/O and argument parsing  *(touch env/stderr, no external processes)*
 
-`lib/_diagnostics.sh`, `lib/_core_args.sh`
+`lib/_diagnostics.sh`, `lib/core.args.sh`
 
 - `_diagnostics.sh`: redirect stderr to a temp file; assert error/warn/info output format.
-- `_core_args.sh`: invoke argument-parse functions with crafted `$@` arrays; assert flag variables
+- `core.args.sh`: invoke argument-parse functions with crafted `$@` arrays; assert flag variables
   are set correctly and that invalid input returns `err_invalid_arguments`.
 
 ### Layer 3 — Pure parts of external-process modules  *(no real git/gh needed)*
 
-`lib/_git_gh.sh` (URL and owner/name validation functions only)
+`lib/_git.gh.sh` (URL and owner/name validation functions only)
 
-- Test `is_valid_gh_repo_owner`, `is_valid_gh_repo_name`, URL-parse helpers with table-driven inputs.
+- Test `is_gh_repo_owner`, `is_gh_repo_name`, URL-parse helpers with table-driven inputs.
 - Stub `git` and `gh` with local `function` overrides for the few calls that do need a process.
 
 ### Layer 4 — CI script logic  *(mock git + gh)*

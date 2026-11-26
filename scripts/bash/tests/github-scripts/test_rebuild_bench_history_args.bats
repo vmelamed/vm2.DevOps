@@ -209,7 +209,7 @@ NO_ERRORS"
                  echo \"errors=\$(get_errors)\""
         assert_success
         assert_output --partial "repeat must be a positive integer (got '$_repeat')."
-        assert_output --partial "Could not determine the GitHub owner."
+        assert_output --partial "Failed to determine the GitHub owner."
         assert_output --partial "REACHED"
         assert_output --partial "errors=2"
     done
@@ -222,7 +222,7 @@ NO_ERRORS"
              echo REACHED
              has_errors && echo HAS_ERRORS || echo NO_ERRORS" "" plain
     assert_success
-    assert_output --partial "Could not determine the GitHub owner."
+    assert_output --partial "Failed to determine the GitHub owner."
     assert_output --partial "REACHED"
     assert_output --partial "HAS_ERRORS"
 }
@@ -250,7 +250,7 @@ NO_ERRORS"
     run _rh "get_arguments --repeat 0; echo AFTER" "GH_TOKEN=dummy"
     assert_failure
     assert_output --partial "repeat must be a positive integer (got '0')."
-    assert_output --partial "Could not determine the GitHub owner."
+    assert_output --partial "Failed to determine the GitHub owner."
     assert_output --partial "Usage:"
     refute_output --partial "AFTER"
 }

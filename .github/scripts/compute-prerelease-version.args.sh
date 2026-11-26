@@ -79,15 +79,15 @@ function parse_arguments()
 
 function verify_environment()
 {
-    is_git_present                                                              || true
+    verify_git                                                                  || true
 
     return "$success"
 }
 
 function resolve_arguments()
 {
-    validate_minver_tag_components "$minver_tag_prefix" "$minver_prerelease_id" || true
-    is_safe_reason "$reason"                                                    || true
+    is_valid_minver_settings "$minver_tag_prefix" "$minver_prerelease_id"       || true
+    is_safe_gh_reason "$reason"                                                 || true
 
     readonly minver_tag_prefix
     readonly minver_prerelease_id

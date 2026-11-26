@@ -278,7 +278,7 @@ setup() {
     run _spdx "$dir"
 
     assert_failure "$err_not_file"
-    assert_output --partial "to be an existing writable file"
+    assert_output --partial "it is not writable."
     assert_output --partial "Added header to: ./a.cs"
     assert_equal "$(cat "$dir/ro.yaml")" "a: 1"
 }
@@ -318,7 +318,7 @@ setup() {
     run _spdx "$dir" "$dir/missing"
 
     assert_failure "$err_not_directory"
-    assert_output --partial "Directory not found: '$dir/missing'"
+    assert_output --partial "Invalid directory '$dir/missing': it does not exist."
 }
 
 @test "add-spdx: rejects an empty --license" {

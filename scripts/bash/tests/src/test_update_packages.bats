@@ -32,43 +32,43 @@ _up() {
 # --- select_upgrade_version ---------------------------------------------------------------------
 
 @test "select_upgrade_version: picks the highest stable candidate that is newer than the current version" {
-    run _up "select_upgrade_version 1.0.0 chosen 1.0.2 1.2.0 1.1.0; echo \"\$chosen\""
+    run _up "declare chosen=''; select_upgrade_version 1.0.0 chosen 1.0.2 1.2.0 1.1.0; echo \"\$chosen\""
     assert_success
     assert_output "1.2.0"
 }
 
 @test "select_upgrade_version: keeps the current version when no candidate is newer" {
-    run _up "select_upgrade_version 1.2.0 chosen 1.0.0 1.2.0; echo \"\$chosen\""
+    run _up "declare chosen=''; select_upgrade_version 1.2.0 chosen 1.0.0 1.2.0; echo \"\$chosen\""
     assert_success
     assert_output "1.2.0"
 }
 
 @test "select_upgrade_version: ignores prerelease candidates" {
-    run _up "select_upgrade_version 1.0.0 chosen 1.5.0-preview.1 1.0.1; echo \"\$chosen\""
+    run _up "declare chosen=''; select_upgrade_version 1.0.0 chosen 1.5.0-preview.1 1.0.1; echo \"\$chosen\""
     assert_success
     assert_output "1.0.1"
 }
 
 @test "select_upgrade_version: never downgrades a current prerelease to an older stable" {
-    run _up "select_upgrade_version 1.1.0-preview.3 chosen 1.0.2 1.0.0; echo \"\$chosen\""
+    run _up "declare chosen=''; select_upgrade_version 1.1.0-preview.3 chosen 1.0.2 1.0.0; echo \"\$chosen\""
     assert_success
     assert_output "1.1.0-preview.3"
 }
 
 @test "select_upgrade_version: a stable candidate newer than a current prerelease is chosen" {
-    run _up "select_upgrade_version 1.1.0-preview.3 chosen 1.1.0 1.0.2; echo \"\$chosen\""
+    run _up "declare chosen=''; select_upgrade_version 1.1.0-preview.3 chosen 1.1.0 1.0.2; echo \"\$chosen\""
     assert_success
     assert_output "1.1.0"
 }
 
 @test "select_upgrade_version: with no candidates the current version is kept" {
-    run _up "select_upgrade_version 1.0.0 chosen; echo \"\$chosen\""
+    run _up "declare chosen=''; select_upgrade_version 1.0.0 chosen; echo \"\$chosen\""
     assert_success
     assert_output "1.0.0"
 }
 
 @test "select_upgrade_version: bug-exits with fewer than two arguments" {
-    run _up "select_upgrade_version 1.0.0"
+    run _up "declare chosen=''; select_upgrade_version 1.0.0"
     assert_failure "$err_invalid_arguments"
 }
 
@@ -117,15 +117,15 @@ XML
     assert_output --partial '[A.Pkg]="1.2.3"'
 }
 
-# --- validate_package_lines ------------------------------------------------------------------------
+# --- is_valid_packages_file ------------------------------------------------------------------------
 
-@test "validate_package_lines: succeeds when every PackageVersion line has the supported one-line shape" {
+@test "is_valid_packages_file: succeeds when every PackageVersion line has the supported one-line shape" {
     _props_fixture "$BATS_TEST_TMPDIR/Directory.Packages.props"
-    run _up "validate_package_lines '$BATS_TEST_TMPDIR/Directory.Packages.props'"
+    run _up "is_valid_packages_file '$BATS_TEST_TMPDIR/Directory.Packages.props'"
     assert_success
 }
 
-@test "validate_package_lines: rejects a multi-line element, naming the file and line, instead of skipping it" {
+@test "is_valid_packages_file: rejects a multi-line element, naming the file and line, instead of skipping it" {
     cat > "$BATS_TEST_TMPDIR/Directory.Packages.props" <<'XML'
 <Project>
     <ItemGroup>
@@ -134,12 +134,12 @@ XML
     </ItemGroup>
 </Project>
 XML
-    run _up "validate_package_lines '$BATS_TEST_TMPDIR/Directory.Packages.props'"
+    run _up "is_valid_packages_file '$BATS_TEST_TMPDIR/Directory.Packages.props'"
     assert_failure "$err_invalid_item"
     assert_output --partial "Directory.Packages.props:3: unsupported PackageVersion format"
 }
 
-@test "validate_package_lines: rejects Version before Include, and reports EVERY offending line" {
+@test "is_valid_packages_file: rejects Version before Include, and reports EVERY offending line" {
     cat > "$BATS_TEST_TMPDIR/Directory.Packages.props" <<'XML'
 <Project>
     <ItemGroup>
@@ -149,17 +149,17 @@ XML
     </ItemGroup>
 </Project>
 XML
-    run _up "validate_package_lines '$BATS_TEST_TMPDIR/Directory.Packages.props'"
+    run _up "is_valid_packages_file '$BATS_TEST_TMPDIR/Directory.Packages.props'"
     assert_failure "$err_invalid_item"
     assert_output --partial "Directory.Packages.props:3:"
     assert_output --partial "Directory.Packages.props:5:"
     refute_output --partial "Directory.Packages.props:4:"
 }
 
-@test "validate_package_lines: ignores commented-out PackageVersion lines, like the reader does" {
+@test "is_valid_packages_file: ignores commented-out PackageVersion lines, like the reader does" {
     printf '<Project>\n  <ItemGroup>\n    <!-- <PackageVersion Version="1" Include="Ignored" /> -->\n  </ItemGroup>\n</Project>\n' \
         > "$BATS_TEST_TMPDIR/Directory.Packages.props"
-    run _up "validate_package_lines '$BATS_TEST_TMPDIR/Directory.Packages.props'"
+    run _up "is_valid_packages_file '$BATS_TEST_TMPDIR/Directory.Packages.props'"
     assert_success
 }
 
@@ -360,7 +360,7 @@ _classify() {
         source '$lib_dir/core.sh' --no-trap >/dev/null 2>&1
         source '$_src_dir/update-packages.functions.sh'
         source '$_src_dir/update-packages.repos.sh'
-        classify_repo '$BATS_TEST_TMPDIR/clone' m r; echo \"\$m\"
+        declare m='' r=''; classify_repo '$BATS_TEST_TMPDIR/clone' m r; echo \"\$m\"
     "
 }
 

@@ -101,7 +101,7 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 | `.github/workflows/`   | Reusable workflows (`_ci.yaml`, `_build.yaml`, `_test.yaml`, etc.)        |
 | `.github/scripts/`     | CI/CD action scripts (three-file convention — see below)                  |
 | `.github/actions/`     | Custom composite actions (`setup-env`, `cache-dependencies`, etc.)        |
-| `scripts/bash/lib/`    | Shared bash library (`_diagnostics.sh`, `_git.sh`, `_core_args.sh`, etc.) |
+| `scripts/bash/lib/`    | Shared bash library (`_diagnostics.sh`, `_git.sh`, `core.args.sh`, etc.) |
 | `scripts/bash/src/`    | Local dev utility scripts (`diff-shared.sh`, `setup-repo.sh`, etc.)       |
 | `docs/`                | Reference documentation (15 `.md` files)                                  |
 
@@ -187,27 +187,31 @@ function get_arguments()
 
 All core library files live in `scripts/bash/lib/` and are sourced by scripts that need them:
 
-| File                   | Purpose                                                          |
-|------------------------|------------------------------------------------------------------|
-| `gh_core.sh`           | GitHub Actions environment integration (sources core.sh)         |
-| `core.sh`              | Initialization, trap handlers                                    |
-| `_constants.sh`        | ANSI color codes and a few other constants                       |
-| `_core_state.sh`       | Common state variables (quiet, verbose, dry-run, trace modes)    |
-| `_error_codes.sh`      | Error code constants                                             |
-| `_diagnostics.sh`      | Logging (`tee_stdout`, `error`, `warning`, `trace`, etc.)        |
-| `_core_args.sh`        | Common argument parsing to initialize core state                 |
-| `_predicates.sh`       | Boolean checks (`is_array`, `is_positive`, etc.)                 |
-| `_semver.sh`           | Semantic versioning utilities                                    |
-| `_sanitize.sh`         | Input validation (`is_safe_path`, `is_valid_framework`, etc.)    |
-| `_dump_vars.sh`        | Dumps the values of bash variables in a tabular format           |
-| `_user.sh`             | User interface primitives                                        |
-| `_git.sh`              | Git operations (plain git, no hosting service)                   |
-| `_git_gh.sh`           | GitHub: naming rules, repo state, `gh` transient predicate       |
-| `_git_vm2.sh`          | Git operations with focus on vm2 repos                           |
-| `_dotnet_constants.sh` | `dotnet` exit codes and build-information keys                   |
-| `_dotnet_args.sh`      | Common `dotnet` argument parsing and validation                  |
-| `_dotnet_msbuild.sh`   | MSBuild properties, argument conversion, build information       |
-| `_dotnet.sh`           | Clean, restore, build, pack, and solution helpers                |
+| File                    | Purpose                                                           |
+|-------------------------|-------------------------------------------------------------------|
+| `gh_core.sh`            | GitHub Actions environment integration (sources core.sh)          |
+| `core.sh`               | Initialization, trap handlers                                     |
+| `_constants.sh`         | ANSI color codes and a few other constants                        |
+| `core.state.sh`         | Common state variables (quiet, verbose, dry-run, trace modes)     |
+| `_error_codes.sh`       | Error code constants                                              |
+| `_predicates.sh`        | Boolean checks (`is_array`, `is_positive`, etc.)                  |
+| `_predicates.tools.sh`  | Tool presence checks (`is_tool_present`, `verify_git`, etc.)      |
+| `_predicates.json.sh`   | JSON checks (`is_json`, `validate_json_array`, etc.)              |
+| `_diagnostics.sh`       | Logging (`tee_stdout`, `error`, `warning`, `trace`, etc.)         |
+| `core.args.sh`          | Common argument parsing to initialize core state                  |
+| `_semver.sh`            | Semantic versioning utilities                                     |
+| `_sanitize.sh`          | Input validation (`is_safe_path`, `is_valid_gh_reason`, etc.)     |
+| `_dump_vars.sh`         | Dumps the values of bash variables in a tabular format            |
+| `_user.sh`              | User interface primitives                                         |
+| `_git.sh`               | Git operations (plain git, no hosting service)                    |
+| `_git.gh.sh`            | GitHub: naming rules, repo state, `gh` transient predicate        |
+| `_git.vm2.sh`           | Git operations with focus on vm2 repos                            |
+| `_xml.sh`               | Generic XML value reading via `yq`                                |
+| `_dotnet.constants.sh`  | `dotnet` exit codes, build-information keys, values in use        |
+| `_dotnet.predicates.sh` | Validation of configuration, TFM, RID, MinVer, NuGet server, etc. |
+| `_dotnet.args.sh`       | Common `dotnet` argument parsing and validation                   |
+| `_dotnet.msbuild.sh`    | MSBuild properties, argument conversion, build information        |
+| `_dotnet.sh`            | Clean, restore, build, pack, and solution helpers                 |
 
 See `scripts/bash/lib/FUNCTIONS_REFERENCE.md` for the full function inventory.
 
@@ -436,7 +440,7 @@ buffering, and error-propagation behavior, especially when command substitution 
 
 - **Nameref**(s): A function can use *nameref*s (name references) to indirectly set a variable in the caller's scope. This
   allows the function to effectively return a value by modifying the variable whose name is passed as an argument. Use a
-  syntax like this: `declare -n _var="$1"`, or  `local -n _var="$1"`, to create a nameref - an alias for another shell
+  syntax like this: `declare -n __var="$1"`, or  `local -n __var="$1"`, to create a nameref - an alias for another shell
   variable. This method is preferable over the previous "output via stdout" method, because it:
   - does not hide the side effects
   - avoids the need for command substitution (or other piping mechanisms)
@@ -456,7 +460,7 @@ buffering, and error-propagation behavior, especially when command substitution 
 
       exit_if_has_bugs
 
-      local -n _output="$1"
+      local -n __output="$1"
 
       # perform some operations
       if ! some_command; then
@@ -464,7 +468,7 @@ buffering, and error-propagation behavior, especially when command substitution 
           return $failure
       fi
 
-      _output="result"
+      __output="result"
   }
 
   output_value=''
@@ -480,20 +484,37 @@ buffering, and error-propagation behavior, especially when command substitution 
 
 #### Predicates
 
-Predicate functions return a value that can be considered boolean: 0 - `$positive` or `$success` for boolean **true**, and
-non-zero - `$negative` (defined as 1), or `$failure`, or any other non-zero value (`$err_*`) for boolean **false** and are
-typically named with an `is_`, `is_valid_` or `has_` prefix, e.g., `is_defined_array`, `is_positive`, and `has_errors`.
+Predicate functions are named `is_xyz` or `has_xyz`, e.g. `is_defined_array`, `is_positive`, and `has_errors`. They are pure:
+they return `$positive` (0) for **true** or `$negative` (1) for **false**, print no messages, and have no side effects. The
+only thing they report is a `bug`: a call that violates their contract (e.g. the wrong number of arguments). This makes them
+the right tool for the formal argument checks: `is_xyz "$1" || bug "…" -ec "$err_…"`.
 
-The predicates may fail for reasons other than the conditions they are checking, e.g. invalid input parameters or unexpected
-system state. In this case they also will display an appropriate error message.
+A nameref parameter of a predicate is read-only, and is used only to pass an array.
 
 #### Validation Functions
 
-Validation functions check the correctness of their input parameters. When invalid, or incorrect, or unsafe input is discovered
-they typically **display one or more error messages** explaining the validation failure(s), return a non-zero error code or
-`$positive` - 0 for **true**, for success. The names of these functions are typically prefixed with `is_safe_` or `validate_`.
-Examples include `is_safe_reason`, `validate_preprocessor_symbols`, and `is_safe_json_array`. The `validate_*` functions may
-also normalize their input or transform it into a canonical form.
+Validation functions check a value and **report what is wrong** with `error`. They return `$success` or the specific `$err_*`
+code of the failure, so the caller writes `is_valid_xyz "$x" || _rc=$?` instead of `is_xyz "$x" || with_error _rc …`
+(the latter reports twice if `is_valid_xyz` is used). The prefix says what kind of check it is:
+
+| Prefix         | Checks                                                                          | Example                         |
+|----------------|---------------------------------------------------------------------------------|---------------------------------|
+| `is_valid_xyz` | the value is well formed; usually calls `is_xyz`                                | `is_valid_branch_name`          |
+| `is_safe_xyz`  | a refinement of *valid*: also safe to use, for a subject that can be valid but  | `is_safe_path`                  |
+|                | unsafe (`/usr/bin/apt` is a valid path, not a safe one); MUST be used on        |                                 |
+|                | untrusted input, e.g. in GitHub Actions                                         |                                 |
+| `validate_xyz` | validates **and** produces a value: canonicalizes the subject in place, or      | `validate_preprocessor_symbols` |
+|                | derives values from it, through a nameref                                       |                                 |
+| `verify_xyz`   | a fact about the machine: a tool is installed, recent enough, authenticated;    | `verify_gh`                     |
+|                | may cache the result, and may only warn for an optional tool                    |                                 |
+| `assert_xyz`   | a caller's contract only: reports `bug`s and exits, never returns an error      | `assert_classifier_args`        |
+
+- A validator that only answers yes or no is an `is_valid_xyz` or an `is_safe_xyz`, not a `validate_xyz`.
+- A pure presence check stays a predicate: `is_tool_present`, not `verify_tool`.
+- A subject does not need every form. If `is_xyz` would be called only by `is_valid_xyz`, fold it in.
+- A family lives with its data, in the file of its subject (`_git.gh.sh`, `_dotnet.predicates.sh`, `_predicates.json.sh`);
+  `_predicates.sh` and `_sanitize.sh` keep the general-purpose ones.
+- These rules cover `scripts/bash/lib`. A script's own helpers may be named for their step.
 
 #### Functions Forwarding `stdin`
 
@@ -728,9 +749,10 @@ reports the most common departures (see its check 8).
 | `error`: a step failed      | user      | `Failed to <verb> <object> '<subject>'.` (`with_error` adds the tool's exit code)                |
 | `error`: invalid user input | user      | `Invalid <thing> '<value>': <rule>.`                                                             |
 | fix hint (a separate part)  | user      | imperative, without "Please": `Use '--visibility public\|private'.`                              |
+| URL                         | both      | in angle brackets (RFC 3986, Appendix C), the sentence ends as usual: `See <https://…>.`        |
 | code text                   | both      | one generic statement, present tense, no examples, no fix: `An argument is not a directory.`     |
 
-- The code texts live in `_error_codes.sh` and `_dotnet_constants.sh`.
+- The code texts live in `_error_codes.sh` and `_dotnet.constants.sh`.
 - `<count>` uses digits: `1 argument`, `2 arguments`, `1 or 2 arguments`, `2 to 5 arguments`, `at least 1 argument`,
   `at most 2 arguments`, `no arguments`. The verb is always `requires`: not `expects`, `takes`, or `accepts`.
 - Quote every value with single quotes, and end every sentence with a period.

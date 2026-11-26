@@ -143,9 +143,9 @@ NO_ERRORS"
              echo REACHED
              echo \"errors=\$(get_errors)\""
     assert_success
-    assert_output --partial "the MinVer tag prefix"
-    assert_output --partial "(provided 'a b')"
-    assert_output --partial "The reason '-rf /' appears to be a command or contains unsafe characters."
+    assert_output --partial "Invalid MinVer tag prefix 'a b': use letters, digits"
+    assert_output --partial "Invalid MinVer tag prefix 'a b'"
+    assert_output --partial "Invalid reason '-rf /': it looks like a command, or contains unsafe characters."
     assert_output --partial "REACHED"
     assert_output --partial "errors=2"
 }
@@ -172,7 +172,7 @@ NO_ERRORS"
 @test "get_arguments: an invalid value ends the run with the error and the usage" {
     run _cr "get_arguments --minver-tag-prefix 'a b'; echo AFTER"
     assert_failure
-    assert_output --partial "(provided 'a b')"
+    assert_output --partial "Invalid MinVer tag prefix 'a b'"
     assert_output --partial "Usage:"
     refute_output --partial "AFTER"
 }

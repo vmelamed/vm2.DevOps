@@ -180,7 +180,7 @@ NO_ERRORS"
     run _rt "$_project min_coverage_pct='x[\$(printf %s%s INJ ECTED >&2)]'
              resolve_arguments
              has_errors && echo HAS_ERRORS || echo NO_ERRORS"
-    assert_output --partial "must be an integer number between 0 and 100"
+    assert_output --partial "use an integer from 0 to 100"
     assert_output --partial "HAS_ERRORS"
     refute_output --partial "INJECTED"
 }
@@ -189,7 +189,7 @@ NO_ERRORS"
     run _rt "$_project
              resolve_arguments
              has_errors && echo HAS_ERRORS || echo NO_ERRORS" "MIN_BRANCH_COVERAGE_PCT=101"
-    assert_output --partial "The min coverage percentage '101' must be an integer number between 0 and 100."
+    assert_output --partial "Invalid minimum coverage percentage '101': use an integer from 0 to 100."
     assert_output --partial "HAS_ERRORS"
 }
 

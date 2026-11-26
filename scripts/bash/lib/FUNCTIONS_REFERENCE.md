@@ -13,15 +13,15 @@
     - [validate\_classifier\_args()](#validate_classifier_args)
     - [list\_of\_files()](#list_of_files)
     - [find\_files\_by\_precedence()](#find_files_by_precedence)
-  - [\_core\_state.sh](#_core_statesh)
+  - [core.state.sh](#corestatesh)
     - [is\_verbose()](#is_verbose)
     - [set\_verbose() / unset\_verbose()](#set_verbose--unset_verbose)
     - [is\_quiet()](#is_quiet)
     - [set\_quiet() / unset\_quiet()](#set_quiet--unset_quiet)
     - [is\_dry\_run()](#is_dry_run)
     - [set\_dry\_run() / unset\_dry\_run()](#set_dry_run--unset_dry_run)
-    - [show\_ignored\_output()](#show_noise_sink)
-    - [hide\_ignored\_output()](#hide_noise_sink)
+    - [show\_noise\_sink()](#show_noise_sink)
+    - [hide\_noise\_sink()](#hide_noise_sink)
     - [set\_trace\_enabled()](#set_trace_enabled)
     - [unset\_trace\_enabled()](#unset_trace_enabled)
     - [is\_trace\_enabled()](#is_trace_enabled)
@@ -64,19 +64,24 @@
     - [is\_path()](#is_path)
     - [is\_secret()](#is_secret)
     - [is\_percentage()](#is_percentage)
-    - [is\_minverTagPrefix()](#is_minvertagprefix)
-    - [is\_minverPrereleaseId()](#is_minverprereleaseid)
-    - [is\_nuget\_server()](#is_nuget_server)
-    - [is\_valid\_dotnet\_version()](#is_valid_dotnet_version)
+  - [\_predicates.tools.sh](#_predicatestoolssh)
     - [is\_tool\_present()](#is_tool_present)
-    - [is\_valid\_json()](#is_valid_json)
-    - [is\_valid\_json\_file()](#is_valid_json_file)
+    - [verify\_git() / verify\_gh() / verify\_jq() / verify\_yq()](#verify_git--verify_gh--verify_jq--verify_yq)
+    - [verify\_check\_jsonschema()](#verify_check_jsonschema)
+    - [verify\_dotnet()](#verify_dotnet)
+  - [\_predicates.json.sh](#_predicatesjsonsh)
+    - [is\_json()](#is_json)
+    - [is\_json\_file()](#is_json_file)
+    - [is\_valid\_json\_with\_schema()](#is_valid_json_with_schema)
+    - [validate\_json\_array()](#validate_json_array)
   - [\_diagnostics.sh](#_diagnosticssh)
-    - [to\_stdout() / to\_stderr() / to\_output()](#tee_stdout--tee_stderr--tee_output)
+    - [tee\_stdout() / tee\_stderr() / tee\_output()](#tee_stdout--tee_stderr--tee_output)
     - [has\_errors()](#has_errors)
     - [get\_errors()](#get_errors)
+    - [get\_last\_error()](#get_last_error)
     - [set\_errors()](#set_errors)
     - [reset\_errors()](#reset_errors)
+    - [has\_bugs()](#has_bugs)
     - [exit\_if\_has\_bugs()](#exit_if_has_bugs)
     - [usage()](#usage)
     - [exit\_if\_has\_errors()](#exit_if_has_errors)
@@ -94,14 +99,14 @@
     - [show\_stack()](#show_stack)
     - [to\_summary()](#to_summary)
     - [now\_us()](#now_us)
-  - [\_core\_args.sh](#_core_argssh)
+  - [core.args.sh](#coreargssh)
     - [get\_common\_arg()](#get_common_arg)
     - [usage\_if\_requested()](#usage_if_requested)
     - [usage()](#usage-1)
     - [usage\_text()](#usage_text)
   - [\_semver.sh](#_semversh)
     - [print\_semver\_regexes()](#print_semver_regexes)
-    - [validate\_minver\_tag\_components()](#validate_minver_tag_components)
+    - [is\_valid\_minver\_settings()](#is_valid_minver_settings)
     - [get\_semver\_major() / get\_semver\_minor() / get\_semver\_patch() / get\_semver\_prerelease() / get\_semver\_build()](#get_semver_major--get_semver_minor--get_semver_patch--get_semver_prerelease--get_semver_build)
     - [compare\_semver()](#compare_semver)
     - [semver\_eq() / semver\_gt() / semver\_gte() / semver\_lt() / semver\_lte()](#semver_eq--semver_gt--semver_gte--semver_lt--semver_lte)
@@ -121,23 +126,7 @@
     - [is\_safe\_path()](#is_safe_path)
     - [is\_safe\_existing\_path()](#is_safe_existing_path)
     - [is\_safe\_existing\_directory() / is\_safe\_existing\_file()](#is_safe_existing_directory--is_safe_existing_file)
-    - [validate\_json\_array()](#validate_json_array)
-    - [is\_valid\_gh\_runner\_os()](#is_valid_gh_runner_os)
-    - [is\_valid\_visibility()](#is_valid_visibility)
-    - [is\_valid\_reason()](#is_valid_reason)
-    - [is\_safe\_reason()](#is_safe_reason)
-    - [validate\_nuget\_server()](#validate_nuget_server)
-    - [is\_valid\_build\_configuration()](#is_valid_build_configuration)
-    - [is\_valid\_framework()](#is_valid_framework)
-    - [is\_valid\_runtime()](#is_valid_runtime)
-    - [validate\_preprocessor\_symbols()](#validate_preprocessor_symbols)
-    - [is\_valid\_secret\_name()](#is_valid_secret_name)
-    - [is\_valid\_secret()](#is_valid_secret)
-    - [is\_valid\_min\_coverage\_pct() / is\_valid\_max\_regression\_pct()](#is_valid_min_coverage_pct--is_valid_max_regression_pct)
-    - [is\_valid\_minverTagPrefix()](#is_valid_minvertagprefix)
-    - [is\_valid\_minverPrereleaseId()](#is_valid_minverprereleaseid)
     - [escape\_ere()](#escape_ere)
-    - [validate\_json\_schema()](#validate_json_schema)
   - [\_dump\_vars.sh](#_dump_varssh)
     - [\_write\_title()](#_write_title)
     - [\_write\_line()](#_write_line)
@@ -149,19 +138,25 @@
     - [choose()](#choose)
     - [print\_sequence()](#print_sequence)
   - [\_git.sh](#_gitsh)
+    - [is\_branch\_name()](#is_branch_name)
     - [is\_valid\_branch\_name()](#is_valid_branch_name)
+    - [is\_tag\_name()](#is_tag_name)
     - [is\_valid\_tag\_name()](#is_valid_tag_name)
     - [is\_valid\_commit\_sha()](#is_valid_commit_sha)
-    - [validate\_branch\_name()](#validate_branch_name)
     - [is\_inside\_work\_tree()](#is_inside_work_tree)
     - [root\_working\_tree()](#root_working_tree)
     - [should\_fetch\_for\_latest\_stable\_tag()](#should_fetch_for_latest_stable_tag)
     - [ensure\_fresh\_git\_state()](#ensure_fresh_git_state)
     - [get\_latest\_stable\_tag\_hash()](#get_latest_stable_tag_hash)
     - [is\_after\_latest\_stable\_tag() / is\_on\_or\_after\_latest\_stable\_tag()](#is_after_latest_stable_tag--is_on_or_after_latest_stable_tag)
-  - [\_git\_gh.sh](#_git_ghsh)
-    - [is\_valid\_gh\_repo\_owner() / is\_valid\_gh\_repo\_name() / is\_valid\_gh\_repo\_full\_name() / is\_valid\_gh\_repo\_description()](#is_valid_gh_repo_owner--is_valid_gh_repo_name--is_valid_gh_repo_full_name--is_valid_gh_repo_description)
-    - [validate\_gh\_repo\_owner() / validate\_gh\_repo\_name() / validate\_gh\_repo\_description()](#validate_gh_repo_owner--validate_gh_repo_name--validate_gh_repo_description)
+  - [\_git.gh.sh](#_gitghsh)
+    - [is\_gh\_repo\_owner() / is\_gh\_repo\_name() / is\_gh\_repo\_full\_name() / is\_gh\_repo\_description()](#is_gh_repo_owner--is_gh_repo_name--is_gh_repo_full_name--is_gh_repo_description)
+    - [is\_valid\_gh\_repo\_owner() / is\_valid\_gh\_repo\_name() / is\_valid\_gh\_repo\_description()](#is_valid_gh_repo_owner--is_valid_gh_repo_name--is_valid_gh_repo_description)
+    - [is\_valid\_gh\_visibility()](#is_valid_gh_visibility)
+    - [is\_valid\_gh\_runner\_os()](#is_valid_gh_runner_os)
+    - [is\_valid\_gh\_reason()](#is_valid_gh_reason)
+    - [is\_safe\_gh\_reason()](#is_safe_gh_reason)
+    - [is\_valid\_gh\_secret\_name()](#is_valid_gh_secret_name)
     - [gh\_failure()](#gh_failure)
     - [get\_gh\_repo\_property()](#get_gh_repo_property)
     - [is\_repo\_state\_initialized()](#is_repo_state_initialized)
@@ -171,7 +166,7 @@
     - [has\_local\_repo() / has\_remote\_repo() / has\_github\_remote()](#has_local_repo--has_remote_repo--has_github_remote)
     - [read\_repo\_state()](#read_repo_state)
     - [print\_repo\_state()](#print_repo_state)
-  - [\_git\_vm2.sh](#_git_vm2sh)
+  - [\_git.vm2.sh](#_gitvm2sh)
     - [get\_devops\_parent()](#get_devops_parent)
     - [\_\_validate\_repo\_root()](#__validate_repo_root)
     - [resolve\_vm2\_repos()](#resolve_vm2_repos)
@@ -180,12 +175,23 @@
     - [get\_vm2\_sot\_path()](#get_vm2_sot_path)
   - [\_xml.sh](#_xmlsh)
     - [get\_xml\_value()](#get_xml_value)
-  - [\_dotnet\_constants.sh](#_dotnet_constantssh)
+  - [\_dotnet.constants.sh](#_dotnetconstantssh)
     - [dotnet\_error\_message()](#dotnet_error_message)
-  - [\_dotnet\_args.sh](#_dotnet_argssh)
+  - [\_dotnet.predicates.sh](#_dotnetpredicatessh)
+    - [is\_valid\_build\_configuration()](#is_valid_build_configuration)
+    - [is\_valid\_framework()](#is_valid_framework)
+    - [is\_valid\_runtime()](#is_valid_runtime)
+    - [is\_preprocessor\_symbol()](#is_preprocessor_symbol)
+    - [is\_valid\_preprocessor\_symbol()](#is_valid_preprocessor_symbol)
+    - [validate\_preprocessor\_symbols()](#validate_preprocessor_symbols)
+    - [is\_valid\_min\_coverage\_pct() / is\_valid\_max\_regression\_pct()](#is_valid_min_coverage_pct--is_valid_max_regression_pct)
+    - [is\_minverTagPrefix()](#is_minvertagprefix)
+    - [is\_minverPrereleaseId()](#is_minverprereleaseid)
+    - [is\_nuget\_server()](#is_nuget_server)
+  - [\_dotnet.args.sh](#_dotnetargssh)
     - [get\_common\_dotnet\_arg()](#get_common_dotnet_arg)
     - [sanitize\_common\_dotnet\_args()](#sanitize_common_dotnet_args)
-  - [\_dotnet\_msbuild.sh](#_dotnet_msbuildsh)
+  - [\_dotnet.msbuild.sh](#_dotnetmsbuildsh)
     - [get\_msbuild\_property()](#get_msbuild_property)
     - [get\_msbuild\_properties()](#get_msbuild_properties)
     - [get\_target\_path()](#get_target_path)
@@ -202,12 +208,12 @@
     - [list\_solution\_projects()](#list_solution_projects)
     - [expand\_solution\_projects()](#expand_solution_projects)
   - [gh\_core.sh](#gh_coresh)
-    - [to\_stdout() / to\_stderr() (overrides)](#tee_stdout--tee_stderr-overrides)
-    - [to\_output() (override)](#tee_output-override)
+    - [tee\_stdout() / tee\_stderr() (overrides)](#tee_stdout--tee_stderr-overrides)
+    - [tee\_output() (override)](#tee_output-override)
     - [gh\_escape()](#gh_escape)
     - [args\_to\_github\_output()](#args_to_github_output)
   - [Summary](#summary)
-    - [Total Functions: 215](#total-functions-215)
+    - [Total Functions: 220](#total-functions-220)
     - [Usage Pattern](#usage-pattern)
     - [Key Design Principles](#key-design-principles)
 
@@ -223,8 +229,8 @@ comment blocks) directly above each function in its source file.
 
 ## _constants.sh
 
-Defines ANSI escape codes, emojis/glyphs, and vm2-wide constants (vm2 repository list, NuGet server regex, allowed conventional-
-commit types, etc.). Contains no functions, only constant declarations.
+Defines ANSI escape codes, emojis/glyphs, and vm2-wide constants (vm2 repository list, allowed conventional-commit types,
+etc.). Contains no functions, only constant declarations.
 
 ---
 
@@ -279,10 +285,10 @@ Searches a directory for the first of several file name patterns that matches an
 
 ---
 
-## _core_state.sh
+## core.state.sh
 
-Common state variables (`$ci`, `$ci_system`, `$debugger`, quiet/verbose/dry-run/trace modes, `$noise_sink`, table format) and the functions that
-read, set, and save/restore them.
+Common state variables (`$ci`, `$ci_system`, `$debugger`, quiet/verbose/dry-run/trace modes, `$noise_sink`, table format)
+and the functions that read, set, and save/restore them.
 
 ### is_verbose()
 
@@ -393,7 +399,7 @@ status is `$err_tool_error`. The mechanism under the `--classify` functions of `
 
 ## _predicates.sh
 
-Boolean test (`is_*`) functions for variable existence/type, numeric formats, OS detection, and basic file/JSON validity.
+Pure boolean tests (`is_*`) for variable existence and type, numeric formats, OS detection, and paths.
 
 ### is_case_sensitive()
 
@@ -495,33 +501,53 @@ Tests if a string is non-empty and free of control characters.
 
 Tests if a string is an integer between 0 and 100.
 
-### is_minverTagPrefix()
+---
 
-Tests if a string is a valid MinVer Git tag prefix.
+## _predicates.tools.sh
 
-### is_minverPrereleaseId()
-
-Tests if a string is a valid MinVer prerelease identifier.
-
-### is_nuget_server()
-
-Tests if a string is `nuget`, `github`, or a valid http(s) URL.
-
-### is_valid_dotnet_version()
-
-Tests if a string is a valid .NET SDK version specifier (full version, major.minor with optional feature band, bare major, or `latest`).
+Tool presence checks: whether a tool is on `$PATH` and, for `git`, `gh`, `jq`, and `yq`, whether it is the right
+version (and, for `gh`, authenticated). The `is_<tool>_present` results are cached, so the errors are reported once.
 
 ### is_tool_present()
 
 Tests if a named tool is available on `$PATH`.
 
-### is_valid_json()
+### verify_git() / verify_gh() / verify_jq() / verify_yq()
+
+Test if `git` / `gh` / `jq` / `yq` is on `$PATH` and is the required version (`gh`: also authenticated; `yq`: Mike
+Farah's). Report what is missing, with an install or upgrade hint, the first time only; the result is cached.
+
+### verify_check_jsonschema()
+
+Tests if `check-jsonschema` is on `$PATH`; warns the first time when it is not. The result is cached.
+
+### verify_dotnet()
+
+Tests if `dotnet` is on `$PATH` and an SDK that the current directory's `global.json` accepts is installed. Not
+cached: the answer depends on the current directory.
+
+---
+
+## _predicates.json.sh
+
+JSON checks and normalization, via `jq` and (optionally) `check-jsonschema`.
+
+### is_json()
 
 Tests if a string is valid JSON, via `jq`.
 
-### is_valid_json_file()
+### is_json_file()
 
 Tests if the file at a given path contains valid JSON.
+
+### is_valid_json_with_schema()
+
+Validates a JSON file against a JSON Schema file via `check-jsonschema`, if installed (warns and skips otherwise).
+
+### validate_json_array()
+
+Validates and normalizes a JSON array of strings (or a single string) into a deduplicated, trimmed JSON array, optionally
+validating each item with a caller-supplied function.
 
 ---
 
@@ -543,6 +569,10 @@ Tests whether the global error counter has recorded any errors.
 
 Prints the current value of the global error counter.
 
+### get_last_error()
+
+Stores the most recent error code recorded by `error` in the named variable.
+
 ### set_errors()
 
 Sets the global error counter to a specific value.
@@ -551,6 +581,10 @@ Sets the global error counter to a specific value.
 
 Resets the global error counter to zero.
 
+### has_bugs()
+
+Tests if any bugs were recorded (by `bug`).
+
 ### exit_if_has_bugs()
 
 Exits the script (via `exit_with_error`) if any bugs were recorded by this function's own call depth or deeper; defers to an
@@ -558,7 +592,8 @@ ancestor's still-open validation block otherwise.
 
 ### usage()
 
-Forward-declaration placeholder for `usage()`, meant to be overridden by sourcing `_core_args.sh`; always bug-exits if not overridden.
+Forward-declaration placeholder for `usage()`, meant to be overridden by sourcing `core.args.sh`; always bug-exits if not
+overridden.
 
 ### exit_if_has_errors()
 
@@ -626,7 +661,7 @@ Prints the current time in microseconds since the epoch (from `$EPOCHREALTIME`; 
 
 ---
 
-## _core_args.sh
+## core.args.sh
 
 Common command-line argument parsing (`--verbose`, `--quiet`, `--trace`, `--dry-run`, `--graphical`, `--markdown`,
 `--help`/`-h`/`-?`) and the default `usage`/`usage_text` implementation.
@@ -657,7 +692,7 @@ Semantic Versioning (SemVer 2.0.0) and MinVer tag regular expressions, compariso
 
 Dumps the SemVer/MinVer regex constants to stdout, grouped by category, via `dump_vars`.
 
-### validate_minver_tag_components()
+### is_valid_minver_settings()
 
 Validates a MinVer tag prefix and (optionally) a MinVer prerelease identifier template against their regular expressions.
 
@@ -703,7 +738,8 @@ Tests if a string is a valid semver release tag (with the configured MinVer pref
 
 ## _sanitize.sh
 
-Input trimming and safety/validation functions (`is_safe_*`, `validate_*`) for GitHub Actions and script argument sanitization.
+Input trimming, and the validation functions (`is_valid_*`, `is_safe_*`) for the general-purpose subjects: input,
+booleans, integers, paths, the runner OS, the free-text reason, and secrets.
 
 ### ltrim() / rtrim() / trim()
 
@@ -742,76 +778,9 @@ Combines `is_safe_path` with an existence check.
 
 Combine `is_safe_existing_path` with a directory / non-empty-file type check.
 
-### validate_json_array()
-
-Validates and normalizes a JSON array of strings (or a single string) into a deduplicated, trimmed JSON array, optionally
-validating each item with a caller-supplied function.
-
-### is_valid_gh_runner_os()
-
-Validates that a string is one of `$gh_runners_os_in_use`, the GitHub Actions runner labels in use.
-
-### is_valid_visibility()
-
-Validates that a string is one of `$repo_visibilities` (case-sensitive). Callers lowercase a value typed by a person first.
-
-### is_valid_reason()
-
-Validates the length of a free-text "reason" input (at most 200 characters).
-
-### is_safe_reason()
-
-Validates a free-text "reason" input for length (`is_valid_reason`) and shell-safety.
-
-### validate_nuget_server()
-
-Validates a NuGet server moniker and resolves it into a display name and server URL.
-
-### is_valid_build_configuration()
-
-Validates that a string is one of `$configurations_in_use` (case-sensitive).
-
-### is_valid_framework()
-
-Validates that a string is one of `$frameworks_in_use`, the Target Framework Monikers (TFM) in use (empty included).
-
-### is_valid_runtime()
-
-Validates that a string is one of `$runtimes_in_use`, the Runtime Identifiers (RID) in use (empty included).
-
-### validate_preprocessor_symbols()
-
-Validates and reformats a space/comma/colon/semicolon-separated preprocessor-symbol list into a semicolon-separated list, in place.
-
-### is_valid_secret_name()
-
-Validates a GitHub secret name: letters, digits, and underscores only, not starting with a digit or with `GITHUB_`
-(in any case).
-
-### is_valid_secret()
-
-Validates that a candidate secret value is non-empty and free of control characters, via `is_secret`. The error never
-shows the value.
-
-### is_valid_min_coverage_pct() / is_valid_max_regression_pct()
-
-Validate a minimum-coverage / maximum-regression percentage input, via `is_percentage`.
-
-### is_valid_minverTagPrefix()
-
-Validates a MinVer Git tag prefix, via `is_minverTagPrefix`.
-
-### is_valid_minverPrereleaseId()
-
-Validates a MinVer prerelease identifier, via `is_minverPrereleaseId`.
-
 ### escape_ere()
 
 Escapes a string's special characters for safe use in an extended regular expression (ERE).
-
-### validate_json_schema()
-
-Validates a JSON file against a JSON Schema file via `check-jsonschema`, if installed (warns and skips otherwise).
 
 ---
 
@@ -863,25 +832,29 @@ Prints a sequence of values with a customizable quote character, separator, and 
 ## _git.sh
 
 Plain Git: branch, tag, and commit-SHA name validation, the working tree, and latest-stable-tag helpers. Knows nothing
-about GitHub (see `_git_gh.sh`).
+about GitHub (see `_git.gh.sh`).
 
-### is_valid_branch_name()
+### is_branch_name()
 
 Tests if a string is a valid Git branch name (with or without `refs/heads/`), via `git check-ref-format`.
 
-### is_valid_tag_name()
+### is_valid_branch_name()
+
+Validates a Git branch name, via `is_branch_name`.
+
+### is_tag_name()
 
 Tests if a string is a valid Git tag name (with or without `refs/tags/`), via `git check-ref-format`; also rejects a
 leading `-`, which `git tag` refuses.
 
+### is_valid_tag_name()
+
+Validates a Git tag name, like `is_tag_name`, and reports an error when it is invalid.
+
 ### is_valid_commit_sha()
 
-Tests that a string has the format of a commit SHA or an abbreviation of one (4 to 64 hexadecimal digits); it does not check
-that the commit exists.
-
-### validate_branch_name()
-
-Validates a Git branch name, via `is_valid_branch_name`.
+Validates that a string has the format of a commit SHA or an abbreviation of one (4 to 64 hexadecimal digits), and reports an
+error when it does not; it does not check that the commit exists.
 
 ### is_inside_work_tree()
 
@@ -909,17 +882,39 @@ Test if the current commit is strictly after / on-or-after the latest stable tag
 
 ---
 
-## _git_gh.sh
+## _git.gh.sh
 
 GitHub: repository naming rules, the GitHub remote URL, the repo state, and the transient-failure predicate for `gh`.
 
-### is_valid_gh_repo_owner() / is_valid_gh_repo_name() / is_valid_gh_repo_full_name() / is_valid_gh_repo_description()
+### is_gh_repo_owner() / is_gh_repo_name() / is_gh_repo_full_name() / is_gh_repo_description()
 
 Test a GitHub repository owner / name / full name (`<owner>/<name>`) / description against GitHub's rules.
 
-### validate_gh_repo_owner() / validate_gh_repo_name() / validate_gh_repo_description()
+### is_valid_gh_repo_owner() / is_valid_gh_repo_name() / is_valid_gh_repo_description()
 
-Validate a GitHub repository owner / name / description, reporting an error when invalid.
+Validate a GitHub repository owner / name / description, and report what is wrong with `error`. Return
+`$err_argument_value`, or `$err_invalid_repo_name` for the name.
+
+### is_valid_gh_visibility()
+
+Validates that a string is one of `$repo_visibilities` (case-sensitive). Callers lowercase a value typed by a person first.
+
+### is_valid_gh_runner_os()
+
+Validates that a string is one of `$gh_runners_os_in_use`, the GitHub Actions runner labels in use.
+
+### is_valid_gh_reason()
+
+Validates the length of a free-text "reason" input (at most 200 characters).
+
+### is_safe_gh_reason()
+
+Validates a free-text "reason" input for length (`is_valid_gh_reason`) and shell-safety.
+
+### is_valid_gh_secret_name()
+
+Validates a GitHub secret name: letters, digits, and underscores only, not starting with a digit or with `GITHUB_`
+(in any case).
 
 ### gh_failure()
 
@@ -963,7 +958,7 @@ Prints a repo state to stdout, one line per predefined key.
 
 ---
 
-## _git_vm2.sh
+## _git.vm2.sh
 
 vm2-specific repository resolution: locating `$VM2_REPOS` and individual vm2 repositories.
 
@@ -1009,7 +1004,7 @@ values (e.g. from a project's `Directory.Build.props`) the way `get_msbuild_prop
 
 ---
 
-## _dotnet_constants.sh
+## _dotnet.constants.sh
 
 The `dotnet` exit codes with their messages and names, and the keys of the build, build-result, version, and package information
 arrays.
@@ -1021,7 +1016,55 @@ Prints `Dotnet <name> (<code>): <message>` for a `dotnet` process exit code, fal
 
 ---
 
-## _dotnet_args.sh
+## _dotnet.predicates.sh
+
+Validation of the `dotnet`-related inputs: build configuration, Target Framework Moniker (TFM), Runtime Identifier (RID),
+preprocessor symbols, coverage and regression percentages, MinVer tag prefix and prerelease identifier, and NuGet server.
+
+### is_valid_build_configuration()
+
+Validates that a string is one of `$configurations_in_use` (case-sensitive).
+
+### is_valid_framework()
+
+Validates that a string is one of `$frameworks_in_use`, the Target Framework Monikers (TFM) in use (empty included).
+
+### is_valid_runtime()
+
+Validates that a string is one of `$runtimes_in_use`, the Runtime Identifiers (RID) in use (empty included).
+
+### is_preprocessor_symbol()
+
+Tests if a string is a C# preprocessor symbol: a letter or `_`, then letters, digits, and `_`.
+
+### is_valid_preprocessor_symbol()
+
+Validates a C# preprocessor symbol, via `is_preprocessor_symbol`.
+
+### validate_preprocessor_symbols()
+
+Validates and reformats a space/comma/colon/semicolon-separated preprocessor-symbol list into a semicolon-separated list,
+in place.
+
+### is_valid_min_coverage_pct() / is_valid_max_regression_pct()
+
+Validate a minimum-coverage / maximum-regression percentage input, via `is_percentage`.
+
+### is_minverTagPrefix()
+
+Tests if a string is a valid MinVer Git tag prefix.
+
+### is_minverPrereleaseId()
+
+Tests if a string is a valid MinVer prerelease identifier.
+
+### is_nuget_server()
+
+Tests if a string is `nuget`, `github`, or a valid http(s) URL.
+
+---
+
+## _dotnet.args.sh
 
 Common dotnet-CLI argument variables (`$configuration`, `$framework`, `$runtime`, `$artifacts`, MinVer settings, NuGet
 credentials) and their parsing/sanitization.
@@ -1036,9 +1079,10 @@ Validates and freezes (via `readonly`) the common dotnet arguments after parsing
 
 ---
 
-## _dotnet_msbuild.sh
+## _dotnet.msbuild.sh
 
-MSBuild property helpers, conversion of `dotnet` arguments to `dotnet msbuild` arguments, and extraction and display of build information.
+MSBuild property helpers, conversion of `dotnet` arguments to `dotnet msbuild` arguments, and extraction and display of build
+information.
 
 ### get_msbuild_property()
 
@@ -1129,34 +1173,39 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 
 ---
 
+---
+
 ## Summary
 
-### Total Functions: 215
+### Total Functions: 220
 
-| File                 | Functions |
-|----------------------|----------:|
-| core.sh              |         7 |
-| _core_state.sh       |        23 |
-| _error_codes.sh      |         2 |
-| _predicates.sh       |        32 |
-| _diagnostics.sh      |        24 |
-| _core_args.sh        |         4 |
-| _semver.sh           |        19 |
-| _sanitize.sh         |        37 |
-| _dump_vars.sh        |         3 |
-| _user.sh             |         5 |
-| _git.sh              |        11 |
-| _git_gh.sh           |        19 |
-| _git_vm2.sh          |         6 |
-| _xml.sh              |         1 |
-| _dotnet_constants.sh |         1 |
-| _dotnet_args.sh      |         2 |
-| _dotnet_msbuild.sh   |         7 |
-| _dotnet.sh           |         7 |
-| gh_core.sh           |         5 |
+| File                  | Functions |
+|-----------------------|----------:|
+| core.sh               |         8 |
+| core.state.sh         |        23 |
+| _error_codes.sh       |         3 |
+| _predicates.sh        |        28 |
+| _predicates.tools.sh  |         7 |
+| _predicates.json.sh   |         4 |
+| _diagnostics.sh       |        26 |
+| core.args.sh          |         4 |
+| _semver.sh            |        19 |
+| _sanitize.sh          |        15 |
+| _dump_vars.sh         |         3 |
+| _user.sh              |         5 |
+| _git.sh               |        12 |
+| _git.gh.sh            |        23 |
+| _git.vm2.sh           |         6 |
+| _xml.sh               |         1 |
+| _dotnet.constants.sh  |         1 |
+| _dotnet.predicates.sh |        11 |
+| _dotnet.args.sh       |         2 |
+| _dotnet.msbuild.sh    |         7 |
+| _dotnet.sh            |         7 |
+| gh_core.sh            |         5 |
 
 Counts include internal (`__`-prefixed) helper functions that are not part of the public library surface but are still documented
-in their source files. The `gh_core.sh` overrides of `tee_stdout`/`tee_stderr`/`tee_output` and the `_core_args.sh` override of
+in their source files. The `gh_core.sh` overrides of `tee_stdout`/`tee_stderr`/`tee_output` and the `core.args.sh` override of
 `usage` are counted in both files.
 
 ### Usage Pattern
@@ -1164,16 +1213,16 @@ in their source files. The `gh_core.sh` overrides of `tee_stdout`/`tee_stderr`/`
 1. Source `core.sh` in your scripts to get all base functionality (it sources every other component file in turn).
 2. Source `gh_core.sh` instead of `core.sh` when the script runs in GitHub Actions, to get step-summary/output integration.
 3. Individual component files (`_predicates.sh`, `_sanitize.sh`, etc.) can be sourced directly if only a narrow slice of
-4. functionality is needed.
+   functionality is needed.
 
 ### Key Design Principles
 
 - Functions read from stdin and write to stdout/stderr where appropriate, for pipeline composition (`tee_stdout`, `tee_stderr`,
-- `tee_output`, `to_summary`, `error`, `warning`, `info`, `trace`).
+  `tee_output`, `to_summary`, `error`, `warning`, `info`, `trace`).
 - Global state is saved/restored cooperatively via `save_state`/`restore_state`, never mutated ad hoc.
-- Predicate functions (`is_*`, `has_*`) return `$positive`/`$negative` (0/1); they answer a yes/no question, and "no" is a
-- legitimate answer, not a failure.
-- Validation (`is_safe_*`, `validate_*`) and other action functions return `$success`/`$failure` or a specific named error code
-- (`$err_argument_value`, `$err_tool_error`, etc.) on failure.
+- Predicate functions (`is_*`, `has_*`) return `$positive`/`$negative` (0/1) and report nothing; they answer a yes/no question,
+  and "no" is a legitimate answer, not a failure.
+- Validation functions (`is_valid_*`, `is_safe_*`, `validate_*`) report what is wrong with `error`, and return `$success` or a
+  specific named error code (`$err_argument_value`, etc.). `validate_*` also canonicalizes its subject in place.
 - Caller-contract violations (`bug`) hard-exit via `exit_if_has_bugs`; runtime/environmental failures (`error`) accumulate and
-- are surfaced via `exit_if_has_errors` at the top-level script only.
+  are surfaced via `exit_if_has_errors` at the top-level script only.
