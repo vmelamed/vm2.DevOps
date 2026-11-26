@@ -28,13 +28,6 @@ declare -x err_invalid_json_array
 declare -x err_logic_error
 
 # vm2 core lib constants
-declare -x repo_owner
-declare -x default_nuget_server
-declare -x gh_runners_os_in_use
-declare -x gh_runners_os_in_use_str
-declare -x repo_visibilities
-declare -x repo_visibilities_str
-
 declare -rx dangerous_chars_regex=$'[;|&$`<>(){}\n\r]'
 declare -rx dangerous_chars_and_whitespaces_regex='[;|&$`<>(){}[:space:]]'
 

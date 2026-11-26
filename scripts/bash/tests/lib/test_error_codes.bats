@@ -20,6 +20,7 @@ declare -gx err_tool_unauthenticated
 declare -gx err_access_denied
 declare -gx err_argument_value
 declare -gx err_invalid_nameref
+declare -gx lib_dir
 
 bats_require_minimum_version 1.5.0
 
@@ -150,4 +151,34 @@ load '../helpers/setup'
     assert_output "\$err_access_denied"
     run error_message "$err_access_denied"
     assert_output --partial "Access to a resource was denied"
+}
+
+# --- every error code has a message and a name ---------------------------------------------------
+
+# Regression: err_no_stable_tag (96) was declared without map entries, so `error ... -ec 96` printed
+# "vm2 $err_unknown (96): An unknown error occurred." -- nothing failed, the message was just wrong.
+@test "error codes: every err_* constant (and time_out) has a unique value, its own name, and its own message" {
+    local lib_file="$lib_dir/_error_codes.sh"
+    local -a names=()
+    readarray -t names < <(sed -nE 's/^declare -xri (err_[a-z0-9_]+|time_out)=.*/\1/p' "$lib_file")
+    (( ${#names[@]} > 40 ))                                     # the scan itself found the constants
+
+    local -A seen=()
+    local name code
+    local -i failures=0
+    for name in "${names[@]}"; do
+        code=${!name}
+        if [[ -v seen[$code] ]]; then
+            echo "duplicate value $code: \$${seen[$code]} and \$$name"
+            failures+=1
+        fi
+        seen[$code]=$name
+
+        run error_name "$code"
+        [[ $output == "\$$name" ]] || { echo "error_name $code: '$output', expected '\$$name'"; failures+=1; }
+
+        run error_message "$code"
+        [[ $output == "vm2 \$$name ($code): "?* ]] || { echo "error_message $code: '$output'"; failures+=1; }
+    done
+    (( failures == 0 ))
 }

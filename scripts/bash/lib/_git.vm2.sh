@@ -27,7 +27,8 @@ declare -x noise_sink
 # vm2 core lib exit codes
 declare -x success
 declare -x failure
-
+declare -x positive
+declare -x negative
 declare -x err_invalid_arguments
 declare -x err_argument_type
 declare -x err_argument_value
@@ -134,8 +135,7 @@ function get_devops_parent()
 #   '$repo_path/.github/workflows'
 # @exitcode err_invalid_branch=84: the repository is not on the expected branch (when $3 is
 #   given)
-# @exitcode err_not_current_commit=89: the repository exists and is on the expected branch,
-#   but is not at or ahead of the latest stable tag
+# @exitcode N Whatever `verify_on_or_after_latest_stable_tag` returns on error.
 #
 # @stdout the absolute path to the working tree root of the resolved repository
 #
@@ -180,19 +180,23 @@ function __validate_repo_root()
     trace "Resolved the path of the repository '$_repo' as '$_path' from the _repo parameter directly, or from vm2_repos/_repo"
 
     # 2) it is a root of the Git repository's working directory
-    (( _rc != success )) || root_working_tree "$_path" _root 2> "$noise_sink"   || with_error _rc "$err_not_git_directory" "The '${_repo-<missing>}' repository at '${_path-<missing>}' path is not a git repository."
-    (( _rc != success )) || [[ "$_path" == "$_root" ]]                          || with_error _rc "$err_not_git_root" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not the root of the git repository working tree."
+    (( _rc != success )) || root_working_tree "$_path" _root 2> "$noise_sink"   || with_error _rc "$err_not_git_directory" "The repository '${_repo}' at '${_path}' path is not a git repository."
+    (( _rc != success )) || [[ "$_path" == "$_root" ]]                          || with_error _rc "$err_not_git_root" "The repository '${_repo}' at '${_path}' is not the root of the git repository working tree."
     (( _rc == success ))                                                        || return "$_rc"
 
     # 3) it has GitHub Actions workflows in the .github/workflows directory
-    (( _rc != success )) || [[ -d "$_path/.github/workflows" ]]                 || with_error _rc "$err_repo_with_no_ci" "The '${_repo-<missing>}' repository does not have GitHub Actions workflows in '${_path-<missing>}/.github/workflows'."
+    (( _rc != success )) || [[ -d "$_path/.github/workflows" ]]                 || with_error _rc "$err_repo_with_no_ci" "The  repository'${_repo}' does not have GitHub Actions workflows in '${_path}/.github/workflows'."
 
-    # 4) it is on the specified branch (or the currently checked out branch if not specified)
-    (( _rc != success )) || [[ -z "${_branch:-}" || "$_branch" == $(git -C "$_path" branch --show-current 2>"$noise_sink") ]] \
-                                                                                || with_error _rc "$err_invalid_branch" "The '${_repo-<missing>}' repository at '${_path-<missing>}' is not on the branch '${_branch-<missing>}'."
-    # 5) it is at or ahead of the latest stable tag (forcing fetch) of the specified branch.
-    (( _rc != success )) || is_on_or_after_latest_stable_tag "$_path" "$_should_fetch" \
-                                                                                || _rc="$err_behind_latest_stable_tag"
+    # 4) it is on the specified branch (if not empty which stands also for "the current branch")
+    local _current_branch
+    _current_branch=$(git -C "$_path" branch --show-current 2>"$noise_sink")
+
+    (( _rc != success )) || [[ -z "${_branch:-}" || "$_branch" == "$_current_branch" ]] \
+                                                                                || with_error _rc "$err_invalid_branch" "The repository '${_repo}' at '${_path}' is not on the branch '${_branch}'."
+
+    # 5) it is at or ahead of the latest stable tag (possibly forcing fetch) of the current branch.
+    (( _rc != success )) || verify_on_or_after_latest_stable_tag "$_path" "$_should_fetch" \
+                                                                                || _rc=$?
 
     return "$_rc"
 }
@@ -221,10 +225,6 @@ declare -a vm2_repos_instructions=(
 #   4) the directory is the parent of the SoT repository - vm2.Templates
 #   5) that vm2.Templates (SoT) is on the branch specified by @arg4
 #   6) that vm2.Templates (SoT) is at or ahead of its latest stable tag
-#
-# Notes:
-#   - Despite the exit-code table below (inherited from __validate_repo_root), the "behind
-#     latest stable tag" warning messages in this function can never actually fire.
 #
 # @arg $1 nameref to a variable referencing the path to the directory to use as the parent
 #   directory of all vm2 repositories (can be empty, default: $VM2_REPOS, or the parent

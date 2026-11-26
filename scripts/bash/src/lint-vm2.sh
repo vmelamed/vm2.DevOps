@@ -152,6 +152,8 @@ info "vm2.DevOps/scripts/bash/lib/*.sh loaded fine!"
 declare -ri shellcheck_timeout=120 # seconds; a normal run takes under 10
 if command -v shellcheck > "$noise_sink"; then
     declare -a shellcheck_files=()
+    # TODO: lint the test files too:
+    # "$script_dir"/../tests/lib/*.bats  "$script_dir"/../tests/src/*.bats  "$script_dir"/../tests/github-scripts/*.bats  "$script_dir"/../tests/helpers/*.bats
     for file in "$lib_dir"/*.sh "$script_dir"/*.sh "$lib_dir"/../../../.github/scripts/*.sh; do
         [[ -f $file ]] && shellcheck_files+=("$(realpath "$file")")
     done

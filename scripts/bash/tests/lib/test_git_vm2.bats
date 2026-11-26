@@ -31,6 +31,8 @@ declare -gx err_invalid_branch_name
 declare -gx err_not_found
 declare -gx err_repo_with_no_ci
 declare -gx err_repo_not_in_vm2_repos
+declare -gx err_behind_latest_stable_tag
+declare -gx err_no_stable_tag
 
 setup() {
     _repo_root="$(cd "$lib_dir/../../.." && pwd)"
@@ -110,6 +112,40 @@ _make_local_repo() {
     _make_local_repo "$parent/some-repo"
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; __validate_repo_root some-repo '$parent' main"
     assert_success
+}
+
+# Step 5 (on or after the tag of the latest stable release): HEAD on the tag is covered by the test above.
+@test "__validate_repo_root: succeeds when HEAD is after the tag of the latest stable release" {
+    local parent="$BATS_TEST_TMPDIR/after-parent"
+    mkdir -p "$parent"
+    _make_local_repo "$parent/some-repo"
+    git -C "$parent/some-repo" commit --quiet --allow-empty -m "fix: after the release"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; __validate_repo_root some-repo '$parent' main"
+    assert_success
+}
+
+@test "__validate_repo_root: fails with err_behind_latest_stable_tag when HEAD is behind the tag of the latest stable release" {
+    local parent="$BATS_TEST_TMPDIR/behind-parent"
+    mkdir -p "$parent"
+    _make_local_repo "$parent/some-repo"
+    git -C "$parent/some-repo" commit --quiet --allow-empty -m "feat: the next release"
+    git -C "$parent/some-repo" tag v1.1.0
+    git -C "$parent/some-repo" reset --quiet --hard HEAD~1                  # main is back on v1.0.0; v1.1.0 stays
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; __validate_repo_root some-repo '$parent' main"
+    assert_failure "$err_behind_latest_stable_tag"
+    assert_output --partial "is behind the tag of the latest stable release"
+}
+
+@test "__validate_repo_root: fails with err_no_stable_tag (not 'behind') when the repo has only a prerelease tag" {
+    local parent="$BATS_TEST_TMPDIR/notag-parent"
+    mkdir -p "$parent"
+    _make_local_repo "$parent/some-repo"
+    git -C "$parent/some-repo" tag --delete v1.0.0 > /dev/null
+    git -C "$parent/some-repo" tag v1.0.0-preview.1
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; __validate_repo_root some-repo '$parent' main"
+    assert_failure "$err_no_stable_tag"
+    assert_output --partial "has no tag that marks a stable release"
+    refute_output --partial "behind"
 }
 
 # --- resolve_vm2_repos (formal validation only -- the real success path hits real repos) --------
