@@ -125,7 +125,7 @@ function resolve_arguments()
         local _invalid=false
 
         # resolve the repo of the current directory:
-        resolve_repo_root "$vm2_repos" '' _repo_path _                          || { error "The current directory is not a vm2 repository. No other repositories specified." -ec $?; _invalid=true; }
+        resolve_repo_root "$vm2_repos" '' _repo_path void                       || { error "The current directory is not a vm2 repository. No other repositories specified." -ec $?; _invalid=true; }
         $_invalid || {
             _repo=$(basename "$_repo_path")
             is_in "$_repo" "${vm2_repositories[@]}"
@@ -140,7 +140,7 @@ function resolve_arguments()
         for _repo in "${!target_repos[@]}"; do
             is_in "$_repo" "${vm2_repositories[@]}"                             || { error "The specified repository '$_repo' is not in the vm2 repositories list." -ec "$err_repo_not_in_vm2_repos"; continue; }
 
-            resolve_repo_root "$vm2_repos" "$_repo" _repo_path _                || { error "Failed to resolve the repository '$_repo'." -ec $?; continue; }
+            resolve_repo_root "$vm2_repos" "$_repo" _repo_path void             || { error "Failed to resolve the repository '$_repo'." -ec $?; continue; }
 
             [[ -s "$_repo_path/$dpp_file_name" ]]                               || { warning "Missing '$dpp_file_name' in '$_repo'. Skipping the repo.";
                 unset "target_repos[$_repo]"

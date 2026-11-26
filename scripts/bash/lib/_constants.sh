@@ -176,6 +176,19 @@ declare -xr nz_digits_set='123456789'
 declare -xr digits_set="0${nz_digits_set}"
 declare -xr hex_digits_set="${digits_set}ABCDEFabcdef"
 
+#-----------------------------------------------------------------------------------------------
+# @description Discard targets: pass one as an output nameref whose value you do not need, e.g.
+#   `resolve_repo_root "$vm2_repos" "$repo" repo_path void`. Writable on purpose (never readonly), and
+#   never read. Do not use `_` for this: bash overwrites `$_` after every simple command, so a function
+#   that reads its output back sees garbage, an array output is clobbered, and a map output fails.
+#-----------------------------------------------------------------------------------------------
+# shellcheck disable=SC2034 # never read here: the callers pass these names as output namerefs
+{
+    declare void=''
+    declare -a void_array=()
+    declare -A void_map=()
+}
+
 # characters
 declare -xr secret_str='••••••'
 declare -xr secret_placeholder=$secret_str

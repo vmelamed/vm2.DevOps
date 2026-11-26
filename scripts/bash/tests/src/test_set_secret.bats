@@ -73,7 +73,7 @@ _set_calls() {
 @test "set-secret: rejects an unknown application" {
     _run_set_secret 'hunter2\n' MY_SECRET --app nosuchapp
     assert_failure
-    assert_output --partial "Invalid app specified"
+    assert_output --partial "Invalid app 'nosuchapp': use one of:"
     [[ $(_set_calls) -eq 0 ]]
 }
 
