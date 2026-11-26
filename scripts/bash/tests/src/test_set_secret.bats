@@ -3,7 +3,8 @@
 # Copyright (c) 2025-2026 Val Melamed
 
 # Tests for scripts/bash/src/set-secret.sh, run as a subprocess. 'gh' is replaced by a fake on
-# PATH that records every call and answers the two commands the script uses:
+# PATH that records every call and answers 'gh --version' and 'gh auth status' (for verify_gh), and the two commands
+# the script uses:
 #   gh api ... (list the current secret names; FAKE_EXISTING, newline-separated; exit code from FAKE_LIST_EXIT,
 #               default 0 -- the names are printed even on failure, like a pagination that fails midway)
 #   gh secret set ... (exit code from FAKE_SET_EXIT, default 0)
@@ -29,6 +30,8 @@ setup() {
 #!/usr/bin/env bash
 echo "gh $*" >> "$GH_CALL_LOG"
 case "$*" in
+    "--version")    echo "gh version 99.0.0 (2026-01-01)" ;;  # verify_gh: a recent enough version
+    "auth status")  exit 0 ;;                                 # verify_gh: authenticated
     "secret set "*) exit "${FAKE_SET_EXIT:-0}" ;;
     *"/secrets"*)     [[ -n ${FAKE_EXISTING:-} ]] && printf '%s\n' "$FAKE_EXISTING"
                       (( ${FAKE_LIST_EXIT:-0} == 0 )) || echo "HTTP 403: Resource not accessible by integration" >&2
