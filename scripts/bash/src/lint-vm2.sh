@@ -146,7 +146,8 @@ hits=$(grep -nHE -- "$please_rule" "${message_files[@]}" | grep -vE '^[^:]+\.usa
 #    - the text of '...' and "..." strings, but not a command substitution inside "...": "$(error ...)" is a call;
 #    - comments, here-document bodies, and [[ ... ]] tests on one line ('[[ $1 == error ]]' is not a call).
 #    It is a heuristic, like check 8, not a bash parser: a case it gets wrong is a documented limitation, not a reason to
-#    grow it into one. A validator that only delegates its reporting to another validator is flagged too: let it report
+#    grow it into one. Known limitations: a reporter called inside a [[ ... ]] test ('[[ "$(error ...)" == ok ]]', which
+#    loses the error count in the subshell anyway) is not counted; a [[ ... ]] test across lines is scanned as code. A validator that only delegates its reporting to another validator is flagged too: let it report
 #    its own failure.
 declare -r validator_rule='^(is_valid|is_safe|validate|verify)_'
 declare -r silent_rule='^(is_|has_|assert_)'
@@ -155,8 +156,9 @@ declare -r report_scanner='
     # Removes the data from one line, and keeps the code. The state carries over to the next line:
     # q: "" outside quotes, "\"" or "\047" inside; stack[1..depth]: what each open "(" closes back to:
     # "dq" (a "$(" inside "..."), "cs" (an unquoted "$("), or "p" (a plain "(", e.g. a subshell);
-    # continued: the line ended with an unquoted "\", so the next line does not start a command.
-    function strip(line,    out, i, c, n, top) {
+    # continued: the line ended with an unquoted "\" after an argument, so the next line does not start a command;
+    # pending: the delimiter of a here-document opened on this line: its body starts on the next line.
+    function strip(line,    out, i, c, n, top, word) {
         out = continued ? "x" : ""                                      # "x": no command position at the start
         continued = 0
         n = length(line)
@@ -169,7 +171,20 @@ declare -r report_scanner='
                 else if (c == "\"") q = ""
                 else if (substr(line, i, 2) == "$(") { q = ""; stack[++depth] = "dq"; i++; out = out " ( " }
             } else {
-                if (c == "\\") { if (i == n) continued = 1; i++; continue }
+                if (c == "\\") {                                         # at the end: a continued line, unless the
+                    if (i == n && out !~ /([;&|({!]|(^|[[:space:]])(then|else|do))[[:space:]]*$/) continued = 1  # command goes on
+                    i++; continue
+                }
+                if (substr(line, i, 3) == "<<<") { out = out " <<< "; i += 2; continue }  # a here-string: a word follows
+                if (substr(line, i, 2) == "<<") {                       # a here-document: <<, an optional -, spaces, a quoted or bare WORD
+                    word = substr(line, i + 2)
+                    sub(/^-?[[:space:]]*/, "", word)
+                    if (match(word, /^["\047]?[A-Za-z_][A-Za-z0-9_]*/)) {
+                        pending = substr(word, RSTART, RLENGTH)
+                        sub(/^["\047]/, "", pending)
+                    }
+                    out = out " x "; i = n; continue                    # the rest of the line is the redirection
+                }
                 if (c == "#" && (i == 1 || substr(line, i - 1, 1) ~ /[[:space:];|&()]/)) break
                 if (c == "\047" || c == "\"") { q = c; out = out " x "; continue }   # a string is a word, not a command
                 if (substr(line, i, 2) == "$(") { stack[++depth] = "cs"; i++; out = out " ( "; continue }
@@ -187,18 +202,16 @@ declare -r report_scanner='
         gsub(/\[\[([^]]|\][^]])*\]\]/, " x ", out)                      # a [[ ... ]] test on one line is data
         return out
     }
-    FNR == 1                                    { fn = ""; q = ""; depth = 0; continued = 0; heredoc = "" }
+    FNR == 1                                    { fn = ""; q = ""; depth = 0; continued = 0; heredoc = ""; pending = "" }
     /^function [a-zA-Z_][a-zA-Z0-9_]*\(\)/      { fn = $2; sub(/\(\).*/, "", fn); key = FILENAME ":" FNR ":" fn; calls[key] = 0
-                                                  q = ""; depth = 0; continued = 0; heredoc = ""; next }
+                                                  q = ""; depth = 0; continued = 0; heredoc = ""; pending = ""; next }
     heredoc != ""                               { if ($0 ~ ("^[[:space:]]*" heredoc "$")) heredoc = ""; next }   # data
     /^}/ && q == ""                             { fn = ""; next }
     fn != ""                                    {
-                                                    if (q == "" && match($0, /<<-?[[:space:]]*["\047]?[A-Za-z_][A-Za-z0-9_]*/) && substr($0, RSTART, 3) != "<<<") {
-                                                        heredoc = substr($0, RSTART, RLENGTH)
-                                                        gsub(/^<<-?[[:space:]]*["\047]?/, "", heredoc)
-                                                    }
                                                     s = strip($0)
-                                                    if (s ~ /(^|[;&|(){!]|(^|[[:space:]])(if|elif|while|until|then|else|do))[[:space:]]*(error|with_error|warning|info)([[:space:]]|;|$)/)
+                                                    if (pending != "") { heredoc = pending; pending = "" }
+                                                    if (s ~ /(^|[;&|(){!])[[:space:]]*((if|elif|while|until)[[:space:]]+)?(error|with_error|warning|info)([[:space:]]|;|$)/ ||
+                                                        s ~ /(^|[[:space:]])(then|else|do)[[:space:]]+(error|with_error|warning|info)([[:space:]]|;|$)/)
                                                         calls[key]++
                                                 }
     END                                         { for (key in calls) print key, calls[key] }

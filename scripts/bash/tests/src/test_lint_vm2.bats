@@ -213,7 +213,7 @@ _add_functions()
     git -C "$_copy" -c user.email=t@e.com -c user.name=t commit -qam functions
 }
 
-@test "lint-vm2: reports a predicate that reports: direct, after '||', '{', 'then', 'if', a subshell, a case arm, in \"\$(...)\", after mixed quotes" {
+@test "lint-vm2: reports a predicate that reports: direct, after '||' (also continued), '{', 'then', 'if', a subshell, a case arm, in \"\$(...)\", after mixed quotes, a here-string, or '<<' in a string" {
     _copy_library
     # shellcheck disable=SC2016 # the function bodies are literal text for the probe
     _add_functions 'function is_probe_direct()
@@ -255,13 +255,29 @@ function is_probe_if_condition()
 function is_probe_after_subshell()
 {
     (cd /tmp) || error "x"
+}
+function is_probe_or_continued()
+{
+    false || \
+        error "Failure."
+}
+function is_probe_after_here_string()
+{
+    read -r _x <<< "ok"
+    error "x"
+}
+function is_probe_after_heredoc_text_in_a_string()
+{
+    echo "use <<EOF here"
+    error "x"
 }'
     _run_copy
     assert_failure
     assert_output --partial "Predicates and assert_* functions that report"
     local name
     for name in is_probe_direct is_probe_after_or has_probe_braces is_probe_then is_probe_substitution assert_probe_mixed_quotes \
-                is_probe_case_arm is_probe_if_condition is_probe_after_subshell; do
+                is_probe_case_arm is_probe_if_condition is_probe_after_subshell is_probe_or_continued \
+                is_probe_after_here_string is_probe_after_heredoc_text_in_a_string; do
         assert_output --regexp "_xml\.sh:[0-9]+:$name"
     done
 }
@@ -279,7 +295,7 @@ function is_probe_after_subshell()
     assert_output --regexp '_xml\.sh:[0-9]+:is_valid_probe'
 }
 
-@test "lint-vm2: does not take data for a call: a string, a multi-line message, an argument (also continued, or after \$(...)), a test, a here-document, a comment" {
+@test "lint-vm2: does not take data for a call: a string, a multi-line message, an argument (also continued, after \$(...), or after a keyword), a test, a here-document, a comment" {
     _copy_library
     # shellcheck disable=SC2016 # the function bodies are literal text for the probe
     _add_functions 'function is_probe_multiline_bug()
@@ -323,6 +339,11 @@ END
 function is_probe_test_with_or()
 {
     [[ "$1" == ok || error == "$1" ]]
+}
+function is_probe_keywords_as_arguments()
+{
+    is_in "$1" if error
+    is_in "$1" while warning
 }'
     _run_copy
     assert_success
