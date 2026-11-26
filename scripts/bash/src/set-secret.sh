@@ -115,7 +115,7 @@ for repo in "${vm2_repositories[@]}"; do
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     (( rc == success )) &&
         trace "  Secret '$secret_name' was set successfully." ||
-        with_error _ "$rc" "  Failed to set secret $secret_name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot."
+        error "  Failed to set secret $secret_name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$rc"
 done
 
 exit_if_has_errors

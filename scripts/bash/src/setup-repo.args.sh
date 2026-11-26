@@ -266,7 +266,7 @@ function resolve_arguments()
     resolve_vm2_repos vm2_repos "$branches" "$branches"                         || exit_with_error "Failed to resolve the parent directory of all vm2 repositories (usually \$VM2_REPOS)." -ec $?
 
     local _resolved
-    resolve_repo_root "$vm2_repos" "$repo_path" _resolved _                     || _rc=$?
+    resolve_repo_root "$vm2_repos" "$repo_path" _resolved void                  || _rc=$?
     case "$_rc" in
         "$success" )
             ;; # all good!

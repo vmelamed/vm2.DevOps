@@ -94,7 +94,7 @@ function resolve_arguments()
     repo_owner=${repo_owner:-$default_repo_owner}
 
     is_valid_gh_repo_owner "$repo_owner"                                        ||true
-    is_in_i "$app" "${gh_apps_with_secrets[@]}"                                 || with_error _ "$err_argument_value" "Invalid app '$app': use one of: ${gh_apps_with_secrets[*]}."
+    is_in_i "$app" "${gh_apps_with_secrets[@]}"                                 || error "Invalid app '$app': use one of: ${gh_apps_with_secrets[*]}." -ec "$err_argument_value"
     is_valid_gh_secret_name "$secret_name"                                      || true
 
     readonly repo_owner
