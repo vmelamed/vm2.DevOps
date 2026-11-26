@@ -140,20 +140,25 @@ hits=$(grep -nHE -- "$please_rule" "${message_files[@]}" | grep -vE '^[^:]+\.usa
 # 9) A library function's name says whether it reports (vm2.DevOps/CLAUDE.md, "Function Types"): a predicate
 #    (is_*, has_*) and an assert_* never call error, with_error, warning, or info (a bug is fine: it reports a
 #    broken contract); a validator (is_valid_*, is_safe_*, validate_*, verify_*) calls at least one of them.
-#    The body of 'function name()' runs to the first '}' in column 1, as the library writes it. The scan is
-#    quote-aware, across lines: the text of '...' and "..." strings and comments is dropped, so 'bug "... error ..."'
-#    is not a call to error, but a command substitution inside "..." is kept: "$(error ...)" is one. A name counts only
-#    in a command position (the start of a line, or after ; & | ( { ! then else do), so the data in
-#    'is_in "$1" error info' or '[[ $1 == error ]]' is not a call. A validator that only delegates its reporting to
-#    another validator is flagged too: let it report its own failure.
+#    The body of 'function name()' runs to the first '}' in column 1, as the library writes it. A name counts only in a
+#    command position: the start of a command (not of a continued line), or after ; & | ( ) { ! and the reserved words
+#    if elif while until then else do. The scan carries its state across lines, and drops what is data:
+#    - the text of '...' and "..." strings, but not a command substitution inside "...": "$(error ...)" is a call;
+#    - comments, here-document bodies, and [[ ... ]] tests on one line ('[[ $1 == error ]]' is not a call).
+#    It is a heuristic, like check 8, not a bash parser: a case it gets wrong is a documented limitation, not a reason to
+#    grow it into one. A validator that only delegates its reporting to another validator is flagged too: let it report
+#    its own failure.
 declare -r validator_rule='^(is_valid|is_safe|validate|verify)_'
 declare -r silent_rule='^(is_|has_|assert_)'
 # shellcheck disable=SC2016 # the $ signs are awk's and the shell's text to scan, not something to expand here
 declare -r report_scanner='
-    # Removes the quoted text and the comment from one line; the quote state carries over to the next line.
-    # q: "" outside quotes, "\"" or "\047" inside; dq_depth: the "$(" nesting depth that leads back into "...".
-    function strip(line,    out, i, c, n) {
-        out = ""
+    # Removes the data from one line, and keeps the code. The state carries over to the next line:
+    # q: "" outside quotes, "\"" or "\047" inside; stack[1..depth]: what each open "(" closes back to:
+    # "dq" (a "$(" inside "..."), "cs" (an unquoted "$("), or "p" (a plain "(", e.g. a subshell);
+    # continued: the line ended with an unquoted "\", so the next line does not start a command.
+    function strip(line,    out, i, c, n, top) {
+        out = continued ? "x" : ""                                      # "x": no command position at the start
+        continued = 0
         n = length(line)
         for (i = 1; i <= n; i++) {
             c = substr(line, i, 1)
@@ -162,28 +167,38 @@ declare -r report_scanner='
             } else if (q == "\"") {
                 if (c == "\\") i++                                      # an escaped character
                 else if (c == "\"") q = ""
-                else if (substr(line, i, 2) == "$(") { q = ""; dq[++dq_depth] = 1; i++; out = out " ( " }
+                else if (substr(line, i, 2) == "$(") { q = ""; stack[++depth] = "dq"; i++; out = out " ( " }
             } else {
-                if (c == "\\") { i++; continue }
-                if (c == "#" && (i == 1 || substr(line, i - 1, 1) ~ /[[:space:];|&(]/)) break
-                if (c == "\047" || c == "\"") { q = c; out = out " "; continue }
-                if (c == "(") paren[dq_depth]++
-                if (c == ")" && dq_depth > 0) {
-                    if (paren[dq_depth] > 0) paren[dq_depth]--
-                    else { dq_depth--; q = "\""; out = out " ; "; continue }   # the end of "$(...)": back inside "..."
+                if (c == "\\") { if (i == n) continued = 1; i++; continue }
+                if (c == "#" && (i == 1 || substr(line, i - 1, 1) ~ /[[:space:];|&()]/)) break
+                if (c == "\047" || c == "\"") { q = c; out = out " x "; continue }   # a string is a word, not a command
+                if (substr(line, i, 2) == "$(") { stack[++depth] = "cs"; i++; out = out " ( "; continue }
+                if (c == "(") { stack[++depth] = "p"; out = out "("; continue }
+                if (c == ")") {
+                    top = depth > 0 ? stack[depth--] : ""
+                    if (top == "dq") { q = "\""; out = out " x "; continue }   # back inside "...": the rest is a word
+                    if (top == "cs") { out = out " x "; continue }             # $(...) is a word: an argument may follow
+                    out = out ")"                                               # a subshell, or a case arm
+                    continue
                 }
                 out = out c
             }
         }
+        gsub(/\[\[([^]]|\][^]])*\]\]/, " x ", out)                      # a [[ ... ]] test on one line is data
         return out
     }
-    FNR == 1                                    { fn = ""; q = ""; dq_depth = 0 }
+    FNR == 1                                    { fn = ""; q = ""; depth = 0; continued = 0; heredoc = "" }
     /^function [a-zA-Z_][a-zA-Z0-9_]*\(\)/      { fn = $2; sub(/\(\).*/, "", fn); key = FILENAME ":" FNR ":" fn; calls[key] = 0
-                                                  q = ""; dq_depth = 0; next }
+                                                  q = ""; depth = 0; continued = 0; heredoc = ""; next }
+    heredoc != ""                               { if ($0 ~ ("^[[:space:]]*" heredoc "$")) heredoc = ""; next }   # data
     /^}/ && q == ""                             { fn = ""; next }
     fn != ""                                    {
+                                                    if (q == "" && match($0, /<<-?[[:space:]]*["\047]?[A-Za-z_][A-Za-z0-9_]*/) && substr($0, RSTART, 3) != "<<<") {
+                                                        heredoc = substr($0, RSTART, RLENGTH)
+                                                        gsub(/^<<-?[[:space:]]*["\047]?/, "", heredoc)
+                                                    }
                                                     s = strip($0)
-                                                    if (s ~ /(^|[;&|({!]|(^|[[:space:]])(then|else|do))[[:space:]]*(error|with_error|warning|info)([[:space:]]|;|$)/)
+                                                    if (s ~ /(^|[;&|(){!]|(^|[[:space:]])(if|elif|while|until|then|else|do))[[:space:]]*(error|with_error|warning|info)([[:space:]]|;|$)/)
                                                         calls[key]++
                                                 }
     END                                         { for (key in calls) print key, calls[key] }
