@@ -203,3 +203,89 @@ _add_message()
     _run_copy
     assert_success
 }
+
+# --- check 9: function names match whether they report --------------------------------------
+
+# Appends the functions in $1 (complete 'function name() { ... }' text) to a library file of the copy, and commits them.
+_add_functions()
+{
+    printf '\n%s\n' "$1" >> "$_copy/lib/_xml.sh"
+    git -C "$_copy" -c user.email=t@e.com -c user.name=t commit -qam functions
+}
+
+@test "lint-vm2: reports a predicate that reports: a direct call, after '||', in braces, after 'then', in \"\$(...)\", after a mixed-quote string" {
+    _copy_library
+    # shellcheck disable=SC2016 # the function bodies are literal text for the probe
+    _add_functions 'function is_probe_direct()
+{
+    error "x"
+}
+function is_probe_after_or()
+{
+    [[ -n $1 ]] ||
+        with_error _rc 2 "x"
+}
+function has_probe_braces()
+{
+    [[ -n $1 ]] || { warning "x"; return 1; }
+}
+function is_probe_then()
+{
+    if true; then info "x"; fi
+}
+function is_probe_substitution()
+{
+    local _value="$(error '"'"'Invalid value.'"'"')"
+}
+function assert_probe_mixed_quotes()
+{
+    bug '"'"'The token " is invalid.'"'"'; error "Failed to read the file."
+}'
+    _run_copy
+    assert_failure
+    assert_output --partial "Predicates and assert_* functions that report"
+    local name
+    for name in is_probe_direct is_probe_after_or has_probe_braces is_probe_then is_probe_substitution assert_probe_mixed_quotes; do
+        assert_output --regexp "_xml\.sh:[0-9]+:$name"
+    done
+}
+
+@test "lint-vm2: reports a validator that never reports" {
+    _copy_library
+    # shellcheck disable=SC2016 # the function body is literal text for the probe
+    _add_functions 'function is_valid_probe()
+{
+    [[ $1 =~ ^[0-9]+$ ]]
+}'
+    _run_copy
+    assert_failure
+    assert_output --partial "Validators that never report"
+    assert_output --regexp '_xml\.sh:[0-9]+:is_valid_probe'
+}
+
+@test "lint-vm2: does not take a word in a string, a multi-line bug message, an argument, a comparison, or a comment for a call" {
+    _copy_library
+    # shellcheck disable=SC2016 # the function bodies are literal text for the probe
+    _add_functions 'function is_probe_multiline_bug()
+{
+    (( $# == 1 )) || bug "requires
+        an error description" -ec 2
+}
+function is_probe_data_words()
+{
+    is_in "$1" error warning info
+    [[ $1 == error ]]
+}
+function is_probe_comments()
+{
+    true # error "x"
+    # error "y"
+}
+function is_probe_nested_parens()
+{
+    echo "$( (cd /tmp && echo) ) error"
+}'
+    _run_copy
+    assert_success
+    refute_output --partial "Predicates and assert_* functions that report"
+}
