@@ -213,7 +213,7 @@ _add_functions()
     git -C "$_copy" -c user.email=t@e.com -c user.name=t commit -qam functions
 }
 
-@test "lint-vm2: reports a predicate that reports: a direct call, after '||', in braces, after 'then', in \"\$(...)\", after a mixed-quote string" {
+@test "lint-vm2: reports a predicate that reports: direct, after '||', '{', 'then', 'if', a subshell, a case arm, in \"\$(...)\", after mixed quotes" {
     _copy_library
     # shellcheck disable=SC2016 # the function bodies are literal text for the probe
     _add_functions 'function is_probe_direct()
@@ -240,12 +240,28 @@ function is_probe_substitution()
 function assert_probe_mixed_quotes()
 {
     bug '"'"'The token " is invalid.'"'"'; error "Failed to read the file."
+}
+function is_probe_case_arm()
+{
+    case $1 in
+        ok) return 0 ;;
+        *) error "Failure." ;;
+    esac
+}
+function is_probe_if_condition()
+{
+    if error "x"; then :; fi
+}
+function is_probe_after_subshell()
+{
+    (cd /tmp) || error "x"
 }'
     _run_copy
     assert_failure
     assert_output --partial "Predicates and assert_* functions that report"
     local name
-    for name in is_probe_direct is_probe_after_or has_probe_braces is_probe_then is_probe_substitution assert_probe_mixed_quotes; do
+    for name in is_probe_direct is_probe_after_or has_probe_braces is_probe_then is_probe_substitution assert_probe_mixed_quotes \
+                is_probe_case_arm is_probe_if_condition is_probe_after_subshell; do
         assert_output --regexp "_xml\.sh:[0-9]+:$name"
     done
 }
@@ -263,7 +279,7 @@ function assert_probe_mixed_quotes()
     assert_output --regexp '_xml\.sh:[0-9]+:is_valid_probe'
 }
 
-@test "lint-vm2: does not take a word in a string, a multi-line bug message, an argument, a comparison, or a comment for a call" {
+@test "lint-vm2: does not take data for a call: a string, a multi-line message, an argument (also continued, or after \$(...)), a test, a here-document, a comment" {
     _copy_library
     # shellcheck disable=SC2016 # the function bodies are literal text for the probe
     _add_functions 'function is_probe_multiline_bug()
@@ -284,6 +300,29 @@ function is_probe_comments()
 function is_probe_nested_parens()
 {
     echo "$( (cd /tmp && echo) ) error"
+}
+function is_probe_continued_arguments()
+{
+    is_in "$1" \
+        error warning info
+}
+function is_probe_after_substitutions()
+{
+    is_in "$1" "$(printf ok)" error
+    is_in $(printf ok) error
+}
+function is_probe_heredocs()
+{
+    cat <<'"'"'TXT'"'"'
+error description
+TXT
+    cat <<END
+warning text
+END
+}
+function is_probe_test_with_or()
+{
+    [[ "$1" == ok || error == "$1" ]]
 }'
     _run_copy
     assert_success
