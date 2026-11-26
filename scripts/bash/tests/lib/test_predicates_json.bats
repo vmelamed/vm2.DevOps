@@ -125,12 +125,24 @@ EOF
     assert_output --partial "is not well-formed"
 }
 
-@test "is_valid_json_with_schema: fails with err_invalid_json for a non-existent or empty JSON file" {
+@test "is_valid_json_with_schema: fails with err_not_file for a non-existent or empty JSON file, and never runs the schema check" {
     _write_json_schema_fixtures
     run is_valid_json_with_schema "$BATS_TEST_TMPDIR/does-not-exist.json" "$BATS_TEST_TMPDIR/schema.json"
-    assert_failure "$err_invalid_json"
+    assert_failure "$err_not_file"
+    refute_output --partial "failed validation against the schema"
     run is_valid_json_with_schema "$BATS_TEST_TMPDIR/empty.json" "$BATS_TEST_TMPDIR/schema.json"
-    assert_failure "$err_invalid_json"
+    assert_failure "$err_not_file"
+    refute_output --partial "failed validation against the schema"
+}
+
+@test "is_valid_json_with_schema: fails with err_not_file for a non-existent or empty JSON file when check-jsonschema is not on PATH" {
+    _write_json_schema_fixtures
+    local _path_without_check_jsonschema _json
+    _path_without_check_jsonschema=$(echo "$PATH" | tr ':' '\n' | grep -v -F "$(dirname "$(command -v check-jsonschema)")" | paste -sd:)
+    for _json in does-not-exist.json empty.json; do
+        run bash -c "PATH='$_path_without_check_jsonschema'; source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; is_valid_json_with_schema '$BATS_TEST_TMPDIR/$_json' '$BATS_TEST_TMPDIR/schema.json'"
+        assert_failure "$err_not_file"
+    done
 }
 
 @test "is_valid_json_with_schema: skips validation and succeeds when check-jsonschema is not on PATH" {

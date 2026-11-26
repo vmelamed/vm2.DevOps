@@ -101,7 +101,8 @@ function is_valid_json_with_schema()
     local _output
 
     if verify_check_jsonschema; then
-        (( _rc != success )) || _output=$(check-jsonschema --schemafile "$_schema_file" "$_json_file" 2>&1) \
+        # validate against the schema only if both files passed their own checks: _rc holds only the schema file's result
+        (( _rc1 != success || _rc != success )) || _output=$(check-jsonschema --schemafile "$_schema_file" "$_json_file" 2>&1) \
                                                                                 || with_error _rc "$err_invalid_json" "'$_json_file' failed validation against the schema in '$_schema_file':" "$_output"
         (( _rc == success )) || _rc1=$_rc
     fi
