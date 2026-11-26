@@ -254,29 +254,41 @@ setup() {
     assert_failure "$err_invalid_arguments"
 }
 
-# --- get_latest_stable_tag_hash / is_after_latest_stable_tag / is_on_or_after_latest_stable_tag -
+# --- get_latest_stable_tag_hash / verify_after_latest_stable_tag / verify_on_or_after_latest_stable_tag -
 
 @test "get_latest_stable_tag_hash: resolves a commit hash for the real repo without fetching" {
-    run get_latest_stable_tag_hash "$_repo_root" false
-    assert_success
-    [[ ${#output} -eq 40 ]]
+    local hash=''
+    get_latest_stable_tag_hash "$_repo_root" false hash     # in-process: a nameref does not cross 'run'
+    [[ $hash =~ ^[0-9a-f]{40}$ ]]
 }
 
 @test "get_latest_stable_tag_hash: bug-exits on a non-boolean fetch flag" {
-    run get_latest_stable_tag_hash "$_repo_root" "maybe"
+    local hash=''
+    run get_latest_stable_tag_hash "$_repo_root" "maybe" hash
     assert_failure "$err_argument_type"
 }
 
-@test "get_latest_stable_tag_hash: bug-exits with too many arguments" {
-    run get_latest_stable_tag_hash "$_repo_root" false "extra"
+@test "get_latest_stable_tag_hash: bug-exits on an undeclared output variable" {
+    run get_latest_stable_tag_hash "$_repo_root" false "no_such_variable"
+    assert_failure "$err_invalid_nameref"
+}
+
+@test "get_latest_stable_tag_hash: bug-exits with too few arguments" {
+    run get_latest_stable_tag_hash "$_repo_root" false
     assert_failure "$err_invalid_arguments"
 }
 
-@test "is_after_latest_stable_tag / is_on_or_after_latest_stable_tag: run cleanly against the real repo without fetching" {
-    run is_after_latest_stable_tag "$_repo_root" false
-    [[ $status -eq 0 || $status -eq 1 ]]
-    run is_on_or_after_latest_stable_tag "$_repo_root" false
-    [[ $status -eq 0 || $status -eq 1 ]]
+@test "get_latest_stable_tag_hash: bug-exits with too many arguments" {
+    local hash=''
+    run get_latest_stable_tag_hash "$_repo_root" false hash "extra"
+    assert_failure "$err_invalid_arguments"
+}
+
+@test "verify_after_latest_stable_tag / verify_on_or_after_latest_stable_tag: run cleanly against the real repo without fetching" {
+    run verify_after_latest_stable_tag "$_repo_root" false
+    [[ $status -eq 0 || $status -eq $err_not_after_latest_stable_tag ]]
+    run verify_on_or_after_latest_stable_tag "$_repo_root" false
+    [[ $status -eq 0 || $status -eq $err_behind_latest_stable_tag ]]
 }
 
 # --- ensure_fresh_git_state (formal validation only, no real fetch) ------------------------------

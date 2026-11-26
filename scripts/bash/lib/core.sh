@@ -309,7 +309,7 @@ function execute()
 #   so the caller gets real data.
 # @option -q|--quiet Discards the command's stdout (not its stderr).
 # @option -c|--classify <function name> The name of a function that classifies a failure. It
-#   receives three arguments (validate them with `validate_classifier_args "$@"`):
+#   receives three arguments (validate them with `assert_classifier_args "$@"`):
 #       - the failed command's exit code [1, 255]
 #       - the name of the file holding the command's stdout
 #       - the name of the file holding the command's stderr
@@ -482,7 +482,7 @@ function execute_with_retry()
 # @example
 #   function example_failure()
 #   {
-#       validate_classifier_args "$@"
+#       assert_classifier_args "$@"
 #
 #       local _exit_code=$1
 #       local _stdout_file=$2
@@ -491,7 +491,7 @@ function execute_with_retry()
 #       # 0: transient; 1: $err_tool_error; or another vm2 code, e.g. $err_not_found
 #   }
 #-----------------------------------------------------------------------------------------------
-function validate_classifier_args()
+function assert_classifier_args()
 {
     (( $# == 3 ))                                                               || bug "${FUNCNAME[1]}() requires 3 arguments (provided $#):" \
                                                                                        "  - the failed command's exit code" \

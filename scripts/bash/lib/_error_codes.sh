@@ -18,74 +18,76 @@ declare -ri __VM2_LIB_ERROR_CODES_SH_LOADED=1
 #===============================================================================================
 
 # RETURN CODES THAT ARE REUSED FOR OTHER PURPOSES:
-declare -xri success=0                  # The command succeeded (as a predicate: true).
-declare -xri failure=1                  # The command failed with an unspecified error (as a predicate: false; or the input ended).
+declare -xri success=0                              # The command succeeded (as a predicate: true).
+declare -xri failure=1                              # The command failed with an unspecified error (as a predicate: false; or the input ended).
 
 # alternatively as boolean return codes:
-declare -xri positive=0                 # Boolean return codes (truthy), you cannot use `return true` in bash but you can `return $positive`;
-declare -xri negative=1                 # Boolean return codes (falsy), you cannot use `return false` in bash but you can `return $negative`;
+declare -xri positive=0                             # Boolean return codes (truthy), you cannot use `return true` in bash but you can `return $positive`;
+declare -xri negative=1                             # Boolean return codes (falsy), you cannot use `return false` in bash but you can `return $negative`;
 
-declare -xri eof=1                      # Alias for failure: end-of-file is encountered  (e.g., when using the read command)
+declare -xri eof=1                                  # Alias for failure: end-of-file is encountered  (e.g., when using the read command)
 
 # or comparison result constants
-declare -xri rc_equal=0                 # akin to 0 in signed integer comparison
-declare -xri rc_greater_than=1          # akin to 1 in signed integer comparison
-declare -xri rc_less_than=255           # akin to -1 in signed integer comparison
+declare -xri rc_equal=0                             # akin to 0 in signed integer comparison
+declare -xri rc_greater_than=1                      # akin to 1 in signed integer comparison
+declare -xri rc_less_than=255                       # akin to -1 in signed integer comparison
 
 # RETURN CODES THAT MUST NOT BE REUSED FOR OTHER PURPOSES:
-declare -xri err_invalid_arguments=2    # The arguments are invalid: the wrong number of arguments, or values that failed validation.
-declare -xri err_argument_type=3        # An argument has the wrong type.
-declare -xri err_argument_value=4       # An argument has an invalid value.
-declare -xri err_invalid_nameref=5      # An argument is not a valid variable name.
-declare -xri err_missing_argument=6     # A required argument is missing.
-declare -xri err_too_many_arguments=7   # There are more arguments than allowed.
-declare -xri err_unknown_argument=8     # An argument is not recognized.
-declare -xri err_not_found=9            # No item matches the criteria.
-declare -xri err_found_too_many=10      # Too many items match the criteria.
-declare -xri err_unsafe_argument=11     # An argument is unsafe to use.
-declare -xri err_invalid_json=12        # An argument is not valid JSON.
-declare -xri err_invalid_json_array=13  # An argument is not a valid JSON array.
-declare -xri err_invalid_item=14        # An item of a collection is invalid.
+declare -xri err_invalid_arguments=2                # The arguments are invalid: the wrong number of arguments, or values that failed validation.
+declare -xri err_argument_type=3                    # An argument has the wrong type.
+declare -xri err_argument_value=4                   # An argument has an invalid value.
+declare -xri err_invalid_nameref=5                  # An argument is not a valid variable name.
+declare -xri err_missing_argument=6                 # A required argument is missing.
+declare -xri err_too_many_arguments=7               # There are more arguments than allowed.
+declare -xri err_unknown_argument=8                 # An argument is not recognized.
+declare -xri err_not_found=9                        # No item matches the criteria.
+declare -xri err_found_too_many=10                  # Too many items match the criteria.
+declare -xri err_unsafe_argument=11                 # An argument is unsafe to use.
+declare -xri err_invalid_json=12                    # An argument is not valid JSON.
+declare -xri err_invalid_json_array=13              # An argument is not a valid JSON array.
+declare -xri err_invalid_item=14                    # An item of a collection is invalid.
 
-declare -xri err_not_file=16            # An argument is not a file.
-declare -xri err_not_directory=17       # An argument is not a directory.
-declare -xri err_invalid_file=18        # An argument is not a valid file or directory name.
-declare -xri err_invalid_path=19        # An argument is not a valid path.
-declare -xri err_non_existent_path=20   # An argument is a path that does not exist.
-declare -xri err_io_failure=21          # An I/O operation failed.
+declare -xri err_not_file=16                        # An argument is not a file.
+declare -xri err_not_directory=17                   # An argument is not a directory.
+declare -xri err_invalid_file=18                    # An argument is not a valid file or directory name.
+declare -xri err_invalid_path=19                    # An argument is not a valid path.
+declare -xri err_non_existent_path=20               # An argument is a path that does not exist.
+declare -xri err_io_failure=21                      # An I/O operation failed.
 
-declare -xri err_not_overridden=64      # A function that the calling script must override is not overridden.
-declare -xri err_tool_not_found=65      # A required external tool is not installed.
-declare -xri err_tool_error=66          # An external tool failed.
-declare -xri err_tool_unauthenticated=67 # An external tool is not authenticated.
-declare -xri err_logic_error=68         # The script reached an invalid state: a bug or an unexpected condition.
-declare -xri err_tool_version=69        # An external tool's version is not supported.
-declare -xri err_access_denied=70       # Access to a resource was denied.
+declare -xri err_not_overridden=64                  # A function that the calling script must override is not overridden.
+declare -xri err_tool_not_found=65                  # A required external tool is not installed.
+declare -xri err_tool_error=66                      # An external tool failed.
+declare -xri err_tool_unauthenticated=67            # An external tool is not authenticated.
+declare -xri err_logic_error=68                     # The script reached an invalid state: a bug or an unexpected condition.
+declare -xri err_tool_version=69                    # An external tool's version is not supported.
+declare -xri err_access_denied=70                   # Access to a resource was denied.
 
-declare -xri err_not_git_directory=80   # The directory is not in a Git working tree.
-declare -xri err_not_git_root=81        # The directory is not the root of a Git working tree.
-declare -xri err_behind_latest_stable_tag=82 # The repository is behind its latest stable tag.
-declare -xri err_invalid_repo=83        # The repository is not valid.
-declare -xri err_invalid_branch=84      # The repository is not on the expected branch.
-declare -xri err_repo_with_no_ci=85     # The repository has no CI configuration (.github/workflows).
-declare -xri err_dir_with_ci=86         # The directory is not in a Git repository yet, but it has a CI configuration (.github/workflows).
-declare -xri err_dir_with_no_ci=87      # The directory is not in a Git repository and has no CI configuration (.github/workflows).
-declare -xri err_not_repos_parent=88    # The directory is not the parent directory of the vm2 repositories.
-declare -xri err_not_current_commit=89  # The repository is not at the expected commit.
-declare -xri err_root_not_repo_name=90  # The repository's directory name is not its GitHub repository name.
-declare -xri err_repo_not_in_vm2_repos=91   # The repository is not in the vm2 repositories directory.
-declare -xri err_invalid_repo_name=92   # The specified string is not a valid repository name.
-declare -xri err_invalid_branch_name=93 # The specified string is not a valid branch name.
-declare -xri err_invalid_tag=94         # The specified string is not a valid tag.
-declare -xri err_invalid_sha=95         # The specified string is not a valid commit SHA.
+declare -xri err_not_git_directory=80               # The directory is not in a Git working tree.
+declare -xri err_not_git_root=81                    # The directory is not the root of a Git working tree.
+declare -xri err_behind_latest_stable_tag=82        # The repository is behind the tag of the latest stable release.
+declare -xri err_invalid_repo=83                    # The repository is not valid.
+declare -xri err_invalid_branch=84                  # The repository is not on the expected branch.
+declare -xri err_repo_with_no_ci=85                 # The repository has no CI configuration (.github/workflows).
+declare -xri err_dir_with_ci=86                     # The directory is not in a Git repository yet, but it has a CI configuration (.github/workflows).
+declare -xri err_dir_with_no_ci=87                  # The directory is not in a Git repository and has no CI configuration (.github/workflows).
+declare -xri err_not_repos_parent=88                # The directory is not the parent directory of the vm2 repositories.
+declare -xri err_not_current_commit=89              # The repository is not at the expected commit.
+declare -xri err_root_not_repo_name=90              # The repository's directory name is not its GitHub repository name.
+declare -xri err_repo_not_in_vm2_repos=91           # The repository is not in the vm2 repositories directory.
+declare -xri err_invalid_repo_name=92               # The specified string is not a valid repository name.
+declare -xri err_invalid_branch_name=93             # The specified string is not a valid branch name.
+declare -xri err_invalid_tag=94                     # The specified string is not a valid tag.
+declare -xri err_invalid_sha=95                     # The specified string is not a valid commit SHA.
+declare -xri err_no_stable_tag=96                   # The repository does not have a tag that marks a stable release.
+declare -xri err_not_after_latest_stable_tag=97     # The repository is not after the tag of the latest stable release.
 
-declare -xri time_out=128               # The command timed out.
+declare -xri time_out=128                           # The command timed out.
 
-declare -xri err_unknown=250            # An unknown error occurred.
+declare -xri err_unknown=250                        # An unknown error occurred.
 
-declare -xri err_unexpected_error=252   # An unexpected error occurred.
-declare -xri err_has_errors=253         # Errors were reported above.
-declare -xri err_has_bugs=254           # Bugs (violations of a function's calling contract) were reported above.
+declare -xri err_unexpected_error=252               # An unexpected error occurred.
+declare -xri err_has_errors=253                     # Errors were reported above.
+declare -xri err_has_bugs=254                       # Bugs (violations of a function's calling contract) were reported above.
 
 # vm2 core lib constants
 declare -x bug_prefix
@@ -125,7 +127,7 @@ declare -rA __error_messages=(
 
     [$err_not_git_directory]="The directory is not in a Git working tree."
     [$err_not_git_root]="The directory is not the root of a Git working tree."
-    [$err_behind_latest_stable_tag]="The repository is behind its latest stable tag."
+    [$err_behind_latest_stable_tag]="The repository is behind the tag of the latest stable release."
     [$err_invalid_repo]="The repository is not valid."
     [$err_invalid_branch]="The repository is not on the expected branch."
     [$err_repo_with_no_ci]="The repository has no CI configuration (.github/workflows)."
@@ -139,6 +141,8 @@ declare -rA __error_messages=(
     [$err_invalid_branch_name]="The specified string is not a valid branch name."
     [$err_invalid_tag]="The specified string is not a valid tag."
     [$err_invalid_sha]="The specified string is not a valid commit SHA."
+    [$err_no_stable_tag]="The repository has no tag that marks a stable release."
+    [$err_not_after_latest_stable_tag]="The repository is not after the tag of the latest stable release."
 
     [$time_out]="The command timed out."
 
@@ -197,6 +201,8 @@ declare -rA __error_names=(
     [$err_invalid_branch_name]="\$err_invalid_branch_name"
     [$err_invalid_tag]="\$err_invalid_tag"
     [$err_invalid_sha]="\$err_invalid_sha"
+    [$err_no_stable_tag]="\$err_no_stable_tag"
+    [$err_not_after_latest_stable_tag]="\$err_not_after_latest_stable_tag"
 
     [$time_out]="\$time_out"
 

@@ -101,7 +101,7 @@ See `docs/ARCHITECTURE.md` for the full design and `docs/WORKFLOWS_REFERENCE.md`
 | `.github/workflows/`   | Reusable workflows (`_ci.yaml`, `_build.yaml`, `_test.yaml`, etc.)        |
 | `.github/scripts/`     | CI/CD action scripts (three-file convention — see below)                  |
 | `.github/actions/`     | Custom composite actions (`setup-env`, `cache-dependencies`, etc.)        |
-| `scripts/bash/lib/`    | Shared bash library (`_diagnostics.sh`, `_git.sh`, `core.args.sh`, etc.) |
+| `scripts/bash/lib/`    | Shared bash library (`_diagnostics.sh`, `_git.sh`, `core.args.sh`, etc.)  |
 | `scripts/bash/src/`    | Local dev utility scripts (`diff-shared.sh`, `setup-repo.sh`, etc.)       |
 | `docs/`                | Reference documentation (15 `.md` files)                                  |
 
@@ -509,6 +509,9 @@ code of the failure, so the caller writes `is_valid_xyz "$x" || _rc=$?` instead 
 |                | may cache the result, and may only warn for an optional tool                    |                                 |
 | `assert_xyz`   | a caller's contract only: reports `bug`s and exits, never returns an error      | `assert_classifier_args`        |
 
+- Report every independent failure, then return the code of the last one (`with_error` does that). Skip a check whose
+  input an earlier check has already rejected, with the guard `(( _rc != success )) ||`: a missing file is reported
+  once, as missing, not again as "not a file" or "not valid JSON".
 - A validator that only answers yes or no is an `is_valid_xyz` or an `is_safe_xyz`, not a `validate_xyz`.
 - A pure presence check stays a predicate: `is_tool_present`, not `verify_tool`.
 - A subject does not need every form. If `is_xyz` would be called only by `is_valid_xyz`, fold it in.
@@ -749,7 +752,7 @@ reports the most common departures (see its check 8).
 | `error`: a step failed      | user      | `Failed to <verb> <object> '<subject>'.` (`with_error` adds the tool's exit code)                |
 | `error`: invalid user input | user      | `Invalid <thing> '<value>': <rule>.`                                                             |
 | fix hint (a separate part)  | user      | imperative, without "Please": `Use '--visibility public\|private'.`                              |
-| URL                         | both      | in angle brackets (RFC 3986, Appendix C), the sentence ends as usual: `See <https://…>.`        |
+| URL                         | both      | in angle brackets (RFC 3986, Appendix C), the sentence ends as usual: `See <https://…>.`         |
 | code text                   | both      | one generic statement, present tense, no examples, no fix: `An argument is not a directory.`     |
 
 - The code texts live in `_error_codes.sh` and `_dotnet.constants.sh`.

@@ -551,7 +551,7 @@ function is_valid_gh_secret_name()
 #-----------------------------------------------------------------------------------------------
 function gh_failure()
 {
-    validate_classifier_args "$@"
+    assert_classifier_args "$@"
 
     local _exit_code=$1
     local _stdout_file=$2

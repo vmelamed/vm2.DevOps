@@ -10,7 +10,7 @@
     - [add\_trap()](#add_trap)
     - [execute()](#execute)
     - [execute\_with\_retry()](#execute_with_retry)
-    - [validate\_classifier\_args()](#validate_classifier_args)
+    - [assert\_classifier\_args()](#assert_classifier_args)
     - [list\_of\_files()](#list_of_files)
     - [find\_files\_by\_precedence()](#find_files_by_precedence)
   - [core.state.sh](#corestatesh)
@@ -148,7 +148,7 @@
     - [should\_fetch\_for\_latest\_stable\_tag()](#should_fetch_for_latest_stable_tag)
     - [ensure\_fresh\_git\_state()](#ensure_fresh_git_state)
     - [get\_latest\_stable\_tag\_hash()](#get_latest_stable_tag_hash)
-    - [is\_after\_latest\_stable\_tag() / is\_on\_or\_after\_latest\_stable\_tag()](#is_after_latest_stable_tag--is_on_or_after_latest_stable_tag)
+    - [verify\_after\_latest\_stable\_tag() / verify\_on\_or\_after\_latest\_stable\_tag()](#verify_after_latest_stable_tag--verify_on_or_after_latest_stable_tag)
   - [\_git.gh.sh](#_gitghsh)
     - [is\_gh\_repo\_owner() / is\_gh\_repo\_name() / is\_gh\_repo\_full\_name() / is\_gh\_repo\_description()](#is_gh_repo_owner--is_gh_repo_name--is_gh_repo_full_name--is_gh_repo_description)
     - [is\_valid\_gh\_repo\_owner() / is\_valid\_gh\_repo\_name() / is\_valid\_gh\_repo\_description()](#is_valid_gh_repo_owner--is_valid_gh_repo_name--is_valid_gh_repo_description)
@@ -270,7 +270,7 @@ failure from the exit code, stdout, and stderr: `0` transient (retry), `1` persi
 code to return, e.g. `$err_not_found` (default: every failure is transient). A failure is not reported as an error: the
 caller decides.
 
-### validate_classifier_args()
+### assert_classifier_args()
 
 Validates the arguments of a `--classify` function (exit code, stdout file, stderr file); bug-exits when invalid.
 
@@ -876,9 +876,9 @@ Fetches from the remote if `should_fetch_for_latest_stable_tag` recommends it.
 
 Gets the commit hash of the latest stable tag in a repository.
 
-### is_after_latest_stable_tag() / is_on_or_after_latest_stable_tag()
+### verify_after_latest_stable_tag() / verify_on_or_after_latest_stable_tag()
 
-Test if the current commit is strictly after / on-or-after the latest stable tag.
+Verifies that the current commit is strictly after / on-or-after the latest stable tag.
 
 ---
 

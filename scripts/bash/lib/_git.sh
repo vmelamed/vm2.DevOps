@@ -29,6 +29,9 @@ declare -x err_invalid_branch
 declare -x err_invalid_branch_name
 declare -x err_invalid_tag
 declare -x err_invalid_sha
+declare -x err_no_stable_tag
+declare -x err_behind_latest_stable_tag
+declare -x err_not_after_latest_stable_tag
 
 # vm2 core lib constants
 declare -x semverTagReleaseRegex
@@ -355,37 +358,41 @@ function ensure_fresh_git_state()
 #
 # @arg $1 string _dir path to a Git repository.
 # @arg $2 bool _should_fetch flag whether to ensure fresh Git status.
+# @arg $3 string the name of a variable to receive the latest stable tag hash
 #
 # @exitcode success=0: On success.
 # @exitcode err_not_git_directory=80: Argument 1 is not inside a Git working tree.
+# @exitcode err_no_stable_tag=96: If no tags marking stable releases are found.
+# @exitcode err_tool_error=66: Git failure
 # @exitcode N propagated from `ensure_fresh_git_state()` if `$2` is true and fetching fails.
-# @exitcode failure=1: If no stable tags are found.
-#
-# @stdout The commit hash of the latest stable tag.
 #
 # @example
-#   latest_hash=$(get_latest_stable_tag_hash "$repo_dir")
+#   local _latest_hash
+#   get_latest_stable_tag_hash "$repo_dir" true _latest_hash
 #-----------------------------------------------------------------------------------------------
 function get_latest_stable_tag_hash()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
                                                                                        "  - a directory" \
                                                                                        "  - flag whether to fetch the latest changes in main from remote" \
+                                                                                       "  - the name of a variable to receive the hash at the tag of the latest stable release" \
                                                                                        -ec "$err_invalid_arguments"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')." -ec "$err_not_directory"
     [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
+    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable to receive the hash at the tag of the latest stable release (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
                                                                                 exit_if_has_bugs
 
     local _dir=$1
     local _should_fetch=$2
+    local -n __latest_stable_hash=$3
 
     local -i _rc=$success
 
     is_inside_work_tree "$_dir"                                                 || with_error _rc "$err_not_git_directory" "The directory '$_dir' is not in a Git working tree."
-    (( _rc != success )) || ! $_should_fetch || ensure_fresh_git_state "$_dir"  || with_error _rc $? "Failed to ensure fresh Git state for '$_dir': $_rc"
+    (( _rc != success )) || ! $_should_fetch || ensure_fresh_git_state "$_dir"  || with_error _rc $? "Failed to ensure fresh Git state for '$_dir': $?"
     (( _rc == success )) ||                                                     return "$_rc"
 
-    local _latest_stable_tag _latest_stable_hash
+    local _latest_stable_tag
 
     # Get latest stable tag (excludes pre-release tags with -)
     _latest_stable_tag=$(
@@ -394,29 +401,35 @@ function get_latest_stable_tag_hash()
         sort -V |
         tail -n1
     )                                                                           || true
-    [[ -n $_latest_stable_tag ]]                                                || return "$failure" # no stable tags? - return 1
+    [[ -n $_latest_stable_tag ]]                                                || with_error _rc "$err_no_stable_tag" "The repository in '$_dir' has no tag that marks a stable release."
+    (( _rc == success )) ||                                                     return "$_rc"
 
     # get the hash of the commit of the latest stable tag
-    git -C "$_dir" rev-parse "$_latest_stable_tag^{commit}" 2>"$noise_sink"
+    __latest_stable_hash=$(git -C "$_dir" rev-parse "$_latest_stable_tag^{commit}" 2>"$noise_sink") \
+                                                                                || with_error _rc "$err_tool_error" "Failed to get the hash of the tag of the latest stable release from Git."
+
+    return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if the current commit in the specified directory is after the latest
+# @description Verifies that the current commit in the specified directory is after the latest
 #   stable tag. Depends on `get_latest_stable_tag_hash`.
 #
 # @arg $1 string _dir path to a Git repository.
 # @arg $2 bool _should_fetch flag whether to ensure fresh Git status.
 #
-# @exitcode positive=0: If the current commit is after the latest stable tag.
-# @exitcode negative=1: If it is not.
+# @exitcode success=0: If the current commit is after the latest stable tag.
+# @exitcode err_not_after_latest_stable_tag=97: The repository is not after the tag of the latest
+#   stable release.
+# @exitcode err_tool_error=66: Git failure
 # @exitcode N Whatever `get_latest_stable_tag_hash` returns on error (e.g. no stable tags,
 #   not a Git directory) -- its own argument-count/type bugs are also caught by this
 #   function's identical, direct validation gate above.
 #
 # @example
-#   if is_after_latest_stable_tag "$repo_dir"; then echo "Beyond latest stable"; fi
+#   if verify_after_latest_stable_tag "$repo_dir"; then echo "Beyond latest stable"; fi
 #-----------------------------------------------------------------------------------------------
-function is_after_latest_stable_tag()
+function verify_after_latest_stable_tag()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - a directory" \
@@ -426,32 +439,43 @@ function is_after_latest_stable_tag()
     [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
                                                                                 exit_if_has_bugs
 
-    local _latest_stable_hash _commits_after_latest_stable
+    local _latest_stable_hash
 
     # get commit of the latest stable tag
-    _latest_stable_hash=$(get_latest_stable_tag_hash "$@")                      || return $?
+    get_latest_stable_tag_hash "$@" _latest_stable_hash                         || return $?
+
+    local _commits_after_latest_stable
 
     # How many commits since the latest stable tag
-    _commits_after_latest_stable=$(git -C "${1:-$initial_cwd}" rev-list "$_latest_stable_hash..HEAD" --count 2>"$noise_sink")
-    (( _commits_after_latest_stable > 0 ))
+    _commits_after_latest_stable=$(git -C "$1" rev-list "$_latest_stable_hash..HEAD" --count 2>"$noise_sink") \
+                                                                                ||  {
+                                                                                        error "Could not get the list of commits from Git." -ec "$err_tool_error"
+                                                                                        return "$err_tool_error"
+                                                                                    }
+    (( _commits_after_latest_stable > 0 ))                                      ||  {
+                                                                                        error "The current branch of the repository in '$1' is not after the tag of the latest stable release." -ec "$err_not_after_latest_stable_tag"
+                                                                                        return "$err_not_after_latest_stable_tag"
+                                                                                    }
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Tests if the current commit in the specified directory is on or after the
+# @description Verifies that the current commit in the specified directory is on or after the
 #   latest stable tag. Depends on `get_latest_stable_tag_hash`.
 #
 # @arg $1 string _dir path to a Git repository.
 # @arg $2 bool _should_fetch flag whether to ensure fresh Git status.
 #
-# @exitcode positive=0: If the current commit is on or after the latest stable tag.
-# @exitcode negative=1: If it is before.
+# @exitcode success=0: If the current commit is on or after the latest stable tag.
+# @exitcode err_behind_latest_stable_tag=82: The current branch of the repository is behind the
+#   latest stable tag.
+# @exitcode err_tool_error=66: Git failure
 # @exitcode N Whatever `get_latest_stable_tag_hash` returns on error (e.g. no stable tags, not
 #   a Git directory).
 #
 # @example
-#   if is_on_or_after_latest_stable_tag "$repo_dir"; then echo "Ready for release"; fi
+#   if verify_on_or_after_latest_stable_tag "$repo_dir"; then echo "Ready for release"; fi
 #-----------------------------------------------------------------------------------------------
-function is_on_or_after_latest_stable_tag()
+function verify_on_or_after_latest_stable_tag()
 {
     (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                        "  - a directory" \
@@ -461,12 +485,20 @@ function is_on_or_after_latest_stable_tag()
     [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
                                                                                 exit_if_has_bugs
 
+    local -i _rc=$success
     local _latest_stable_tag_hash
 
     # get commit of the latest stable tag
-    _latest_stable_tag_hash=$(get_latest_stable_tag_hash "$@")                  || return $?
+    get_latest_stable_tag_hash "$@" _latest_stable_tag_hash                     || return $?
 
     # Check if current commit is on or after the latest tag
     # Returns 0 if tag commit is an ancestor of HEAD (i.e., HEAD is at or after the tag)
-    git -C "${1:-$initial_cwd}" merge-base --is-ancestor "$_latest_stable_tag_hash" HEAD &> "$noise_sink"
+    git -C "$1" merge-base --is-ancestor "$_latest_stable_tag_hash" HEAD &> "$noise_sink" \
+                                                                                ||  {
+                                                                                        # shellcheck disable=SC2015 # Info: Note that A && B || C is not if-then-else. C may run when A is true.
+                                                                                        (( $? == negative )) &&
+                                                                                            with_error _rc "$err_behind_latest_stable_tag" "The current branch of the repository in '$1' is behind the tag of the latest stable release." ||
+                                                                                            with_error _rc "$err_tool_error" "Failed to query Git if the merge base is an ancestor."
+                                                                                    }
+    return "$_rc"
 }

@@ -11,6 +11,8 @@ declare -x err_argument_value
 declare -x err_tool_error
 declare -x err_not_found
 declare -x err_invalid_nameref
+declare -x err_not_directory
+declare -x err_invalid_branch_name
 
 declare -x fail_em
 declare -x question_em
@@ -105,8 +107,8 @@ function start_publish_branch()
                                                                                        "  - the repository path" \
                                                                                        "  - the branch name" \
                                                                                        -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')." -ec "$err_invalid_arguments"
-    [[ ! -v 2 ]] || is_branch_name "$2"                                         || bug "${FUNCNAME[0]}() requires argument 2 to be a valid branch name (provided '${2-<missing>}')." -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')." -ec "$err_not_directory"
+    [[ ! -v 2 ]] || is_branch_name "$2"                                         || bug "${FUNCNAME[0]}() requires argument 2 to be a valid branch name (provided '${2-<missing>}')." -ec "$err_invalid_branch_name"
                                                                                 exit_if_has_bugs
 
     if git -C "$1" show-ref --verify --quiet "refs/heads/$2"; then
@@ -265,7 +267,7 @@ function update_section_versions()
 function refresh_lock_files()
 {
     (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the repository path." -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')." -ec "$err_invalid_arguments"
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')." -ec "$err_not_directory"
                                                                                 exit_if_has_bugs
 
     local _repo=$1
