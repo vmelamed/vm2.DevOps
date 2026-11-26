@@ -400,7 +400,10 @@ function get_latest_stable_tag_hash()
         grep -E "$semverTagReleaseRegex" |
         sort -V |
         tail -n1
-    )                                                                           || true
+    )                                                                           ||  {
+                                                                                        error "Failed to get tags from Git." -ec "$err_tool_error"
+                                                                                        return "$err_tool_error"
+                                                                                    }
     [[ -n $_latest_stable_tag ]]                                                || with_error _rc "$err_no_stable_tag" "The repository in '$_dir' has no tag that marks a stable release."
     (( _rc == success )) ||                                                     return "$_rc"
 
