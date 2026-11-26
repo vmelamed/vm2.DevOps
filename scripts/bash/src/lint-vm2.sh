@@ -137,18 +137,60 @@ hits=$(grep -nHE -- "$please_rule" "${message_files[@]}" | grep -vE '^[^:]+\.usa
 [[ -z $hits ]] ||
     error "Messages that depart from the templates: a fix hint is an imperative, without 'Please'." "$hits" -ec "$err_logic_error"
 
+# 9) A library function's name says whether it reports (vm2.DevOps/CLAUDE.md, "Function Types"): a predicate
+#    (is_*, has_*) and an assert_* never call error, with_error, warning, or info (a bug is fine: it reports a
+#    broken contract); a validator (is_valid_*, is_safe_*, validate_*, verify_*) calls at least one of them.
+#    The body of 'function name()' runs to the first '}' in column 1, as the library writes it. Comment lines, quoted
+#    strings, and trailing comments are removed first, so 'bug "... error ..."' is not a call to error. A validator that
+#    only delegates its reporting to another validator is flagged too: let it report its own failure.
+declare -r validator_rule='^(is_valid|is_safe|validate|verify)_'
+declare -r silent_rule='^(is_|has_|assert_)'
+declare reports_text=''
+reports_text=$(awk '
+    FNR == 1                                    { fn = "" }
+    /^function [a-zA-Z_][a-zA-Z0-9_]*\(\)/      { fn = $2; sub(/\(\).*/, "", fn); key = FILENAME ":" FNR ":" fn; calls[key] = 0; next }
+    /^}/                                        { fn = ""; next }
+    fn != "" && $0 !~ /^[[:space:]]*#/          {
+                                                    s = $0
+                                                    gsub(/"([^"\\]|\\.)*"/, "", s)
+                                                    gsub(/\047[^\047]*\047/, "", s)
+                                                    sub(/[[:space:]]#.*/, "", s)
+                                                    if (s ~ /(^|[^a-zA-Z0-9_$-])(error|with_error|warning|info)([[:space:]]|$)/)
+                                                        calls[key]++
+                                                }
+    END                                         { for (key in calls) print key, calls[key] }
+' "$lib_dir"/*.sh) || error "Failed to scan the library functions in '$lib_dir'." -ec "$err_tool_error"
+
+declare location='' function_calls=''
+declare -a silent_hits=() validator_hits=()
+while read -r location function_calls; do
+    [[ -n $location ]] || continue
+    function_name=${location##*:}
+    if [[ $function_name =~ $validator_rule ]]; then
+        (( function_calls > 0 )) || validator_hits+=("$location")
+    elif [[ $function_name =~ $silent_rule ]]; then
+        (( function_calls == 0 )) || silent_hits+=("$location")
+    fi
+done <<< "$reports_text"
+(( ${#silent_hits[@]} == 0 )) ||
+    error "Predicates and assert_* functions that report (call error, with_error, warning, or info):" \
+          "$(printf '%s\n' "${silent_hits[@]}" | sort)" -ec "$err_logic_error"
+(( ${#validator_hits[@]} == 0 )) ||
+    error "Validators that never report (no call to error, with_error, warning, or info):" \
+          "$(printf '%s\n' "${validator_hits[@]}" | sort)" -ec "$err_logic_error"
+
 exit_if_has_errors false
 
 info "vm2.DevOps/scripts/bash/lib/*.sh loaded fine!"
 
-# 9) ShellCheck, last: it is the slowest check, and its findings matter only once the library loads.
-#    Each file picks up the repository's .shellcheckrc, as in the VSCode extension, so the results match.
-#    Report only, for now: the findings do not change the exit code, so the library checks above stay
-#    usable while older findings remain. Make it an error once ShellCheck is clean.
-#    ShellCheck runs from the repository root, as the VSCode extension does. Its result depends on the current
-#    directory: for `source "$lib_dir/_x.sh"` it also tries `_x.sh` relative to it, so started from
-#    scripts/bash/lib it follows every source line into the whole library, for each of the ~100 files, and takes
-#    minutes instead of seconds. The timeout is the guard in case something else makes it that slow again.
+# 10) ShellCheck, last: it is the slowest check, and its findings matter only once the library loads.
+#     Each file picks up the repository's .shellcheckrc, as in the VSCode extension, so the results match.
+#     Report only, for now: the findings do not change the exit code, so the library checks above stay
+#     usable while older findings remain. Make it an error once ShellCheck is clean.
+#     ShellCheck runs from the repository root, as the VSCode extension does. Its result depends on the current
+#     directory: for `source "$lib_dir/_x.sh"` it also tries `_x.sh` relative to it, so started from
+#     scripts/bash/lib it follows every source line into the whole library, for each of the ~100 files, and takes
+#     minutes instead of seconds. The timeout is the guard in case something else makes it that slow again.
 declare -ri shellcheck_timeout=120 # seconds; a normal run takes under 10
 if command -v shellcheck > "$noise_sink"; then
     declare -a shellcheck_files=()

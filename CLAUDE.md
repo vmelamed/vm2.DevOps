@@ -518,6 +518,8 @@ code of the failure, so the caller writes `is_valid_xyz "$x" || _rc=$?` instead 
 - A family lives with its data, in the file of its subject (`_git.gh.sh`, `_dotnet.predicates.sh`, `_predicates.json.sh`);
   `_predicates.sh` and `_sanitize.sh` keep the general-purpose ones.
 - These rules cover `scripts/bash/lib`. A script's own helpers may be named for their step.
+- `scripts/bash/src/lint-vm2.sh` (check 9) reports a predicate or an `assert_xyz` that calls `error`, `with_error`,
+  `warning`, or `info`, and a validator that calls none of them.
 
 #### Functions Forwarding `stdin`
 
