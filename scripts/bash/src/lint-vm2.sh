@@ -140,26 +140,56 @@ hits=$(grep -nHE -- "$please_rule" "${message_files[@]}" | grep -vE '^[^:]+\.usa
 # 9) A library function's name says whether it reports (vm2.DevOps/CLAUDE.md, "Function Types"): a predicate
 #    (is_*, has_*) and an assert_* never call error, with_error, warning, or info (a bug is fine: it reports a
 #    broken contract); a validator (is_valid_*, is_safe_*, validate_*, verify_*) calls at least one of them.
-#    The body of 'function name()' runs to the first '}' in column 1, as the library writes it. Comment lines, quoted
-#    strings, and trailing comments are removed first, so 'bug "... error ..."' is not a call to error. A validator that
-#    only delegates its reporting to another validator is flagged too: let it report its own failure.
+#    The body of 'function name()' runs to the first '}' in column 1, as the library writes it. The scan is
+#    quote-aware, across lines: the text of '...' and "..." strings and comments is dropped, so 'bug "... error ..."'
+#    is not a call to error, but a command substitution inside "..." is kept: "$(error ...)" is one. A name counts only
+#    in a command position (the start of a line, or after ; & | ( { ! then else do), so the data in
+#    'is_in "$1" error info' or '[[ $1 == error ]]' is not a call. A validator that only delegates its reporting to
+#    another validator is flagged too: let it report its own failure.
 declare -r validator_rule='^(is_valid|is_safe|validate|verify)_'
 declare -r silent_rule='^(is_|has_|assert_)'
-declare reports_text=''
-reports_text=$(awk '
-    FNR == 1                                    { fn = "" }
-    /^function [a-zA-Z_][a-zA-Z0-9_]*\(\)/      { fn = $2; sub(/\(\).*/, "", fn); key = FILENAME ":" FNR ":" fn; calls[key] = 0; next }
-    /^}/                                        { fn = ""; next }
-    fn != "" && $0 !~ /^[[:space:]]*#/          {
-                                                    s = $0
-                                                    gsub(/"([^"\\]|\\.)*"/, "", s)
-                                                    gsub(/\047[^\047]*\047/, "", s)
-                                                    sub(/[[:space:]]#.*/, "", s)
-                                                    if (s ~ /(^|[^a-zA-Z0-9_$-])(error|with_error|warning|info)([[:space:]]|$)/)
+# shellcheck disable=SC2016 # the $ signs are awk's and the shell's text to scan, not something to expand here
+declare -r report_scanner='
+    # Removes the quoted text and the comment from one line; the quote state carries over to the next line.
+    # q: "" outside quotes, "\"" or "\047" inside; dq_depth: the "$(" nesting depth that leads back into "...".
+    function strip(line,    out, i, c, n) {
+        out = ""
+        n = length(line)
+        for (i = 1; i <= n; i++) {
+            c = substr(line, i, 1)
+            if (q == "\047") {                                          # single quotes: nothing is special but the end
+                if (c == "\047") q = ""
+            } else if (q == "\"") {
+                if (c == "\\") i++                                      # an escaped character
+                else if (c == "\"") q = ""
+                else if (substr(line, i, 2) == "$(") { q = ""; dq[++dq_depth] = 1; i++; out = out " ( " }
+            } else {
+                if (c == "\\") { i++; continue }
+                if (c == "#" && (i == 1 || substr(line, i - 1, 1) ~ /[[:space:];|&(]/)) break
+                if (c == "\047" || c == "\"") { q = c; out = out " "; continue }
+                if (c == "(") paren[dq_depth]++
+                if (c == ")" && dq_depth > 0) {
+                    if (paren[dq_depth] > 0) paren[dq_depth]--
+                    else { dq_depth--; q = "\""; out = out " ; "; continue }   # the end of "$(...)": back inside "..."
+                }
+                out = out c
+            }
+        }
+        return out
+    }
+    FNR == 1                                    { fn = ""; q = ""; dq_depth = 0 }
+    /^function [a-zA-Z_][a-zA-Z0-9_]*\(\)/      { fn = $2; sub(/\(\).*/, "", fn); key = FILENAME ":" FNR ":" fn; calls[key] = 0
+                                                  q = ""; dq_depth = 0; next }
+    /^}/ && q == ""                             { fn = ""; next }
+    fn != ""                                    {
+                                                    s = strip($0)
+                                                    if (s ~ /(^|[;&|({!]|(^|[[:space:]])(then|else|do))[[:space:]]*(error|with_error|warning|info)([[:space:]]|;|$)/)
                                                         calls[key]++
                                                 }
     END                                         { for (key in calls) print key, calls[key] }
-' "$lib_dir"/*.sh) || error "Failed to scan the library functions in '$lib_dir'." -ec "$err_tool_error"
+'
+declare reports_text=''
+reports_text=$(awk "$report_scanner" "$lib_dir"/*.sh) || error "Failed to scan the library functions in '$lib_dir'." -ec "$err_tool_error"
 
 declare location='' function_calls=''
 declare -a silent_hits=() validator_hits=()
