@@ -69,18 +69,18 @@ test_config_path="$repo_root/testconfig.json"
 coverage_settings_path="$repo_root/coverage.settings.xml"                       # path to coverage settings file    ~/repos/vm2.Glob/coverage.settings.xml
 
 if [[ ! -s "$test_config_path" ]]; then
-    error "Failed to find the test configuration file '$test_config_path'." -ec "$err_logic_error"
+    error "$err_logic_error" "Failed to find the test configuration file '$test_config_path'."
 fi
 if [[ ! -s "$coverage_settings_path" ]]; then
-    error "Failed to find the coverage settings file '$coverage_settings_path'." -ec "$err_logic_error"
+    error "$err_logic_error" "Failed to find the coverage settings file '$coverage_settings_path'."
 fi
 
 exit_if_has_errors
 
 artifacts_tests_dir=$(realpath -m "$artifacts/tests")
 artifacts_test_dir="$artifacts_tests_dir/$test_name"
-coverage_source_path="$artifacts_test_dir/coverage.cobertura.xml"              # path to the raw coverage file      ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
-coverage_reports_dir="$artifacts_test_dir/reports"                             # directory for coverage reports     ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
+coverage_source_path="$artifacts_test_dir/coverage.cobertura.xml"               # path to the raw coverage file      ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/coverage.cobertura.xml
+coverage_reports_dir="$artifacts_test_dir/reports"                              # directory for coverage reports     ~/repos/vm2.Glob/TestResults/Glob.Api.Tests/reports
 coverage_files="$artifacts_tests_dir/*/coverage.cobertura.xml"
 
 # Freeze the variables
@@ -147,11 +147,11 @@ if [[ ! -s $test_exec_path ]]; then
     if ! is_dry_run; then
         warning "Test executable '$test_exec_path' was not found in the artifacts directory. Rebuilding the test project..."
 
-        update_nuget_sources_with_github_vm2 || exit_with_error "Updating the NuGet sources with GitHub packages from vm2 failed." -ec "$err_tool_error"
-        dotnet_clean "$test_project"         || exit_with_error "Cleaning the test project failed." -ec "$err_tool_error"
-        dotnet_restore "$test_project"       || exit_with_error "Restoring the test project failed." -ec "$err_tool_error"
-        dotnet_build "$test_project"         || exit_with_error -sd 3 "Building the test project failed." -ec "$err_tool_error"
-        [[ -s $test_exec_path ]]             || exit_with_error -sd 3 "After rebuilding the project, the test executable '$test_exec_path' was still NOT FOUND." -ec "$err_tool_error"
+        update_nuget_sources_with_github_vm2 || exit_with_error "$err_tool_error" "Updating the NuGet sources with GitHub packages from vm2 failed."
+        dotnet_clean "$test_project"         || exit_with_error "$err_tool_error" "Cleaning the test project failed."
+        dotnet_restore "$test_project"       || exit_with_error "$err_tool_error" "Restoring the test project failed."
+        dotnet_build "$test_project"         || exit_with_error "$err_tool_error" -sd 3 "Building the test project failed."
+        [[ -s $test_exec_path ]]             || exit_with_error "$err_tool_error" -sd 3 "After rebuilding the project, the test executable '$test_exec_path' was still NOT FOUND."
     fi
 fi
 
@@ -180,9 +180,9 @@ else
     "$test_exec_path" "${test_args[@]}" || rc=$?
 fi
 (( rc == 0 )) ||
-    exit_with_error "Tests failed in project '$test_project' with exit code $rc." -ec "$err_tool_error"
+    exit_with_error "$err_tool_error" "Tests failed in project '$test_project' with exit code $rc."
 [[ -s "$coverage_source_path" ]] ||
-    exit_with_error "Coverage file '$coverage_source_path' not found or is empty." -ec "$err_tool_error"
+    exit_with_error "$err_tool_error" "Coverage file '$coverage_source_path' not found or is empty."
 
 if $ci; then
     # Set outputs for merged coverage

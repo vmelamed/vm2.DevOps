@@ -3,12 +3,10 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -x common_args_usage
 declare -x script_name
 
-declare -x err_invalid_arguments
-declare -x err_argument_type
-
+declare -x common_args_usage
+declare -x default_vm2_repos_path
 declare -x default_interval
 declare -x default_timeout
 
@@ -24,9 +22,7 @@ declare -x default_timeout
 #-----------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a boolean, whether to display the long or short usage text." -ec "$err_invalid_arguments"
-    is_boolean "$1"                                                             || bug "${FUNCNAME[0]}() requires argument 1, whether to display the long or short usage text, to be 'true' or 'false' (provided '${1-<missing>}')." -ec "$err_argument_type"
-                                                                                exit_if_has_bugs
+    assert_usage_text_args "$@"
 
     local _long_text=$1
     local _common_args=''

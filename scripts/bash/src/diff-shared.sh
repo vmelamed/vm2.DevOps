@@ -115,7 +115,7 @@ info "The Source of Truth '$sot' folder is in '$sot_path'"
     echo -e "## Source of truth: **$sot** (\`$sot_path\`)\n"
 } >> "$summary_file"
 
-    configure "$sot_path"                                                           || exit_with_error "Failed to load configuration from the SoT directory '$sot_path'." -ec "$err_logic_error"
+    configure "$sot_path"                                                       || exit_with_error "$err_logic_error" "Failed to load configuration from the SoT directory '$sot_path'."
     trace "Configured from SoT '$sot_path'."
 
 # iterate through the target repositories
@@ -196,7 +196,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                         copy_file "$source_file" "$target_file" && todo_or_done_txt="copied" || todo_or_done_txt="copy failed"
                         ;;
 
-                    * ) error "Unknown action '$actions' for files '$source_file' and '$target_file'." -ec "$err_logic_error"
+                    * ) error "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'."
                         todo_or_done_txt="error"
                         press_any_key
                         ;;
@@ -219,7 +219,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
             "$action_copy_shared"        ) warn_no_markers=true ;;
             "$action_ask_to_copy_shared" ) show_in_diff_tool=true
                                            warn_no_markers=true ;;
-            * ) error "Unknown action '$actions' for files '$source_file' and '$target_file'."  -ec "$err_logic_error" ;;
+            * ) error "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'." ;;
         esac
 
         # calculate the difference and if required: warn about missing markers and/or show the files in the diff tool
@@ -246,7 +246,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
             "$shared_not_equal" )
                 file_difference_txt=" $cross_ch shared different"
                 ;;
-            * ) error "Unexpected return code '$difference'." -ec "$err_unexpected_error"
+            * ) error "$err_unexpected_error" "Unexpected return code '$difference'."
                 ;;
         esac
 
@@ -336,7 +336,7 @@ for (( targets_index=0; targets_index < ${#target_roots[@]}; targets_index++ ));
                     esac
                     ;;
 
-                * ) error "Unknown action '$actions' for files '$source_file' and '$target_file'." -ec "$err_logic_error"
+                * ) error "$err_logic_error" "Unknown action '$actions' for files '$source_file' and '$target_file'."
                                                                                 todo_or_done_txt="error!"
                     press_any_key
                     ;;

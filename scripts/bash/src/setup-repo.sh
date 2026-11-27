@@ -190,9 +190,8 @@ if $audit; then
     # Requested audit
     #===============================================================================================
 
-    has_github_remote repo_state                                                || error "The repository in '$repo_path' is not linked to a GitHub remote. Cannot perform audit." \
-                                                                                         "Ensure that the repository is properly initialized and linked to GitHub before running the script with '--audit'." \
-                                                                                         -ec "$err_logic_error"
+    has_github_remote repo_state                                                || error "$err_logic_error" "The repository in '$repo_path' is not linked to a GitHub remote. Cannot perform audit." \
+                                                                                                            "Ensure that the repository is properly initialized and linked to GitHub before running the script with '--audit'."
                                                                                 exit_if_has_errors
 
     initialize_jq_queries

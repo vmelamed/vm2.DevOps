@@ -81,21 +81,24 @@ declare -i _rc=$success
 
 # 1. We don't need to switch to the old branch that we want to rename
 # 2. Rename the branch locally
-execute --quiet git branch -m "$old_branch_name" "$new_branch_name"             || with_error _rc "$err_tool_error" "Failed to rename branch '$old_branch_name' to '$new_branch_name'."
+execute --quiet \
+    git branch -m "$old_branch_name" "$new_branch_name"                         || with_error _rc "$err_tool_error" "Failed to rename branch '$old_branch_name' to '$new_branch_name'."
 # 3. Push the new name to remote
-(( _rc != success )) || execute --quiet git push origin "${git_heads_ns}$new_branch_name" \
-                                                                                || with_error _rc "$err_tool_error" "Failed to push branch '$new_branch_name' to remote."
+(( _rc != success )) || execute --quiet \
+                            git push origin "${git_heads_ns}$new_branch_name"   || with_error _rc "$err_tool_error" "Failed to push branch '$new_branch_name' to remote."
 # 4. Delete the old branch on remote
-(( _rc != success )) || execute --quiet git push origin --delete "${git_heads_ns}$old_branch_name" \
+(( _rc != success )) || execute --quiet \
+                            git push origin --delete "${git_heads_ns}$old_branch_name" \
                                                                                 || warning "Failed to delete old branch '$old_branch_name' on remote. Clean up manually; otherwise both branches will coexist and that may lead to confusion."
 
 # 5. Reset the upstream tracking
-(( _rc != success )) || execute --quiet git branch --set-upstream-to="origin/$new_branch_name" "$new_branch_name" \
+(( _rc != success )) || execute --quiet \
+                            git branch --set-upstream-to="origin/$new_branch_name" "$new_branch_name" \
                                                                                 || with_error _rc "$err_tool_error" "Failed to set upstream tracking for '$new_branch_name'."
 
 # shellcheck disable=SC2015 # Info: Note that A && B || C is not if-then-else. C may run when A is true.
 (( _rc != success )) || { is_dry_run &&
-                            info "Branch '$old_branch_name' would be renamed to '$new_branch_name'." ||
-                            info "Branch '$old_branch_name' successfully renamed to '$new_branch_name'."; }
+                                info "Branch '$old_branch_name' would be renamed to '$new_branch_name'." ||
+                                info "Branch '$old_branch_name' successfully renamed to '$new_branch_name'."; }
 
 exit_if_has_errors false

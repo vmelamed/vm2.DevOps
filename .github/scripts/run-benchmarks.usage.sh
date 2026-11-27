@@ -25,9 +25,7 @@ declare -x common_dotnet_vars
 #-----------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))    || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a boolean, whether to display the long or short usage text."
-    is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1, whether to display the long or short usage text, to be 'true' or 'false' (provided '${1-<missing>}')."
-                                                                                exit_if_has_bugs
+    assert_usage_text_args "$@"
 
     local _long_text=$1
     local _common_args=''

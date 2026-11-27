@@ -64,7 +64,7 @@ function verify_environment
 function resolve_arguments()
 {
     is_safe_existing_path "$benchmark_project"                                  || true
-    [[ $benchmark_project == *.csproj ]]                                        || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
+    [[ $benchmark_project == *.csproj ]]                                        || error "$err_argument_value" "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
     sanitize_common_dotnet_args "$benchmark_project"
 
     readonly benchmark_project

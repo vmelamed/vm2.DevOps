@@ -95,19 +95,19 @@ function resolve_github_app_ids()
     # this function cannot be called before initialize_gh_paths() because the latter relies on the actions_app_id variable being set - circular dependency
     actions_app_id=$(execute_with_retry --query --classify gh_failure \
                             gh api --paginate apps/github-actions \
-                            --jq '.id' 2>"$noise_sink")                         || error "Failed to resolve the app ID of GitHub Actions." -ec "$err_tool_error"
+                            --jq '.id' 2>"$noise_sink")                         || error "$err_tool_error" "Failed to resolve the app ID of GitHub Actions."
     trace "GitHub Actions app ID: $actions_app_id"
     [[ "$actions_app_id" == "15368" ]]                                          || warning "Unexpected GitHub Actions app ID: $actions_app_id (expected 15368). Required status check matching may not work correctly."
 
     dependabot_app_id=$(execute_with_retry --query --classify gh_failure \
                             gh api --paginate apps/dependabot \
-                            --jq '.id' 2>"$noise_sink")                         || error "Failed to resolve the app ID of Dependabot." -ec "$err_tool_error"
+                            --jq '.id' 2>"$noise_sink")                         || error "$err_tool_error" "Failed to resolve the app ID of Dependabot."
     trace "Dependabot app ID: $dependabot_app_id"
     [[ "$dependabot_app_id" == "29110" ]]                                       || warning "Unexpected Dependabot app ID: $dependabot_app_id (expected 29110). Required status check matching may not work correctly for Dependabot."
 
     codespaces_app_id=$(execute_with_retry --query --classify gh_failure \
                             gh api --paginate apps/codespaces \
-                            --jq '.id' 2>"$noise_sink")                         || error "Failed to resolve the app ID of Codespaces." -ec "$err_tool_error"
+                            --jq '.id' 2>"$noise_sink")                         || error "$err_tool_error" "Failed to resolve the app ID of Codespaces."
     trace "Codespaces app ID: $codespaces_app_id"
     [[ "$codespaces_app_id" == "231849" ]]                                      || warning "Unexpected Codespaces app ID: $codespaces_app_id (expected 231849). Required status check matching may not work correctly for Codespaces."
                                                                                 exit_if_has_errors
@@ -146,10 +146,10 @@ function list_required_checks()
 
     # Find the gate job: look for postrun-ci first, fall back to ci-gate
     _gate_job=$(yq -r '.jobs | keys[] | select(test("postrun|ci-gate"))' "$ci_yaml" | head -n 1) \
-                                                                                || error "Failed to parse the gate job from '$ci_yaml'." -ec "$err_tool_error"
+                                                                                || error "$err_tool_error" "Failed to parse the gate job from '$ci_yaml'."
 
     if [[ -n "$_gate_job" ]]; then
-        _gate_name=$(yq -r ".jobs.${_gate_job:-postrun-ci}.name" "$ci_yaml")    || error "Failed to parse the name of the gate job from '$ci_yaml'." -ec "$err_tool_error"
+        _gate_name=$(yq -r ".jobs.${_gate_job:-postrun-ci}.name" "$ci_yaml")    || error "$err_tool_error" "Failed to parse the name of the gate job from '$ci_yaml'."
 
         # The canonical CI.yaml gives the gate job a different name in the push run, so that only the pull_request run
         # reports the required check: name: ${{ github.event_name == 'push' && 'Postrun-CI (push)' || 'Postrun-CI' }}.
@@ -163,8 +163,8 @@ function list_required_checks()
             if [[ $_gate_name =~ $_gate_name_rex ]]; then
                 _gate_name=${BASH_REMATCH[1]}
             else
-                error "The name of the gate job '$_gate_job' in CI.yaml must be a single expression ending with \"|| '<check name>'\", with nothing before or after it: $_gate_name" -ec "$err_argument_value"
-                _gate_name=''
+                                                                                   error "$err_argument_value" "The name of the gate job '$_gate_job' in CI.yaml must be a single expression ending with \"|| '<check name>'\", with nothing before or after it: $_gate_name"
+                                                                                   _gate_name=''
             fi
         fi
 
@@ -197,8 +197,8 @@ function list_required_checks()
 #-----------------------------------------------------------------------------------------------
 function initialize_gh_paths()
 {
-    [[ -n $repo ]]                                                              || bug "${FUNCNAME[0]}() requires the variable 'repo' to be set." -ec "$err_logic_error"
-    [[ -n $main_protection_rs_name ]]                                           || bug "${FUNCNAME[0]}() requires the variable 'main_protection_rs_name' to be set." -ec "$err_logic_error"
+    [[ -n $repo ]]                                                              || bug "$err_logic_error" "${FUNCNAME[0]}() requires the variable 'repo' to be set."
+    [[ -n $main_protection_rs_name ]]                                           || bug "$err_logic_error" "${FUNCNAME[0]}() requires the variable 'main_protection_rs_name' to be set."
                                                                                 exit_if_has_bugs
 
     path_repo="repos/$repo"
@@ -243,9 +243,9 @@ function initialize_gh_paths()
 # shellcheck disable=SC2090 # Quotes/backslashes in this variable will not be respected.
 function initialize_jq_queries()
 {
-    [[ -n $main_protection_rs_name ]]                                           || bug "${FUNCNAME[0]}() requires the variable 'main_protection_rs_name' to be set." -ec "$err_logic_error"
-    (( actions_app_id > 0 ))                                                    || bug "${FUNCNAME[0]}() requires the variable 'actions_app_id' to be set to a valid ID." -ec "$err_logic_error"
-    (( admin_role_id > 0 ))                                                     || bug "${FUNCNAME[0]}() requires the variable 'admin_role_id' to be set to a valid ID." -ec "$err_logic_error"
+    [[ -n $main_protection_rs_name ]]                                           || bug "$err_logic_error" "${FUNCNAME[0]}() requires the variable 'main_protection_rs_name' to be set."
+    (( actions_app_id > 0 ))                                                    || bug "$err_logic_error" "${FUNCNAME[0]}() requires the variable 'actions_app_id' to be set to a valid ID."
+    (( admin_role_id > 0 ))                                                     || bug "$err_logic_error" "${FUNCNAME[0]}() requires the variable 'admin_role_id' to be set to a valid ID."
                                                                                 exit_if_has_bugs
 
     jq_entries='to_entries[] | "\(.key)=\(.value)"'
@@ -317,8 +317,8 @@ def count_pr_checks_param(check): [.rules[] | select(.type == "required_status_c
 #-----------------------------------------------------------------------------------------------
 function initialize_main_protection_rs_id()
 {
-    [[ -n $main_protection_rs_name ]]                                           || bug "${FUNCNAME[0]}() requires the variable 'main_protection_rs_name' to be set." -ec "$err_logic_error"
-    [[ -n $path_rulesets ]]                                                     || bug "${FUNCNAME[0]}() requires the variable 'path_rulesets' to be set: call initialize_gh_paths() first." -ec "$err_logic_error"
+    [[ -n $main_protection_rs_name ]]                                           || bug "$err_logic_error" "${FUNCNAME[0]}() requires the variable 'main_protection_rs_name' to be set."
+    [[ -n $path_rulesets ]]                                                     || bug "$err_logic_error" "${FUNCNAME[0]}() requires the variable 'path_rulesets' to be set: call initialize_gh_paths() first."
                                                                                 exit_if_has_bugs
 
     # main_protection_rs_id is not 0 - already initialized
@@ -403,8 +403,7 @@ function configure_default_repo_settings()
     local _result
     _result=$(execute_with_retry --query --classify gh_failure \
                   gh api "$path_repo" -q "$jq_entries" 2>"$noise_sink")         || {
-                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo settings failed." \
-                                                                                                                         -ec $?
+                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo settings failed." -ec $?
                                                                                         return "$_rc"
                                                                                    }
 
@@ -494,7 +493,8 @@ function configure_actions_permissions()
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
         execute_with_retry --quiet --classify gh_failure \
             gh api -X PUT "$path_permissions" -H "Accept: application/vnd.github+json" "${_rs[@]}" 2>"$noise_sink" &&
-            info "...actions workflow permissions configured."                  || warning "Failed to configure the Actions workflow permissions." "Run the script with '--verbose' for the details."
+            info "...actions workflow permissions configured."                  || warning "Failed to configure the Actions workflow permissions." \
+                                                                                           "Run the script with '--verbose' for the details."
     else
         info "...actions workflow permissions configured."
     fi
@@ -531,10 +531,8 @@ function configure_actions_permissions()
 # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
 function configure_variables()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
-                                                                                       "  - the name of the GitHub application being configured, e.g. actions" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}"                        || bug "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: $gh_apps_with_vars_str (provided '${1-<missing>}')." -ec "$err_argument_value"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the GitHub application being configured, e.g. actions."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}"                        || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: $gh_apps_with_vars_str (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _app=${1,,}
@@ -560,7 +558,7 @@ function configure_variables()
     _result=$(execute_with_retry --query --classify gh_failure \
                   gh api --paginate "$path_repo/$_app/variables" -q "$jq_vars" 2>"$noise_sink") \
                                                                                 ||  {
-                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo variables failed." -ec $?
+                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo variables failed."
                                                                                         return "$_rc"
                                                                                     }
 
@@ -708,12 +706,11 @@ function configure_variables()
 #-----------------------------------------------------------------------------------------------
 function get_var()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - the name of the GitHub Actions variable whose value is to be requested" \
-                                                                                       "  - the variable value." \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the name of the GitHub Actions variable whose value is to be requested, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a variable to receive the value of the GitHub Actions variable (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - the name of the GitHub Actions variable whose value is to be requested" \
+                                                                                                                "  - the variable value."
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the name of the GitHub Actions variable whose value is to be requested, to be non-empty (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a variable to receive the value of the GitHub Actions variable (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _name="$1"
@@ -749,12 +746,11 @@ function get_var()
 #-----------------------------------------------------------------------------------------------
 function set_var()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - the variable name" \
-                                                                                       "  - the variable value." \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ -v 2 ]]                                                                  || bug "${FUNCNAME[0]}() requires argument 2, the variable value, to be present (it may be empty)." -ec "$err_missing_argument"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - the variable name" \
+                                                                                                                "  - the variable value"
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1-<missing>}')."
+    [[ -v 2 ]]                                                                  || bug "$err_missing_argument" "${FUNCNAME[0]}() requires argument 2, the variable value, to be present (it may be empty)."
                                                                                 exit_if_has_bugs
 
     local _name="$1"
@@ -781,10 +777,8 @@ function set_var()
 #-----------------------------------------------------------------------------------------------
 function delete_var()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
-                                                                                       "  - the variable name" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the variable name."
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the variable name, to be non-empty (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _name="$1"
@@ -834,10 +828,8 @@ function delete_var()
 #-----------------------------------------------------------------------------------------------
 function configure_secrets()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
-                                                                                       "  - the application name" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}"                     || bug "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${1-<missing>}')." -ec "$err_argument_value"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the application name."
+    [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}"                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _app=${1,,}
@@ -860,7 +852,7 @@ function configure_secrets()
     _temp=$(mktemp)                                                             || with_error _rc "$err_io_failure" "  Failed to create a temporary file."
 
     (( _rc != success ))  || execute_with_retry --query --classify gh_failure \
-        gh api --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names" > "$_temp" \
+                                gh api --paginate "$path_repo/$_app/secrets" -q "$jq_secret_names" > "$_temp" \
                                                                                 || with_error _rc $? "  Failed to retrieve the list of secrets for the GitHub application '$_app' in repository '$repo'."
 
     local -a _current
@@ -983,13 +975,12 @@ function configure_secrets()
 #-----------------------------------------------------------------------------------------------
 function set_secret()
 {
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
-                                                                                       "  - the secret name" \
-                                                                                       "  - the secret value" \
-                                                                                       "  - the application" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 3 ]] || is_in "$3" "${gh_apps_with_secrets[@]}"                     || bug "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${3-<missing>}')." -ec "$err_argument_value"
+    (( $# == 3 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
+                                                                                                                "  - the secret name" \
+                                                                                                                "  - the secret value" \
+                                                                                                                "  - the application"
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')."
+    [[ ! -v 3 ]] || is_in "$3" "${gh_apps_with_secrets[@]}"                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 3, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _name="$1"
@@ -1010,7 +1001,7 @@ function set_secret()
 
     # create and/or set the secret value on GitHub
     execute_with_retry --quiet --classify gh_failure \
-        gh secret set "$_name" --body "$__value" --app "$_app" --repo "$repo" || _rc=$?
+        gh secret set "$_name" --body "$__value" --app "$_app" --repo "$repo"   || _rc=$?
 
     restore_state _core_state
 
@@ -1037,12 +1028,11 @@ function set_secret()
 #-----------------------------------------------------------------------------------------------
 function delete_secret()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - the secret name" \
-                                                                                       "  - the application" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_in "$2" "${gh_apps_with_secrets[@]}"                     || bug "${FUNCNAME[0]}() requires argument 2, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${2-<missing>}')." -ec "$err_argument_value"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - the secret name" \
+                                                                                                                "  - the application"
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the secret name, to be non-empty (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_in "$2" "${gh_apps_with_secrets[@]}"                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the application name, to be one of: ${gh_apps_with_secrets[*]} (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _name="$1"

@@ -6,7 +6,7 @@
 declare -x script_name
 declare -x lib_dir
 
-# constants from core:
+# vm2 core lib exit codes
 declare -x success
 declare -x err_argument_value
 declare -x err_missing_argument
@@ -17,15 +17,19 @@ declare -x err_invalid_file
 declare -x err_repo_with_no_ci
 declare -x err_repo_not_in_vm2_repos
 declare -x err_io_failure
+declare -x err_not_file
 
+# vm2 core lib constants
 declare -x ci
 declare -x default_vm2_repos_path
 declare -x vm2_sot_repo_name
 declare -x default_sot
-declare -x dpp_file_name
 declare -x vm2_repositories
 declare -x sources_of_truth
 declare -x sources_of_truth_str
+
+# this script constants
+declare -x dpp_file_name
 
 # this script's arguments
 declare -x vm2_repos="${VM2_REPOS:-$default_vm2_repos_path}"    # the path to the folder containing all vm2 repositories, usually '$VM2_REPOS'
@@ -44,7 +48,18 @@ declare -a arguments=(
 
 function get_arguments()
 {
-    local _option _repo
+    parse_arguments "$@"
+    usage_if_requested
+    verify_environment
+    resolve_arguments
+    exit_if_has_errors
+    dump_args
+}
+
+function parse_arguments()
+{
+    local _option
+    local _repo
 
     while (( $# > 0 )); do
         _option="$1"; shift
@@ -52,7 +67,7 @@ function get_arguments()
 
         case "${_option,,}" in
             -r|--vm2-repos )
-                (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
                 vm2_repos="$1"; shift
                 ;;
 
@@ -74,7 +89,7 @@ function get_arguments()
                 ;;
 
             -sf|--summary-file )
-                (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
                 summary_file="$1"; shift
                 ;;
 
@@ -82,10 +97,10 @@ function get_arguments()
             # ShellCheck to flag (SC2221/SC2222) any script-specific arm that tries to reuse one of them, and it bugs out
             # if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                   exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "Unknown argument: $_option" -ec "$err_unknown_argument"
                 ;;
 
             * ) is_in "$_option" "${!target_repos[@]}" || target_repos+=([$_option]='')
@@ -93,9 +108,16 @@ function get_arguments()
         esac
     done
 
-    usage_if_requested
-    resolve_arguments
-    dump_args
+    return "$success"
+}
+
+function verify_environment()
+{
+    verify_dotnet                                                               || true
+    verify_gh                                                                   || true
+    verify_git                                                                  || true
+
+    return "$success"
 }
 
 function resolve_arguments()
@@ -104,9 +126,10 @@ function resolve_arguments()
 
     [[ -n $summary_file ]] || {
         summary_file=$(mktemp -p /tmp "update-packages-summary-$(date +%Y%m%d-%H%M%S)-XXXXXX.md") \
-                                                                                || { with_error _rc "$err_io_failure" "Failed to create a temporary file."
-                                                                                     return "$_rc"
-                                                                                }
+                                                                                ||  {
+                                                                                        with_error _rc "$err_io_failure" "Failed to create a temporary file."
+                                                                                        return "$_rc"
+                                                                                    }
         add_trap "rm -f ${summary_file@Q}" EXIT
     }
     is_path "$summary_file"                                                     || with_error _rc "$err_invalid_path" "Invalid summary file path: '$summary_file'."
@@ -114,7 +137,7 @@ function resolve_arguments()
     is_in "$sot" "${sources_of_truth[@]}"                                       || with_error _rc "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: $sources_of_truth_str."
 
     has_errors || [[ -z $vm2_repos ]] || get_vm2_sot_path "$vm2_repos" sot_path "$sot" || true
-    exit_if_has_errors true # we cannot go further without vm2_repos or sot path
+                                                                                exit_if_has_errors true # we cannot go further without vm2_repos or sot path
 
     local -i _rc=$success
     local _repo_path
@@ -125,43 +148,40 @@ function resolve_arguments()
         local _invalid=false
 
         # resolve the repo of the current directory:
-        resolve_repo_root "$vm2_repos" '' _repo_path void                       || { error "The current directory is not a vm2 repository. No other repositories specified." -ec $?; _invalid=true; }
-        $_invalid || {
-            _repo=$(basename "$_repo_path")
-            is_in "$_repo" "${vm2_repositories[@]}"
-        }                                                                       || { error "The repository of the current directory '$_repo' is not in the vm2 repositories list. No other repositories specified." -ec "$err_repo_not_in_vm2_repos"; _invalid=true; }
-        $_invalid ||
-            [[ -s $_repo_path/$dpp_file_name ]]                                 || { error "Missing '$dpp_file_name' in '$_repo'. No other repositories specified." -ec "$err_invalid_file"; _invalid=true; }
-        $_invalid ||
-            is_valid_packages_file "$_repo_path/$dpp_file_name"                 || { error "Invalid package lines in $_repo_path/$dpp_file_name." -ec $?; _invalid=true; }
-        $_invalid ||
-            target_repos[$_repo]=$_repo_path
+        resolve_repo_root "$vm2_repos" '' _repo_path void                       || with_error _rc $? "The current directory is not a vm2 repository. No other repositories specified."
+        (( _rc != success )) || {
+                                    _repo=$(basename "$_repo_path")
+                                    is_in "$_repo" "${vm2_repositories[@]}"
+                                }                                               || with_error _rc "$err_repo_not_in_vm2_repos" "The repository of the current directory '$_repo' is not in the vm2 repositories list. No other repositories specified."
+        (( _rc != success )) || [[ -s $_repo_path/$dpp_file_name ]]             || with_error _rc "$err_invalid_file" "Missing '$dpp_file_name' in '$_repo'. No other repositories specified."
+        (( _rc != success )) || is_valid_packages_file "$_repo_path/$dpp_file_name" \
+                                                                                || with_error _rc $? "Invalid package lines in $_repo_path/$dpp_file_name."
+        (( _rc != success )) || target_repos[$_repo]=$_repo_path
     else
         for _repo in "${!target_repos[@]}"; do
-            is_in "$_repo" "${vm2_repositories[@]}"                             || { error "The specified repository '$_repo' is not in the vm2 repositories list." -ec "$err_repo_not_in_vm2_repos"; continue; }
-
-            resolve_repo_root "$vm2_repos" "$_repo" _repo_path void             || { error "Failed to resolve the repository '$_repo'." -ec $?; continue; }
-
-            [[ -s "$_repo_path/$dpp_file_name" ]]                               || { warning "Missing '$dpp_file_name' in '$_repo'. Skipping the repo.";
-                unset "target_repos[$_repo]"
-                continue
-            }
-
-            is_valid_packages_file "$_repo_path/$dpp_file_name"                 || { error "Invalid package lines in $_repo_path/$dpp_file_name." -ec $?; continue; }
-
-            target_repos[$_repo]=$_repo_path
+            _rc=$success
+            is_in "$_repo" "${vm2_repositories[@]}"                             || with_error _rc "$err_repo_not_in_vm2_repos" "The specified repository '$_repo' is not in the vm2 repositories list."
+            (( _rc != success )) || resolve_repo_root "$vm2_repos" "$_repo" _repo_path void \
+                                                                                || with_error _rc $? "Failed to resolve the repository '$_repo'."
+            (( _rc != success )) || [[ -s "$_repo_path/$dpp_file_name" ]]       ||  {
+                                                                                        warning "Missing '$dpp_file_name' in '$_repo'. Skipping the repo.";
+                                                                                        unset "target_repos[$_repo]"
+                                                                                        _rc=$err_not_file
+                                                                                    }
+            (( _rc != success )) || is_valid_packages_file "$_repo_path/$dpp_file_name" \
+                                                                                || with_error _rc $? "Invalid package lines in $_repo_path/$dpp_file_name."
+            (( _rc != success )) || target_repos[$_repo]=$_repo_path
         done
     fi
 
     ! is_in "$vm2_sot_repo_name" "${!target_repos[@]}" ||
-        is_valid_packages_file "$sot_path/$dpp_file_name"                       || error "Invalid package lines in $sot_path/$dpp_file_name." -ec $?
+        is_valid_packages_file "$sot_path/$dpp_file_name"                       || error $? "Invalid package lines in $sot_path/$dpp_file_name."
 
     has_errors || {
         echo "# Update Packages Summary"
         echo
-    } > "$summary_file"                                                         || error "Failed to write to summary file: '$summary_file'." -ec "$err_invalid_file"
-
-    exit_if_has_errors true
+    } > "$summary_file"                                                         || error "$err_invalid_file" "Failed to write to summary file: '$summary_file'."
+                                                                                exit_if_has_errors true
 
     # at this point all arguments have been initialized, validated and necessary paths have been resolved
     readonly vm2_repos
@@ -169,6 +189,8 @@ function resolve_arguments()
     readonly sot_path
     readonly target_repos
     readonly summary_file
+
+    return "$success"
 }
 
 # shellcheck disable=SC2120 # dump_args references arguments, but none are ever passed.

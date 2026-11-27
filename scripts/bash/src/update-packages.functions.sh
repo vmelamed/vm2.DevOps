@@ -39,8 +39,8 @@ declare -xr package_regex='^([[:space:]]*<PackageVersion[[:space:]]+Include=")([
 #-----------------------------------------------------------------------------------------------
 function is_valid_packages_file()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the path to 'Directory.Packages.props'." -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided '${1-<missing>}')." -ec "$err_argument_value"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the path to 'Directory.Packages.props'."
+    [[ ! -v 1 || -f $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -56,10 +56,9 @@ function is_valid_packages_file()
         [[ $_line =~ $package_regex ]]                && continue # validate PackageVersion lines, e.g., <PackageVersion Include="<id>" Version="<version>" />
 
         _rc=$err_invalid_item
-        error "$_file:$_line_number: unsupported PackageVersion format; expected one line in the form" \
-              "  <PackageVersion Include=\"<id>\" Version=\"<version>\" />" \
-              "  but found: $_line" \
-              -ec "$_rc"
+        error "$_rc" "$_file:$_line_number: unsupported PackageVersion format; expected one line in the form" \
+                     "  <PackageVersion Include=\"<id>\" Version=\"<version>\" />" \
+                     "  but found: $_line"
     done < "$_file"
 
     return "$_rc"
@@ -81,13 +80,12 @@ function is_valid_packages_file()
 #-----------------------------------------------------------------------------------------------
 function select_upgrade_version()
 {
-    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
-                                                                                       "  - the current version" \
-                                                                                       "  - the name of the variable that receives the chosen version" \
-                                                                                       "  - zero or more candidate versions" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the current version, to be non-empty." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# >= 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
+                                                                                                                "  - the current version" \
+                                                                                                                "  - the name of the variable that receives the chosen version" \
+                                                                                                                "  - zero or more candidate versions"
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the current version, to be non-empty."
+    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _current=$1
@@ -135,14 +133,13 @@ declare -x shared_end_marker
 #-----------------------------------------------------------------------------------------------
 function _props_line_in_section()
 {
-    (( $# == 3 ))                              || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
-                                                      "  - the section to match ('shared' or 'repo')" \
-                                                      "  - the line of the file to test" \
-                                                      "  - the name of the variable that tracks whether the current line is inside the shared block" \
-                                                      -ec "$err_invalid_arguments"
-    [[ ! -v 1 || $1 == shared || $1 == repo ]] || bug "${FUNCNAME[0]}() requires argument 1, the section to match, to be 'shared' or 'repo' (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 3 ]] || is_variable "$3"           || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
-    exit_if_has_bugs
+    (( $# == 3 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
+                                                                                                                "  - the section to match ('shared' or 'repo')" \
+                                                                                                                "  - the line of the file to test" \
+                                                                                                                "  - the name of the variable that tracks whether the current line is inside the shared block"
+    [[ ! -v 1 || $1 == shared || $1 == repo ]]                                  || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the section to match, to be 'shared' or 'repo' (provided '${1-<missing>}')."
+    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided '${3-<missing>}')."
+                                                                                exit_if_has_bugs
 
     [[ -z ${2-} ]] && return "$negative" # shortcut for empty XML lines
 
@@ -177,15 +174,14 @@ function _props_line_in_section()
 #-----------------------------------------------------------------------------------------------
 function read_package_versions()
 {
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
-                                                                                       "  - the path to 'Directory.Packages.props' file" \
-                                                                                       "  - the section ('shared' or 'repo')" \
-                                                                                       "  - the name of the variable that receives the versions" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 || $2 == shared || $2 == repo ]]                                  || bug "${FUNCNAME[0]}() requires argument 2 to be either 'shared' or 'repo' (provided '${2-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 3 ]] || is_associative_array "$3"                                   || bug "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array variable (provided '${3-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+    (( $# == 3 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
+                                                                                                                "  - the path to 'Directory.Packages.props' file" \
+                                                                                                                "  - the section ('shared' or 'repo')" \
+                                                                                                                "  - the name of the variable that receives the versions"
+    [[ ! -v 1 || -f $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided '${1-<missing>}')."
+    [[ ! -v 2 || $2 == shared || $2 == repo ]]                                  || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be either 'shared' or 'repo' (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || is_associative_array "$3"                                   || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array variable (provided '${3-<missing>}')."
+                                                                                exit_if_has_bugs
 
     local _file=$1
     local _section=$2
@@ -227,9 +223,10 @@ function set_package_version()
     local _line _tmp _inside=false _done=false _line_id _line_version
     local _rc=$success
 
-    _tmp=$(mktemp)                                                              || { with_error _rc "$err_io_failure" "Failed to create a temporary file."
-                                                                                     return "$_rc"
-                                                                                }
+    _tmp=$(mktemp)                                                              ||  {
+                                                                                        with_error _rc "$err_io_failure" "Failed to create a temporary file."
+                                                                                        return "$_rc"
+                                                                                    }
     while IFS= read -r _line || [[ -n $_line ]]; do
         if _props_line_in_section "$_section" "$_line" _inside &&
            [[ $_line != *"<!--"* && $_line != *"-->"* && $_line =~ $package_regex ]] &&
@@ -253,6 +250,9 @@ function set_package_version()
     return "$_rc"
 }
 
+# shellcheck disable=SC2016 # Info: Expressions don't expand in single quotes, use double quotes for that.
+declare -r ver_qry='.searchResult[].packages[] | select((.id | ascii_downcase) == ($id | ascii_downcase)) | .version'
+
 #-----------------------------------------------------------------------------------------------
 # @description Lists every version of a package found in the configured NuGet sources, using 'dotnet package search'.
 #   Versions from all sources are returned; the package ID is matched case-insensitively.
@@ -265,10 +265,10 @@ function set_package_version()
 #-----------------------------------------------------------------------------------------------
 function query_package_versions()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#): the package ID and the name of the variable that receives the versions." -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the package ID, to be non-empty." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided '${2-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#): the package ID and the name of the variable that receives the versions."
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the package ID, to be non-empty."
+    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided '${2-<missing>}')."
+                                                                                exit_if_has_bugs
 
     local _rc=$success
     local _id=$1
@@ -279,16 +279,11 @@ function query_package_versions()
                                                                                 || return "$err_tool_error"
 
     local _output_file
-    _output_file=$(mktemp)                                                      || { _rc=$err_io_failure; error "Failed to create a temporary output file." -ec "$_rc"; }
+    _output_file=$(mktemp)                                                      || with_error _rc "$err_io_failure" "Failed to create a temporary output file."
 
-    (( _rc != success )) ||
-    jq -r --arg id "$_id" '.searchResult[].packages[] | select((.id | ascii_downcase) == ($id | ascii_downcase)) | .version' <<< "$_json" > "$_output_file" || {
-        _rc=$err_tool_error
-        error "Failed to query package versions." -ec "$_rc"
-    }
-
-    (( _rc != success )) ||
-    readarray -t __found_ref < "$_output_file"                                   || { _rc=$err_io_failure; error "Failed to read package versions from temporary output file." "$(dotnet_error_message "$_rc")" -ec "$_rc"; }
+    (( _rc != success )) || jq -r --arg id "$_id" "$ver_qry" <<< "$_json" > "$_output_file" \
+                                                                                || with_error _rc "$err_tool_error" "Failed to query package versions."
+    (( _rc != success )) || readarray -t __found_ref < "$_output_file"          || with_error _rc "$err_io_failure" "Failed to read package versions from temporary output file."
 
     rm -f "$_output_file"
     return "$_rc"

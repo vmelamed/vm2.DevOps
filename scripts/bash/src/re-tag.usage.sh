@@ -3,8 +3,9 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -x common_args_usage
 declare -x script_name
+
+declare -x common_args_usage
 
 #-----------------------------------------------------------------------------------------------
 # @description Builds and prints the usage/help text for 're-tag.sh'. When '$1' is true, appends the common switches and
@@ -18,9 +19,7 @@ declare -x script_name
 #-----------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a boolean, whether to display the long or short usage text."
-    is_boolean "$1"                                                             || bug "${FUNCNAME[0]}() requires argument 1, whether to display the long or short usage text, to be 'true' or 'false' (provided '${1-<missing>}')."
-                                                                                exit_if_has_bugs
+    assert_usage_text_args "$@"
 
     local _long_text=$1
     local _common_args=''

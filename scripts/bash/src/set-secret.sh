@@ -73,9 +73,9 @@ for repo in "${vm2_repositories[@]}"; do
 
     [[ -n $secret_value && $secret_value != "$secret_placeholder" ]] || {
 
-        declare default=''
+        declare default
 
-        $secret_exists && default="$secret_placeholder"
+        $secret_exists && default="$secret_placeholder" || default=''
         enter_value "  Enter value for secret '$secret_name'" secret_value "$default" true is_secret
 
         # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
@@ -114,8 +114,7 @@ for repo in "${vm2_repositories[@]}"; do
 
     # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
     (( rc == success )) &&
-        trace "  Secret '$secret_name' was set successfully." ||
-        error "  Failed to set secret $secret_name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot." -ec "$rc"
+        trace "  Secret '$secret_name' was set successfully."                   || error "$rc" "  Failed to set secret $secret_name for ${app^}. Run the script with '--verbose' to see more details and troubleshoot."
 done
 
 exit_if_has_errors

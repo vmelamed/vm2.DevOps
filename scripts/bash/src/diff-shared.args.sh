@@ -122,14 +122,13 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                   exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "Unknown argument: $_option" -ec "$err_unknown_argument"
                 ;;
 
-            * ) is_empty_array target_repos || ! is_in "$_option" "${target_repos[@]}" &&
-                    target_repos+=("$_option")
+            * ) is_empty_array target_repos || ! is_in "$_option" "${target_repos[@]}" && target_repos+=("$_option")
                 ;;
         esac
     done
@@ -240,10 +239,9 @@ declare -x action_ask_to_copy_shared
 
 function get_selector_action()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - option" \
-                                                                                       "  - file selector" \
-                                                                                       -ec "$err_invalid_arguments"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - option" \
+                                                                                                                "  - file selector"
                                                                                 exit_if_has_bugs
 
     local _option="$1"
@@ -251,8 +249,7 @@ function get_selector_action()
     local _action=""
 
     # get the action from the option name, e.g. --file-ask-to-merge => "ask-to-merge"
-    [[ $_option =~ ^-(-file|f)(-?([a-z-]+))?$ ]] ||
-        error "Unknown argument: $_option" -ec "$err_unknown_argument"
+    [[ $_option =~ ^-(-file|f)(-?([a-z-]+))?$ ]]                                || error "$err_unknown_argument" "Unknown argument: $_option"
 
     # get the action and replace the dashes with spaces in the action name, e.g. "ask-to-merge" => "ask to merge"
     _action="${BASH_REMATCH[3]//-/ }"
@@ -267,11 +264,10 @@ function get_selector_action()
         "cs" | "$action_copy_shared"        ) _action="$action_copy_shared" ;;
         "acs"| "$action_ask_to_copy_shared" ) _action="$action_ask_to_copy_shared" ;;
         ""                                  ) ;;
-        *                                   ) error "Invalid action '$_action'." "Use one of: $valid_actions_str."  -ec "$err_argument_value" ;;
+        *                                   )                                      error "$err_argument_value" "Invalid action '$_action'." "Use one of: $valid_actions_str." ;;
     esac
 
-    [[ $_file_selector != -* ]] ||
-        error "The argument '$_file_selector' does not appear to be a valid file selector." -ec "$err_argument_value"
+    [[ $_file_selector != -* ]]                                                 || error "$err_argument_value" "The argument '$_file_selector' does not appear to be a valid file selector."
 
     exit_if_has_errors
 

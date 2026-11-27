@@ -119,10 +119,9 @@ declare -xra output_common_dotnet_args=(
 #-----------------------------------------------------------------------------------------------
 function get_common_dotnet_arg()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - the command-line option identifier" \
-                                                                                       "  - the command-line option value" \
-                                                                                       -ec "$err_invalid_arguments"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - the command-line option identifier" \
+                                                                                                                "  - the command-line option value"
                                                                                 exit_if_has_bugs
 
     # Accept $2 unconditionally, even empty -- this function only recognizes option NAMES and
@@ -177,9 +176,7 @@ function sanitize_common_dotnet_args()
 {
     local -i _rc="$success"
 
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
-                                                                                       "  - a path to a project file (build, test, etc.)" \
-                                                                                       -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#) a path to a project file (build, test, etc.)."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -192,12 +189,12 @@ function sanitize_common_dotnet_args()
     [[ -v gh_nuget_username ]] && {
         is_safe_input "$gh_nuget_username"                                      || true
         if [[ -n $gh_nuget_username ]]; then
-            [[ -v gh_nuget_password && -n $gh_nuget_password ]]                 || error "If the GitHub username is present, then the GitHub password also must be present and not empty." -ec "$err_argument_value"
+            [[ -v gh_nuget_password && -n $gh_nuget_password ]]                 || error "$err_argument_value" "If the GitHub username is present, then the GitHub password also must be present and not empty."
         else
-            [[ ! -v gh_nuget_password || -z $gh_nuget_password ]]               || error "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty." -ec "$err_argument_value"
+            [[ ! -v gh_nuget_password || -z $gh_nuget_password ]]               || error "$err_argument_value" "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty."
         fi
     } || {
-        [[ ! -v gh_nuget_password || -z $gh_nuget_password ]]                   || error "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty." -ec "$err_argument_value"
+        [[ ! -v gh_nuget_password || -z $gh_nuget_password ]]                   || error "$err_argument_value" "If the GitHub username is not present or empty, then the GitHub password also must be either not present or empty."
     }
 
     # the following 3 arguments should be coming from Directory.Build.props but just in case:

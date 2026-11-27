@@ -85,9 +85,9 @@ function parse_arguments()
 
 function verify_environment()
 {
-    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "GITHUB_REPOSITORY and/or RELEASE_PAT are not set." -ec "$err_argument_value"
+    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
     verify_git                                                                  || true
-    is_tool_present git-cliff                                                   || error "'git-cliff' is not installed." "Install it from <https://git-cliff.org/docs/installation>." -ec "$err_tool_not_found"
+    is_tool_present git-cliff                                                   || error "$err_tool_not_found" "'git-cliff' is not installed." "Install it from <https://git-cliff.org/docs/installation>."
     return "$success"
 }
 
@@ -104,7 +104,7 @@ function resolve_arguments()
         is_prerelease=true
         reason=${reason:-"pre-release"}
     else
-        error "Tag '$tag' is not a valid semver release or prerelease tag." -ec "$err_argument_value"
+        error "$err_argument_value" "Tag '$tag' is not a valid semver release or prerelease tag."
     fi
 
     is_valid_boolean "$needs_empty_commit"                                      || true

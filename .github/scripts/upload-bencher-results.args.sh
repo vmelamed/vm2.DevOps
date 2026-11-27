@@ -147,10 +147,10 @@ function parse_arguments()
 
 function verify_environment()
 {
-    [[ -n ${BENCHER_API_TOKEN:-} ]]                                             || error "The BENCHER_API_TOKEN environment variable is required." -ec "$err_missing_argument"
+    [[ -n ${BENCHER_API_TOKEN:-} ]]                                             || error "$err_missing_argument" "The BENCHER_API_TOKEN environment variable is required."
 
-    is_tool_present bc                                                          || error "'bc' is not installed." "Install it: 'sudo apt install bc'." -ec "$err_tool_not_found"
-    is_tool_present bencher                                                     || error "'bencher' is not installed." "Install it from <https://bencher.dev/docs/how-to/install-cli/>." -ec "$err_tool_not_found"
+    is_tool_present bc                                                          || error "$err_tool_not_found" "'bc' is not installed." "Install it: 'sudo apt install bc'."
+    is_tool_present bencher                                                     || error "$err_tool_not_found" "'bencher' is not installed." "Install it from <https://bencher.dev/docs/how-to/install-cli/>."
 
     return "$success"
 }
@@ -179,22 +179,22 @@ function resolve_arguments()
     # reject absolute paths by design (the framework's convention for user-facing --artifacts-path-style inputs), but
     # this value is an internal, already-resolved absolute path handed off from run-benchmarks.sh's own output, not a
     # raw CLI/env path a caller is expected to type in relative form.
-    [[ -n $results_dir ]]                                                       || error "The results directory is required." -ec "$err_missing_argument"
-    [[ -z $results_dir || -d $results_dir ]]                                    || error "The results directory '$results_dir' is not a directory." -ec "$err_argument_value"
-    [[ $repository == */* ]]                                                    || error "--repository must be in 'owner/repo' form (provided '${repository:-<empty>}')." -ec "$err_argument_value"
-    [[ -n $event_name ]]                                                        || error "--event-name is required." -ec "$err_missing_argument"
-    [[ -n $ref_name ]]                                                          || error "--ref-name is required." -ec "$err_missing_argument"
+    [[ -n $results_dir ]]                                                       || error "$err_missing_argument" "The results directory is required."
+    [[ -z $results_dir || -d $results_dir ]]                                    || error "$err_argument_value" "The results directory '$results_dir' is not a directory."
+    [[ $repository == */* ]]                                                    || error "$err_argument_value" "--repository must be in 'owner/repo' form (provided '${repository:-<empty>}')."
+    [[ -n $event_name ]]                                                        || error "$err_missing_argument" "--event-name is required."
+    [[ -n $ref_name ]]                                                          || error "$err_missing_argument" "--ref-name is required."
     is_valid_max_regression_pct "$max_regression_pct"                           || true
-    is_non_negative "$max_gen1_collects"                                        || error "--max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')." -ec "$err_argument_value"
-    is_non_negative "$max_gen2_collects"                                        || error "--max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')." -ec "$err_argument_value"
+    is_non_negative "$max_gen1_collects"                                        || error "$err_argument_value" "--max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')."
+    is_non_negative "$max_gen2_collects"                                        || error "$err_argument_value" "--max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')."
     is_valid_boolean "$reset_thresholds"                                        || true
 
     if [[ $event_name == "pull_request" ]]; then
-        [[ -n $head_ref ]]                                                      || error "--head-ref is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
-        [[ -n $pr_number ]]                                                     || error "--pr-number is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
-        [[ -z $pr_number ]] || is_natural "$pr_number"                          || error "The PR number must be a natural number." -ec "$err_argument_value"
-        [[ -n $pr_base_sha ]]                                                   || error "--pr-base-sha is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
-        [[ -n ${GH_TOKEN:-} ]]                                                  || error "The GH_TOKEN environment variable is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
+        [[ -n $head_ref ]]                                                      || error "$err_missing_argument" "--head-ref is required when --event-name is 'pull_request'."
+        [[ -n $pr_number ]]                                                     || error "$err_missing_argument" "--pr-number is required when --event-name is 'pull_request'."
+        [[ -z $pr_number ]] || is_natural "$pr_number"                          || error "$err_argument_value" "The PR number must be a natural number."
+        [[ -n $pr_base_sha ]]                                                   || error "$err_missing_argument" "--pr-base-sha is required when --event-name is 'pull_request'."
+        [[ -n ${GH_TOKEN:-} ]]                                                  || error "$err_missing_argument" "The GH_TOKEN environment variable is required when --event-name is 'pull_request'."
     fi
 
     # freeze the parameters

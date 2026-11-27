@@ -452,11 +452,11 @@ buffering, and error-propagation behavior, especially when command substitution 
   ```bash
   my_function() {
       (( $# == 1 )) ||
-            bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of a variable to receive the result." -ec "$err_invalid_arguments"
+            bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of a variable to receive the result."
       # properly validate the parameter as a defined variable within a param validation pattern - see above
       [[ ! -v "$1" ]] ||
             is_defined_variable "$1" ||
-            bug "${FUNCNAME[0]}() requires argument 1 to be the name of a defined variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+            bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a defined variable (provided '${1-<missing>}')."
 
       exit_if_has_bugs
 
@@ -487,7 +487,7 @@ buffering, and error-propagation behavior, especially when command substitution 
 Predicate functions are named `is_xyz` or `has_xyz`, e.g. `is_defined_array`, `is_positive`, and `has_errors`. They are pure:
 they return `$positive` (0) for **true** or `$negative` (1) for **false**, print no messages, and have no side effects. The
 only thing they report is a `bug`: a call that violates their contract (e.g. the wrong number of arguments). This makes them
-the right tool for the formal argument checks: `is_xyz "$1" || bug "…" -ec "$err_…"`.
+the right tool for the formal argument checks: `is_xyz "$1" || bug "$err_…" "…"`.
 
 A nameref parameter of a predicate is read-only, and is used only to pass an array.
 
@@ -616,15 +616,15 @@ function example()
 
     (( $# == 1 || $# == 2 )) || {
         _rc="$err_invalid_arguments"
-        error "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#)." -ec "$_rc"
+        error "$_rc" "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#)."
     }
     [[ ! -v 1 || -n $1 ]] || {
         _rc="$err_argument_value"
-        error "${FUNCNAME[0]}() requires argument 1, the input name, to be non-empty (provided '${1-<missing>}')." -ec "$_rc"
+        error "$_rc" "${FUNCNAME[0]}() requires argument 1, the input name, to be non-empty (provided '${1-<missing>}')."
     }
     [[ ! -v 2 || $2 =~ ^(true|false)$ ]] || {
         _rc="$err_argument_type"
-        error "${FUNCNAME[0]}() requires optional argument 2 to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$_rc"
+        error "$_rc" "${FUNCNAME[0]}() requires optional argument 2 to be 'true' or 'false' (provided '${2-<missing>}')."
     }
 
     (( _rc == success )) || return "$err_invalid_arguments"
@@ -731,12 +731,12 @@ short forms keep them visually compact, so the part that actually matters at eac
 stays the most prominent thing on the line.
 
 **Put `-ec` after the message parts** (and `--dotnet-error-code`/`-dec` too). These flags are positional: the code's message
-is printed exactly where the flag appears, so `error "Bad commit message: $subject" -ec "$err_argument_value"` prints the
+is printed exactly where the flag appears, so `error "$err_argument_value" "Bad commit message: $subject"` prints the
 specific message first and the generic text of the code below it.
 
 ```bash
 # Exception: message()-family functions keep their short forms
-error "Bad commit message: $subject" -ec "$err_argument_value"
+error "$err_argument_value" "Bad commit message: $subject"
 usage -sd 3 "Invalid argument value for the option <option_name>" -ec "$_rc"
 ```
 
@@ -803,7 +803,7 @@ what is already up to date); a dry run reports the intended changes of one parti
 if ! git -C "$repo" show-ref --verify --quiet "$git_heads_ns$branch"; then      # a query: runs directly
     execute --quiet git -C "$repo" switch -c "$branch"                        # a side effect: dry run prints it
 fi
-is_dry_run || [[ -s $package ]] || error "Package '$package' not found or empty." -ec "$err_tool_error"
+is_dry_run || [[ -s $package ]] || error "$err_tool_error" "Package '$package' not found or empty."
 
 # Avoid: a query behind execute, a redirected execute, and is_dry_run as an on/off switch for a whole block
 if ! execute dotnet tool list "$tool" --global; then ...; fi                 # always "installed" in a dry run

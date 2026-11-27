@@ -57,11 +57,11 @@ declare result
 
 result=$(execute_with_retry --query --classify gh_failure \
                 gh pr view "$pr_number" \
-                --repo "$repo" \
-                --json title,url,headRefOid \
-                --jq '[.title, .url, .headRefOid] | @tsv')                      || exit_with_error "Failed to read the pull request #$pr_number of '$repo'." -ec "$err_tool_error"
+                    --repo "$repo" \
+                    --json title,url,headRefOid \
+                    --jq '[.title, .url, .headRefOid] | @tsv')                  || exit_with_error "$err_tool_error" "Failed to read the pull request #$pr_number of '$repo'."
 IFS=$'\t' read -r pr_title pr_url pr_head <<< "$result"
-[[ -n $pr_head ]]                                                               || exit_with_error "Pull request #$pr_number of '$repo' was not found." -ec "$err_not_found"
+[[ -n $pr_head ]]                                                               || exit_with_error "$err_not_found" "Pull request #$pr_number of '$repo' was not found."
 
 # Counts the submitted reviews of the pull request's head commit. A PENDING review (the authenticated user's draft, not
 # yet submitted) already carries the head commit's id, but is not a review yet: it must not end '--watch'. The SHA is 40
@@ -86,10 +86,10 @@ if $watch; then
     declare -i head_reviews=0
     declare -i remaining=0
     while :; do
-        head_reviews=$(count_head_reviews)                                      || exit_with_error "Failed to read the reviews of #$pr_number." -ec "$err_tool_error"
+        head_reviews=$(count_head_reviews)                                      || exit_with_error "$err_tool_error" "Failed to read the reviews of #$pr_number."
         (( head_reviews == 0 )) || break
         remaining=$(( deadline - SECONDS ))
-        (( remaining > 0 ))                                                     || exit_with_error "No review of commit ${pr_head:0:7} of #$pr_number within $timeout seconds." -ec "$err_not_found"
+        (( remaining > 0 ))                                                     || exit_with_error "$err_not_found" "No review of commit ${pr_head:0:7} of #$pr_number within $timeout seconds."
         info "Waiting for a review of commit ${pr_head:0:7} of #$pr_number (checking every $interval seconds)..."
         # never sleep past the deadline: '--timeout' limits the wait, whatever the interval
         sleep $(( interval < remaining ? interval : remaining ))
@@ -184,7 +184,7 @@ printf '\n== Reviews\n\n'
 result=$(execute_with_retry --query --classify gh_failure \
             gh api --paginate "repos/$repo/pulls/$pr_number/reviews" \
             --jq '.[] | select(.state != "PENDING" and .body != "") | "-- \(.user.login) [\(.state)] \((.submitted_at // "")[:16] | sub("T"; " "))\n\(.body)\n"') \
-                                                                                || exit_with_error "Failed to read the reviews of #$pr_number." -ec "$err_tool_error"
+                                                                                || exit_with_error "$err_tool_error" "Failed to read the reviews of #$pr_number."
 strip_html <<< "$result"
 
 
@@ -192,5 +192,5 @@ printf '\n== Inline comments\n\n'
 result=$(execute_with_retry --query --classify gh_failure \
             gh api --paginate "repos/$repo/pulls/$pr_number/comments" \
             --jq '.[] | "-- \(.path):\(.line // .original_line)\(if .in_reply_to_id then " (reply)" else "" end) -- \(.user.login)\n\(.body)\n"') \
-                                                                                || exit_with_error "Failed to read the inline comments of #$pr_number." -ec "$err_tool_error"
+                                                                                || exit_with_error "$err_tool_error" "Failed to read the inline comments of #$pr_number."
 strip_html <<< "$result"

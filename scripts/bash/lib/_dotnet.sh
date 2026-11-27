@@ -57,11 +57,10 @@ declare -x gh_nuget_password
 #-----------------------------------------------------------------------------------------------
 function update_nuget_sources_with_github_vm2()
 {
-    (( $# == 0 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() requires 0 or 2 arguments (provided $#):" \
-                                                                                       "  - NuGet source username (in CI defaults to \$GH_ACTOR)" \
-                                                                                       "  - NuGet source password (in CI defaults to \$GH_TOKEN)" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 && ! -v 2 || -n "$1" && -n "$2" ]]                                || bug "${FUNCNAME[0]}() requires arguments 1 and 2 to be both missing or both non-empty." -ec "$err_argument_value"
+    (( $# == 0 || $# == 2 ))                                                    || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 0 or 2 arguments (provided $#):" \
+                                                                                                                "  - NuGet source username (in CI defaults to \$GH_ACTOR)" \
+                                                                                                                "  - NuGet source password (in CI defaults to \$GH_TOKEN)"
+    [[ ! -v 1 && ! -v 2 || -n "$1" && -n "$2" ]]                                || bug "$err_argument_value" "${FUNCNAME[0]}() requires arguments 1 and 2 to be both missing or both non-empty."
                                                                                 exit_if_has_bugs
 
     local _gh_nuget_username=${1:-${gh_nuget_username:-${GH_ACTOR:-}}}
@@ -100,11 +99,10 @@ function update_nuget_sources_with_github_vm2()
 #-----------------------------------------------------------------------------------------------
 function dotnet_clean()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
-                                                                                       "  - path to an existing project or solution file which should be cleaned" \
-                                                                                       "  - additional arguments to pass to 'dotnet clean' (optional)" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                   || bug "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')." -ec  "$err_argument_value"
+    (( $# >= 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
+                                                                                                                "  - path to an existing project or solution file which should be cleaned" \
+                                                                                                                "  - additional arguments to pass to 'dotnet clean' (optional)"
+    [[ ! -v 1 ]] || [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                   || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -148,11 +146,10 @@ function dotnet_clean()
 #-----------------------------------------------------------------------------------------------
 function dotnet_restore()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
-                                                                                       "  - path to an existing project or solution file which dependencies should be restored" \
-                                                                                       "  - additional arguments to pass to 'dotnet restore' (optional)" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                   || bug "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')." -ec  "$err_argument_value"
+    (( $# >= 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
+                                                                                                                "  - path to an existing project or solution file which dependencies should be restored" \
+                                                                                                                "  - additional arguments to pass to 'dotnet restore' (optional)"
+    [[ ! -v 1 ]] || [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                   || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -196,13 +193,12 @@ function dotnet_restore()
 #-----------------------------------------------------------------------------------------------
 function dotnet_build()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
-                                                                                       "  - path to an existing project or solution file to build" \
-                                                                                       "  - name of an associative array to receive the build information (optional if this is the last argument)" \
-                                                                                       "  - additional arguments to pass to 'dotnet build' (optional, if any are present - requires argument 2)" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                   || bug "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')." -ec "$err_not_file"
-    [[ ! -v 2 || -z $2 ]] || is_associative_array "$2"                          || bug "${FUNCNAME[0]}() requires optional argument 2 to name an associative array that will receive the build information (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# >= 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
+                                                                                                                "  - path to an existing project or solution file to build" \
+                                                                                                                "  - name of an associative array to receive the build information (optional if this is the last argument)" \
+                                                                                                                "  - additional arguments to pass to 'dotnet build' (optional, if any are present - requires argument 2)"
+    [[ ! -v 1 ]] || [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                   || bug "$err_not_file" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')."
+    [[ ! -v 2 || -z $2 ]] || is_associative_array "$2"                          || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires optional argument 2 to name an associative array that will receive the build information (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -306,13 +302,12 @@ declare -r __build_info_line_regex="^[[:space:]]*([${letters_set}_][${letters_se
 #-----------------------------------------------------------------------------------------------
 function dotnet_pack()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
-                                                                                       "  - path to an existing project file" \
-                                                                                       "  - package release notes (can be empty string)" \
-                                                                                       "  - nameref to an associative array variable that will store the properties of the produced packages" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || [[ -s $1 && $1 == *.csproj ]]                               || bug "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project file (provided '${1-<missing>}')." -ec  "$err_argument_value"
-    [[ ! -v 3 || -z $3 ]] || is_associative_array "$3"                          || bug "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# >= 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
+                                                                                                                "  - path to an existing project file" \
+                                                                                                                "  - package release notes (can be empty string)" \
+                                                                                                                "  - nameref to an associative array variable that will store the properties of the produced packages"
+    [[ ! -v 1 ]] || [[ -s $1 && $1 == *.csproj ]]                               || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project file (provided '${1-<missing>}')."
+    [[ ! -v 3 || -z $3 ]] || is_associative_array "$3"                          || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -433,12 +428,11 @@ function dotnet_pack()
 #-----------------------------------------------------------------------------------------------
 function list_solution_projects()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - path to a solution file (*.sln or *.slnx)" \
-                                                                                       "  - name of an indexed array variable to receive the list of project paths" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || [[ -s $1 && $1 == *.@(slnx|sln) ]]                          || bug "${FUNCNAME[0]}() requires argument 1 to be a path to an existing solution file (provided '${1-<missing>}')." -ec  "$err_argument_value"
-    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "${FUNCNAME[0]}() requires argument 2 to name a declared indexed-array variable (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - path to a solution file (*.sln or *.slnx)" \
+                                                                                                                "  - name of an indexed array variable to receive the list of project paths"
+    [[ ! -v 1 ]] || [[ -s $1 && $1 == *.@(slnx|sln) ]]                          || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing solution file (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a declared indexed-array variable (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -506,10 +500,8 @@ function list_solution_projects()
 #-----------------------------------------------------------------------------------------------
 function expand_solution_projects()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#):" \
-                                                                                       "  - the name of a variable containing a JSON array of project/solution paths" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to name a declared variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of a variable containing a JSON array of project/solution paths."
+    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a declared variable (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __projects=$1

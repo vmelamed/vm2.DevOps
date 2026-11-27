@@ -33,7 +33,7 @@ declare -x noise_sink
 #-----------------------------------------------------------------------------------------------
 function is_json()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the JSON string to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the JSON string to validate."
                                                                                 exit_if_has_bugs
 
     jq empty <<< "$1" &> "$noise_sink" && return "$positive" || return "$negative"
@@ -49,8 +49,8 @@ function is_json()
 #-----------------------------------------------------------------------------------------------
 function is_json_file()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the JSON file to validate." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_path "$1"                                                || bug "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')." -ec "$err_invalid_path"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the JSON file to validate."
+    [[ ! -v 1 ]] || is_path "$1"                                                || bug "$err_invalid_path" "${FUNCNAME[0]}() requires argument 1 to be a valid path (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     jq empty "$1" &> "$noise_sink" && return "$positive" || return "$negative"
@@ -77,10 +77,9 @@ function is_json_file()
 #-----------------------------------------------------------------------------------------------
 function is_valid_json_with_schema()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - the JSON file to validate" \
-                                                                                       "  - the JSON Schema file to validate against" \
-                                                                                       -ec "$err_invalid_arguments"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - the JSON file to validate" \
+                                                                                                                "  - the JSON Schema file to validate against"
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -135,13 +134,12 @@ function is_valid_json_with_schema()
 #-----------------------------------------------------------------------------------------------
 function validate_json_array()
 {
-    (( $# > 0 && $# <= 3 ))                                                     || bug "${FUNCNAME[0]}() requires 1 to 3 arguments (provided $#):" \
-                                                                                       "  - the name of a variable containing the JSON array" \
-                                                                                       "  - the default value to use if the variable is unbound or empty, optional" \
-                                                                                       "  - the name of the function to validate each item in the array, optional" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to name a declared variable containing the JSON input (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 3 ]] || is_function "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to name a defined item-validation function (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# > 0 && $# <= 3 ))                                                     || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 to 3 arguments (provided $#):" \
+                                                                                                                "  - the name of a variable containing the JSON array" \
+                                                                                                                "  - the default value to use if the variable is unbound or empty, optional" \
+                                                                                                                "  - the name of the function to validate each item in the array, optional"
+    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a declared variable containing the JSON input (provided '${1-<missing>}')."
+    [[ ! -v 3 ]] || is_function "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a defined item-validation function (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __input=$1

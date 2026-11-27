@@ -212,6 +212,66 @@ declare -gx err_tool_error
     assert_output "last=12"
 }
 
+# --- the leading error code: `error <code> <message parts...>`, like with_error ---------------------
+
+@test "error: a leading code sets the last error code, and is printed as the code's text after the message, not as a part" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error 9 'No such file.' 2>&1; echo \"last=\$__last_error\""
+    assert_success
+    assert_line "last=9"
+    # shellcheck disable=SC2016 # '$err_not_found' is literal text in the output, not something to expand
+    assert_output --regexp 'No such file\..*'$'\n''.*\$err_not_found \(9\)'          # the message first, then the code's text
+    refute_output --regexp '(ERROR:|^)[[:space:]]*9[[:space:]]*$'                      # the bare 9 is not a message part
+}
+
+@test "error: a leading code wins over a trailing -ec (it is appended last)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error 9 'boom' -ec 17 2>/dev/null; echo \"last=\$__last_error\""
+    assert_success
+    assert_output "last=9"
+}
+
+@test "error: -ec as the first argument still sets the last error code" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error -ec 9 'boom' 2>/dev/null; echo \"last=\$__last_error\""
+    assert_success
+    assert_output "last=9"
+}
+
+@test "error: with no arguments (the message from stdin) does not trip set -u, and the last error code is failure" {
+    run bash -c "set -u; source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error <<< 'from stdin' 2>/dev/null; echo \"last=\$__last_error\""
+    assert_success
+    assert_output "last=1"
+}
+
+# Pins the documented trap of detecting the code: a message that is only a number is taken as the code.
+@test "error: a message that is only a number is taken as the code (the documented trap)" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error 42 2>&1; echo \"last=\$__last_error\""
+    assert_success
+    assert_line "last=42"
+    assert_output --partial "(42): An unknown error occurred."
+}
+
+@test "error: a leading code becomes the exit code of exit_if_has_errors" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error 9 'boom' 2>/dev/null; exit_if_has_errors false 2>/dev/null"
+    assert_failure 9
+}
+
+@test "bug: a leading code sets the last bug code, and exit_if_has_bugs exits with it" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; bug 5 'broken' 2>/dev/null; echo \"last=\$__last_bug\"; exit_if_has_bugs 2>/dev/null"
+    assert_failure 5
+    assert_line "last=5"
+}
+
+@test "bug: a leading code wins over a trailing -ec, and -ec first still works" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; bug 5 'broken' -ec 12 2>/dev/null; echo \"a=\$__last_bug\"; bug -ec 12 'broken' 2>/dev/null; echo \"b=\$__last_bug\""
+    assert_success
+    assert_line "a=5"
+    assert_line "b=12"
+}
+
+@test "exit_with_bug: a leading code is the exit code" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; exit_with_bug 5 'broken' 2>/dev/null"
+    assert_failure 5
+}
+
 @test "bug: prints to stderr with the bug prefix and increments the bug counter" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; bug 'contract violated' 2>&1 1>/dev/null"
     [[ "$output" == *"something"* ]] || [[ "$output" == *"contract violated"* ]]

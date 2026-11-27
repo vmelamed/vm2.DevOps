@@ -81,7 +81,7 @@ function resolve_arguments()
 
         end_scope
 
-        (( ${#_projects[@]} > 0 ))                                              || error "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory." -ec "$err_not_found"
+        (( ${#_projects[@]} > 0 ))                                              || error "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
         build_project=${_projects[0]:-}
         (( ${#_projects[@]} == 1 ))                                             || warning "Multiple projects found: (${_projects[*]}), using the first one: '$build_project'."
         trace "Auto-detected build project: $build_project"

@@ -106,7 +106,7 @@ function resolve_arguments()
     # validate the values of the variables common for many vm2.DevOps scripts,
     # usually set from CLI arguments, environment variables, or defaults
     is_safe_existing_file "$package_project"                                    || true
-    [[ $package_project == *.csproj ]]                                          || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
+    [[ $package_project == *.csproj ]]                                          || error "$err_argument_value" "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
     is_valid_boolean "$build"                                                   || true
     is_safe_gh_reason "$reason"                                                 || true
     sanitize_common_dotnet_args "$package_project"

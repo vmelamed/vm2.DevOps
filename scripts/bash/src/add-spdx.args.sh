@@ -52,10 +52,10 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                 usage "Unknown argument: $_option" -ec "$err_unknown_argument"
                 ;;
 
             *)  ! $_positional_arg_set                                          || usage "Multiple directories specified - $_option" -ec "$err_too_many_arguments"
@@ -77,8 +77,8 @@ function verify_environment
 
 function resolve_arguments()
 {
-    [[ -n $dir && -d $dir ]]                                                    || error "Invalid directory '$dir': it does not exist." -ec "$err_not_directory"
-    [[ -n $license ]]                                                           || error "The license (--license) must not be empty." -ec "$err_argument_value"
+    [[ -n $dir && -d $dir ]]                                                    || error "$err_not_directory" "Invalid directory '$dir': it does not exist."
+    [[ -n $license ]]                                                           || error "$err_argument_value" "The license (--license) must not be empty."
 
     readonly dir
     readonly license

@@ -52,7 +52,7 @@ declare -a bad_subjects=()
 declare hash subject
 declare result
 
-result=$(git -C "$repo_path" log --format=$'%H\t%s' "$base_ref..HEAD")          || exit_with_error "Failed to list the commits in '$base_ref..HEAD'." -ec "$err_tool_error"
+result=$(git -C "$repo_path" log --format=$'%H\t%s' "$base_ref..HEAD")          || exit_with_error "$err_tool_error" "Failed to list the commits in '$base_ref..HEAD'."
 
 [[ -z $result ]] ||
 while IFS=$'\t' read -r hash subject; do

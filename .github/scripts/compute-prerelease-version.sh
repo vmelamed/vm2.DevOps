@@ -51,7 +51,7 @@ git fetch --tags --force
 
 # detect if the head is already tagged
 head_tag=$(git tag --points-at HEAD)
-[[ -z $head_tag ]]                                                              || error "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main." -ec "$err_tool_error"
+[[ -z $head_tag ]]                                                              || error "$err_tool_error" "The HEAD is already tagged with '$head_tag'. A prerelease requires at least one new commit on main."
 
 latest_stable_tag=$(
     git tag --list "$minver_tag_prefix*" |
@@ -89,7 +89,7 @@ if is_semver_release "$latest_stable_ver"; then
     minor=${BASH_REMATCH[$semver_minor]}
     patch=${BASH_REMATCH[$semver_patch]}
     ((major > 0 && minor >= 0 && patch >= 0)) ||
-        exit_with_error "Invalid latest stable tag '$latest_stable_ver': its major version must be greater than 0." -ec "$err_argument_value"
+        exit_with_error "$err_argument_value" "Invalid latest stable tag '$latest_stable_ver': its major version must be greater than 0."
     trace "Base version from latest stable: $major.$minor.$patch"
 else
     trace "No previous stable release found; starting at 0.0.0"
@@ -178,7 +178,7 @@ info "Computed prerelease version: $prerelease_version [$bump_type]"
 # ============================================================================
 
 if [[ "$bump_type" != *"none"* ]] && git rev-parse "$prerelease_tag" >"$noise_sink" 2>&1; then
-    error "Tag '$prerelease_tag' already exists. Possible remedy: delete the tag, or merge another PR first." -ec "$err_tool_error"
+    error "$err_tool_error" "Tag '$prerelease_tag' already exists. Possible remedy: delete the tag, or merge another PR first."
 fi
 
 exit_if_has_errors

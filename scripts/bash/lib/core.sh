@@ -119,7 +119,7 @@ function on_exit()
     fi
 
     # restore the initial cwd before exiting
-    cd "$initial_cwd" 2>/dev/null || true
+    cd "$initial_cwd" 2>/dev/null                                               || true
 
     # the shell exits with $_ec anyway (bash keeps the status it had when the EXIT trap started); returning it would
     # only stop the trap, under set -e, before the cleanups that add_trap appended after this function
@@ -194,16 +194,15 @@ fi
 #-----------------------------------------------------------------------------------------------
 function add_trap()
 {
-    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
-                                                                                       "  - the command to append" \
-                                                                                       "  - one or more signal names" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the command, to be non-empty." -ec "$err_argument_value"
+    (( $# >= 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
+                                                                                                                "  - the command to append" \
+                                                                                                                "  - one or more signal names"
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the command, to be non-empty."
 
     local _signal
     for _signal in "${@:2}"; do
         trap -p "$_signal" > /dev/null 2>&1 ||
-            bug "${FUNCNAME[0]}() requires the signal names to be valid (provided '$_signal')." -ec "$err_argument_value"
+            bug "$err_argument_value" "${FUNCNAME[0]}() requires the signal names to be valid (provided '$_signal')."
     done
                                                                                 exit_if_has_bugs
 
@@ -270,7 +269,7 @@ function execute()
     local _quiet=false
     [[ ${1-} == --quiet ]] && { _quiet=true; shift; }
 
-    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#): the command to execute, followed by its arguments." -ec "$err_invalid_arguments"
+    (( $# > 0 ))                                                                || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 1 argument (provided $#): the command to execute, followed by its arguments."
                                                                                 exit_if_has_bugs
 
     local _command
@@ -352,22 +351,22 @@ function execute_with_retry()
         case "$_option" in
             -a|--attempts )
                 shift
-                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() requires the option --attempts to be followed by a natural number, the maximum number of attempts." -ec "$err_missing_argument"
-                [[ ! -v 1 ]] || is_natural "$1"                                 || bug "${FUNCNAME[0]}() requires the option --attempts to be followed by a natural number, the maximum number of attempts (provided '${1-<missing>}')." -ec "$err_argument_type"
+                (( $# > 0 ))                                                    || bug "$err_missing_argument" "${FUNCNAME[0]}() requires the option --attempts to be followed by a natural number, the maximum number of attempts."
+                [[ ! -v 1 ]] || is_natural "$1"                                 || bug "$err_argument_type" "${FUNCNAME[0]}() requires the option --attempts to be followed by a natural number, the maximum number of attempts (provided '${1-<missing>}')."
                 has_bugs || _max_attempts=$1
                 (( $# > 0 )) && shift
                 ;;
             -d|--delay )
                 shift
-                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() requires the option --delay to be followed by a non-negative number, the delay in seconds between the attempts." -ec "$err_missing_argument"
-                [[ ! -v 1 ]] || is_non_negative "$1"                            || bug "${FUNCNAME[0]}() requires the option --delay to be followed by a non-negative number, the delay in seconds between the attempts (provided '${1-<missing>}')." -ec "$err_argument_type"
+                (( $# > 0 ))                                                    || bug "$err_missing_argument" "${FUNCNAME[0]}() requires the option --delay to be followed by a non-negative number, the delay in seconds between the attempts."
+                [[ ! -v 1 ]] || is_non_negative "$1"                            || bug "$err_argument_type" "${FUNCNAME[0]}() requires the option --delay to be followed by a non-negative number, the delay in seconds between the attempts (provided '${1-<missing>}')."
                 has_bugs || _delay=$1
                 (( $# > 0 )) && shift
                 ;;
             -c|--classify )
                 shift
-                (( $# > 0 ))                                                    || bug "${FUNCNAME[0]}() requires the option --classify to be followed by the name of a function that classifies the output of the command." -ec "$err_missing_argument"
-                [[ ! -v 1 ]] || is_function "$1"                                || bug "${FUNCNAME[0]}() requires the option --classify to be followed by the name of a function that classifies the output of the command (provided '${1-<missing>}')." -ec "$err_argument_type"
+                (( $# > 0 ))                                                    || bug "$err_missing_argument" "${FUNCNAME[0]}() requires the option --classify to be followed by the name of a function that classifies the output of the command."
+                [[ ! -v 1 ]] || is_function "$1"                                || bug "$err_argument_type" "${FUNCNAME[0]}() requires the option --classify to be followed by the name of a function that classifies the output of the command (provided '${1-<missing>}')."
                 has_bugs || _classify=$1
                 (( $# > 0 )) && shift
                 ;;
@@ -384,7 +383,7 @@ function execute_with_retry()
         esac
     done
 
-    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#): the command to execute, followed by its arguments." -ec "$err_missing_argument"
+    (( $# > 0 ))                                                                || bug "$err_missing_argument" "${FUNCNAME[0]}() requires at least 1 argument (provided $#): the command to execute, followed by its arguments."
                                                                                 exit_if_has_bugs
 
     # build the command line for display purposes
@@ -493,14 +492,13 @@ function execute_with_retry()
 #-----------------------------------------------------------------------------------------------
 function assert_classifier_args()
 {
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[1]}() requires 3 arguments (provided $#):" \
-                                                                                       "  - the failed command's exit code" \
-                                                                                       "  - the name of the file holding the command's stdout" \
-                                                                                       "  - the name of the file holding the command's stderr" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || { is_exit_code "$1" && (( $1 > 0 )); }                      || bug "${FUNCNAME[1]}() requires argument 1 to be the failed command's exit code [1, 255] (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 || -f $2 ]]                                                       || bug "${FUNCNAME[1]}() requires argument 2 to be the file holding the command's stdout (provided '${2-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 3 || -f $3 ]]                                                       || bug "${FUNCNAME[1]}() requires argument 3 to be the file holding the command's stderr (provided '${3-<missing>}')." -ec "$err_argument_value"
+    (( $# == 3 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[1]}() requires 3 arguments (provided $#):" \
+                                                                                                                "  - the failed command's exit code" \
+                                                                                                                "  - the name of the file holding the command's stdout" \
+                                                                                                                "  - the name of the file holding the command's stderr"
+    [[ ! -v 1 ]] || { is_exit_code "$1" && (( $1 > 0 )); }                      || bug "$err_argument_value" "${FUNCNAME[1]}() requires argument 1 to be the failed command's exit code [1, 255] (provided '${1-<missing>}')."
+    [[ ! -v 2 || -f $2 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[1]}() requires argument 2 to be the file holding the command's stdout (provided '${2-<missing>}')."
+    [[ ! -v 3 || -f $3 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[1]}() requires argument 3 to be the file holding the command's stderr (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
     return "$success"
 }
@@ -527,8 +525,8 @@ function assert_classifier_args()
 #-----------------------------------------------------------------------------------------------
 function list_of_files()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the file pattern." -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the file pattern, to be non-empty (provided '${1-<missing>}')." -ec "$err_argument_value"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the file pattern."
+    [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the file pattern, to be non-empty (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     # remember the current settings of the nullglob and globstar options
@@ -570,13 +568,12 @@ function list_of_files()
 #-----------------------------------------------------------------------------------------------
 function find_files_by_precedence()
 {
-    (( $# > 2 ))                                                                || bug "${FUNCNAME[0]}() requires at least 3 arguments (provided $#):" \
-                                                                                       "  - path to the repository to search for the file name patterns" \
-                                                                                       "  - name of the array variable to store the found file names" \
-                                                                                       "  - the file name patterns to search for, in order of precedence" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1 to be a path to a directory, usually the root of a Git working tree (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "${FUNCNAME[0]}() requires argument 2 to be the name of an indexed array variable to receive the found file names (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# > 2 ))                                                                || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 3 arguments (provided $#):" \
+                                                                                                                "  - path to the repository to search for the file name patterns" \
+                                                                                                                "  - name of the array variable to store the found file names" \
+                                                                                                                "  - the file name patterns to search for, in order of precedence"
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to a directory, usually the root of a Git working tree (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of an indexed array variable to receive the found file names (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _dir=$1

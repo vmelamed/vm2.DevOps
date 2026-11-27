@@ -98,7 +98,7 @@ function resolve_arguments()
     # validate the values of the variables common for many vm2.DevOps scripts,
     # usually set from CLI arguments, environment variables, or defaults
     is_safe_existing_file "$test_project"                                       || true
-    [[ $test_project == *.csproj ]]                                             || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
+    [[ $test_project == *.csproj ]]                                             || error "$err_argument_value" "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
     sanitize_common_dotnet_args "$test_project"
 
     # Unless MIN_BRANCH_COVERAGE_PCT or MIN_METHOD_COVERAGE_PCT is set, derive it from the line coverage. Derive only from a

@@ -108,7 +108,7 @@ done
     echo "Recorded **$uploaded** of **$total** runs ($repeat per project)."
 } | to_summary
 
-(( uploaded > 0 )) || error "No data points were recorded to Bencher." -ec "$err_logic_error"
+(( uploaded > 0 )) || error "$err_logic_error" "No data points were recorded to Bencher."
 
 exit_if_has_errors
 

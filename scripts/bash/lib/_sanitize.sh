@@ -49,7 +49,7 @@ declare -x noise_sink
 #-----------------------------------------------------------------------------------------------
 function ltrim()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to trim the leading spaces of." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to trim the leading spaces of."
                                                                                 exit_if_has_bugs
 
     printf '%s' "${1#"${1%%[![:space:]]*}"}"
@@ -69,8 +69,8 @@ function ltrim()
 #-----------------------------------------------------------------------------------------------
 function ltrim_var()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to trim the leading spaces of." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to trim the leading spaces of."
+    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a variable (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __var="$1"
@@ -93,7 +93,7 @@ function ltrim_var()
 #-----------------------------------------------------------------------------------------------
 function rtrim()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to trim the trailing spaces of." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to trim the trailing spaces of."
                                                                                 exit_if_has_bugs
 
     printf '%s' "${1%"${1##*[![:space:]]}"}"
@@ -113,8 +113,8 @@ function rtrim()
 #-----------------------------------------------------------------------------------------------
 function rtrim_var()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to trim the trailing spaces of." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to trim the trailing spaces of."
+    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a variable (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __var="$1"
@@ -137,7 +137,7 @@ function rtrim_var()
 #-----------------------------------------------------------------------------------------------
 function trim()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to trim the leading and trailing spaces of." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to trim the leading and trailing spaces of."
                                                                                 exit_if_has_bugs
 
     local _value=$1
@@ -162,8 +162,8 @@ function trim()
 #-----------------------------------------------------------------------------------------------
 function trim_var()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to trim the leading and trailing spaces of." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to trim the leading and trailing spaces of."
+    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a variable (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __var="$1"
@@ -193,11 +193,10 @@ function trim_var()
 #-----------------------------------------------------------------------------------------------
 function is_safe_input()
 {
-    (( $# == 1 || $# == 2 ))                                                    || bug "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
-                                                                                       "  - the input string to sanitize" \
-                                                                                       "  - an optional flag to allow spaces" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2 to be a valid boolean (provided '${2-<missing>}')." -ec "$err_argument_type"
+    (( $# == 1 || $# == 2 ))                                                    || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
+                                                                                                                "  - the input string to sanitize" \
+                                                                                                                "  - an optional flag to allow spaces"
+    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "$err_argument_type" "${FUNCNAME[0]}() requires argument 2 to be a valid boolean (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -234,7 +233,7 @@ function is_safe_input()
 #-----------------------------------------------------------------------------------------------
 function is_valid_boolean()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the boolean value to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the boolean value to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -257,7 +256,7 @@ function is_valid_boolean()
 #-----------------------------------------------------------------------------------------------
 function is_valid_integer()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the integer value to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the integer value to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -280,7 +279,7 @@ function is_valid_integer()
 #-----------------------------------------------------------------------------------------------
 function is_valid_path()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the file path to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -313,7 +312,7 @@ function is_valid_path()
 #-----------------------------------------------------------------------------------------------
 function is_safe_path()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the file path to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -348,7 +347,7 @@ function is_safe_path()
 #-----------------------------------------------------------------------------------------------
 function is_safe_existing_path()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the file path to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -377,7 +376,7 @@ function is_safe_existing_path()
 #-----------------------------------------------------------------------------------------------
 function is_safe_existing_directory()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the directory path to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the directory path to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -405,7 +404,7 @@ function is_safe_existing_directory()
 #-----------------------------------------------------------------------------------------------
 function is_safe_existing_file()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the file path to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the file path to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -434,7 +433,7 @@ function is_safe_existing_file()
 #-----------------------------------------------------------------------------------------------
 function escape_ere()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the string that needs its special ERE characters to be escaped." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the string that needs its special ERE characters to be escaped."
                                                                                 exit_if_has_bugs
 
     printf '%s' "$1" | sed 's/[][(){}.^$*+?|\\]/\\&/g'

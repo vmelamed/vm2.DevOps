@@ -112,8 +112,8 @@ function resolve_arguments()
         fi
     fi
 
-    is_positive "$repeat"                                                       || error "repeat must be a positive integer (got '$repeat')." -ec "$err_argument_value"
-    [[ -n "$owner" ]]                                                           || error "Failed to determine the GitHub owner." "Use '--owner <owner>', or set \$GITHUB_REPOSITORY_OWNER." -ec "$err_argument_value"
+    is_positive "$repeat"                                                       || error "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
+    [[ -n "$owner" ]]                                                           || error "$err_argument_value" "Failed to determine the GitHub owner." "Use '--owner <owner>', or set \$GITHUB_REPOSITORY_OWNER."
 
     readonly owner
     readonly repeat

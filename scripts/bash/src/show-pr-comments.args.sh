@@ -117,23 +117,23 @@ declare -r __owner_repo_regex="^[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 #-----------------------------------------------------------------------------------------------
 function resolve_arguments()
 {
-    [[ -z $pr_number ]] || is_natural "$pr_number"                              || error "The pull request number must be a positive integer (provided '$pr_number')." -ec "$err_argument_value"
-    [[ -z $repo || $repo =~ $__owner_repo_regex ]]                              || error "The repository must be given as 'owner/repo' (provided '$repo')." -ec "$err_argument_value"
-    [[ -z $repo || -n $pr_number ]]                                             || error "With '--repo', the pull request number is required: the current branch belongs to the current directory's repository." -ec "$err_missing_argument"
-    is_natural "$interval"                                                      || error "The interval must be a positive number of seconds (provided '$interval')." -ec "$err_argument_value"
-    is_natural "$timeout"                                                       || error "The timeout must be a positive number of seconds (provided '$timeout')." -ec "$err_argument_value"
+    [[ -z $pr_number ]] || is_natural "$pr_number"                              || error "$err_argument_value" "The pull request number must be a positive integer (provided '$pr_number')."
+    [[ -z $repo || $repo =~ $__owner_repo_regex ]]                              || error "$err_argument_value" "The repository must be given as 'owner/repo' (provided '$repo')."
+    [[ -z $repo || -n $pr_number ]]                                             || error "$err_missing_argument" "With '--repo', the pull request number is required: the current branch belongs to the current directory's repository."
+    is_natural "$interval"                                                      || error "$err_argument_value" "The interval must be a positive number of seconds (provided '$interval')."
+    is_natural "$timeout"                                                       || error "$err_argument_value" "The timeout must be a positive number of seconds (provided '$timeout')."
                                                                                 exit_if_has_errors # circuit breaker: resolving the values below needs valid environment and arguments above
 
     # resolve what was omitted: the current directory's repository, the current branch's pull request
     [[ -n $repo ]] || repo=$(execute_with_retry --query --classify gh_failure \
                                 gh repo view \
                                 --json nameWithOwner \
-                                --jq .nameWithOwner 2>"$noise_sink")            || error "The current directory is not in a GitHub repository; use '--repo <owner/repo>'." -ec "$err_not_found"
+                                --jq .nameWithOwner 2>"$noise_sink")            || error "$err_not_found" "The current directory is not in a GitHub repository; use '--repo <owner/repo>'."
     [[ -n $pr_number || -z $repo ]] || pr_number=$(execute_with_retry --query --classify gh_failure \
                                                         gh pr view \
-                                                        --json number \
-                                                        --jq .number 2>"$noise_sink") \
-                                                                                || error "The current branch has no pull request; give the pull request number." -ec "$err_not_found"
+                                                            --json number \
+                                                            --jq .number 2>"$noise_sink") \
+                                                                                || error "$err_not_found" "The current branch has no pull request; give the pull request number."
 
     readonly pr_number
     readonly repo

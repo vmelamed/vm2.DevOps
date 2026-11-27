@@ -61,7 +61,7 @@ declare usage_requested=""
 #-----------------------------------------------------------------------------------------------
 function get_common_arg()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the command-line argument to process." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the command-line argument to process."
                                                                                 exit_if_has_bugs
 
     # the calling scripts should not use any of the common arguments options:
@@ -158,7 +158,7 @@ function usage()
     local -i _exit_code=$success
     local _explicit_exit_code=false
     (( $# > 0 )) &&
-        is_non_negative "$1" &&
+        is_exit_code "$1" &&
         _exit_code=$1 &&
         _explicit_exit_code=true &&
         shift
@@ -222,6 +222,21 @@ Common environment variables:
 "
 
 #-----------------------------------------------------------------------------------------------
+# @description Verifies the arguments of the function usage_text usually defined in each top-
+#   level script.
+#
+# @arg $1 bool _long_text whether Indicates whether to display the long (`true`) or short
+#   (`false`) version of the usage text. The long version includes the standard flags like
+#   verbose, quiet, etc. Optional, default: `false`.
+#-----------------------------------------------------------------------------------------------
+function assert_usage_text_args()
+{
+    (( $# ==1 ))                                                                || bug "$err_invalid_arguments" "${FUNCNAME[1]}() requires 1 argument (provided $#): a boolean, whether to display the long or short usage text."
+    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "$err_argument_type" "${FUNCNAME[1]}() requires argument 1, whether to display the long or short usage text, to be 'true' or 'false' (provided '${1-<missing>}')."
+                                                                                exit_if_has_bugs
+}
+
+#-----------------------------------------------------------------------------------------------
 # @description Displays the usage text for the script. This default implementation is a
 #   placeholder -- override it in each top-level script to show script-specific usage
 #   information.
@@ -235,9 +250,7 @@ Common environment variables:
 #-----------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a boolean, whether to display the long or short usage text."
-    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1, whether to display the long or short usage text, to be 'true' or 'false' (provided '${1-<missing>}')."
-                                                                                exit_if_has_bugs
+    assert_usage_text_args "$@"
 
     local _long_text=$1
     local _common_args

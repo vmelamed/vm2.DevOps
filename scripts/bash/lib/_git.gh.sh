@@ -184,7 +184,7 @@ declare -x noise_sink
 #-----------------------------------------------------------------------------------------------
 function is_gh_repo_owner()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository owner to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository owner to validate."
                                                                                 exit_if_has_bugs
 
     local _owner=${1:-}
@@ -212,7 +212,7 @@ function is_gh_repo_owner()
 #-----------------------------------------------------------------------------------------------
 function is_gh_repo_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository name to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository name to validate."
                                                                                 exit_if_has_bugs
 
     local _repo="${1:-}"
@@ -241,7 +241,7 @@ function is_gh_repo_name()
 #-----------------------------------------------------------------------------------------------
 function is_gh_repo_full_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository name to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository name to validate."
                                                                                 exit_if_has_bugs
 
     local _full_name="${1:-}"
@@ -271,7 +271,7 @@ function is_gh_repo_full_name()
 #-----------------------------------------------------------------------------------------------
 function is_gh_repo_description()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository description to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository description to validate."
                                                                                 exit_if_has_bugs
 
     local _description=${1:-}
@@ -299,7 +299,7 @@ function is_gh_repo_description()
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_repo_owner()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository owner to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository owner to validate."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -335,7 +335,7 @@ See https://docs.github.com/en/rest/repos/repos#create-a-repository-for-the-auth
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_repo_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository name to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub repository name to validate."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -367,7 +367,7 @@ function is_valid_gh_repo_name()
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_repo_description()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the repository description to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the repository description to validate."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -392,7 +392,7 @@ function is_valid_gh_repo_description()
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_visibility()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a visibility." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): a visibility."
                                                                                 exit_if_has_bugs
     local -i _rc=$success
 
@@ -418,7 +418,7 @@ function is_valid_gh_visibility()
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_runner_os()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the runner OS to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the runner OS to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -447,7 +447,7 @@ declare -rxi max_reason_length=200
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_reason()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the reason text to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the reason text to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -478,7 +478,7 @@ function is_valid_gh_reason()
 #-----------------------------------------------------------------------------------------------
 function is_safe_gh_reason()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the reason text to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the reason text to test."
                                                                                 exit_if_has_bugs
 
     local _reason="$1"
@@ -507,7 +507,7 @@ function is_safe_gh_reason()
 #-----------------------------------------------------------------------------------------------
 function is_valid_gh_secret_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub secret name to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the GitHub secret name to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -600,12 +600,11 @@ function gh_failure()
 #-----------------------------------------------------------------------------------------------
 function get_gh_repo_property()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - repo: the full name of the repository (<repo owner>/<repo name>)" \
-                                                                                       "  - property: the name of a property to get" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_gh_repo_full_name "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to be a full name (<repo owner>/<repo name>) of a GitHub repository (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 || "$2" =~ ^[a-z][a-z_.]*$ ]]                                     || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a property to get (provided '${2-<missing>}')." -ec "$err_argument_value"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - repo: the full name of the repository (<repo owner>/<repo name>)" \
+                                                                                                                "  - property: the name of a property to get"
+    [[ ! -v 1 ]] || is_gh_repo_full_name "$1"                                   || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a full name (<repo owner>/<repo name>) of a GitHub repository (provided '${1-<missing>}')."
+    [[ ! -v 2 || "$2" =~ ^[a-z][a-z_.]*$ ]]                                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be the name of a property to get (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _repo_full_name=$1
@@ -620,9 +619,8 @@ function get_gh_repo_property()
 
 function is_repo_state_initialized()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): nameref: the name of an associative array variable - to receive the initialized GitHub repo state." \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to be a name of an associative array that will receive the repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): nameref: the name of an associative array variable - to receive the initialized GitHub repo state."
+    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a name of an associative array that will receive the repository state (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Warning: Variable was used as an array but is now assigned a string.
@@ -641,9 +639,8 @@ function is_repo_state_initialized()
 
 function initialize_repo_state()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): nameref: the name of an associative array variable - to receive the initialized GitHub repo state." \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to be a name of an associative array that will receive the repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): nameref: the name of an associative array variable - to receive the initialized GitHub repo state."
+    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be a name of an associative array that will receive the repository state (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Warning: Variable was used as an array but is now assigned a string.
@@ -681,13 +678,12 @@ declare -r jq_gh_repo_state="{
 #-----------------------------------------------------------------------------------------------
 function get_gh_repo_state()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - repo: the full name of the repository (<repo owner>/<repo name>)" \
-                                                                                       "  - nameref: the name of an associative array variable - to receive the GitHub repo state" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_gh_repo_full_name "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to be a full name (<repo owner>/<repo name>) of a GitHub repository (provided '${1-<missing>}')." -ec "$err_argument_value"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - repo: the full name of the repository (<repo owner>/<repo name>)" \
+                                                                                                                "  - nameref: the name of an associative array variable - to receive the GitHub repo state"
+    [[ ! -v 1 ]] || is_gh_repo_full_name "$1"                                   || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a full name (<repo owner>/<repo name>) of a GitHub repository (provided '${1-<missing>}')."
     [[ ! -v 2 ]] || { is_associative_array "$2" && is_repo_state_initialized "$2"; } \
-                                                                                || bug "${FUNCNAME[0]}() requires argument 2 to be a name of initialized associative array that will receive the repository state (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+                                                                                || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be a name of initialized associative array that will receive the repository state (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _repo_full_name=$1
@@ -746,14 +742,13 @@ declare -xri url_name=9
 #-----------------------------------------------------------------------------------------------
 function get_repo_state()
 {
-    (( $# == 2 || $# == 3 ))                                                    || bug "${FUNCNAME[0]}() requires 2 or 3 arguments (provided $#):" \
-                                                                                       "  - the existing path to the root of the git repo working tree" \
-                                                                                       "  - nameref: the name of an associative array variable - to receive the repo state" \
-                                                                                       "  - full_info - if false, only retrieve the local Git repository state without trying to get GitHub API data (optional, default: true)" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be the existing root directory of the Git working tree (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "${FUNCNAME[0]}() requires argument 2 to name an associative array that will receive the repository state (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 3 ]] || is_boolean "$3"                                             || bug "${FUNCNAME[0]}() requires optional argument 3, the full-information flag, to be 'true' or 'false' (provided '${3-<missing>}')." -ec "$err_argument_type"
+    (( $# == 2 || $# == 3 ))                                                    || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 or 3 arguments (provided $#):" \
+                                                                                                                "  - the existing path to the root of the git repo working tree" \
+                                                                                                                "  - nameref: the name of an associative array variable - to receive the repo state" \
+                                                                                                                "  - full_info - if false, only retrieve the local Git repository state without trying to get GitHub API data (optional, default: true)"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be the existing root directory of the Git working tree (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name an associative array that will receive the repository state (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || is_boolean "$3"                                             || bug "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 3, the full-information flag, to be 'true' or 'false' (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -817,8 +812,8 @@ function get_repo_state()
 #-----------------------------------------------------------------------------------------------
 function has_local_repo()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable."
+    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.
@@ -837,8 +832,8 @@ function has_local_repo()
 #-----------------------------------------------------------------------------------------------
 function has_remote_repo()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable."
+    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __state="$1"
@@ -856,8 +851,8 @@ function has_remote_repo()
 #-----------------------------------------------------------------------------------------------
 function has_github_remote()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
-    is_associative_array "$1"                                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable."
+    is_associative_array "$1"                                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __state="$1"
@@ -876,8 +871,8 @@ function has_github_remote()
 #-----------------------------------------------------------------------------------------------
 function read_repo_state()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
-    is_associative_array "$1"                                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable."
+    is_associative_array "$1"                                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     initialize_repo_state "$1"
@@ -905,8 +900,8 @@ function read_repo_state()
 #-----------------------------------------------------------------------------------------------
 function print_repo_state()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable." -ec "$err_invalid_arguments"
-    is_associative_array "$1"                                                   || bug "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable."
+    is_associative_array "$1"                                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing repository state (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     # shellcheck disable=SC2178 # Variable was used as an array but is now assigned a string.

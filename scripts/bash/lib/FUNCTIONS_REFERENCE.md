@@ -104,6 +104,7 @@
     - [usage\_if\_requested()](#usage_if_requested)
     - [usage()](#usage-1)
     - [usage\_text()](#usage_text)
+    - [verify\_usage\_text\_args()](#assert_usage_text_args)
   - [\_semver.sh](#_semversh)
     - [print\_semver\_regexes()](#print_semver_regexes)
     - [is\_valid\_minver\_settings()](#is_valid_minver_settings)
@@ -681,6 +682,10 @@ Displays an optional error message, the usage text, and exits. Overrides the for
 ### usage_text()
 
 Default placeholder usage text; meant to be overridden by each top-level script.
+
+### assert_usage_text_args()
+
+Verifies the arguments of the function `usage_text()` usually defined in the `*.usage.sh` file of every top-level script.
 
 ---
 

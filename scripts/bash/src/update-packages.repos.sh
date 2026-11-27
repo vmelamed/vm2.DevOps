@@ -40,14 +40,13 @@ declare -x search_count
 #-----------------------------------------------------------------------------------------------
 function classify_repo()
 {
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
-                                                                                       "  - the repository path" \
-                                                                                       "  - the mode" \
-                                                                                       "  - the reason" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be a valid variable name (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to be a valid variable name (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 3 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
+                                                                                                                "  - the repository path" \
+                                                                                                                "  - the mode" \
+                                                                                                                "  - the reason"
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be a valid variable name (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be a valid variable name (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _repo=$1
@@ -103,29 +102,26 @@ function classify_repo()
 #-----------------------------------------------------------------------------------------------
 function start_publish_branch()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - the repository path" \
-                                                                                       "  - the branch name" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_branch_name "$2"                                         || bug "${FUNCNAME[0]}() requires argument 2 to be a valid branch name (provided '${2-<missing>}')." -ec "$err_invalid_branch_name"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - the repository path" \
+                                                                                                                "  - the branch name"
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_branch_name "$2"                                         || bug "$err_invalid_branch_name" "${FUNCNAME[0]}() requires argument 2 to be a valid branch name (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     if git -C "$1" show-ref --verify --quiet "refs/heads/$2"; then
-        execute --quiet git -C "$1" switch "$2" ||
-            return "$err_tool_error"
+        execute --quiet git -C "$1" switch "$2"                                 || return "$err_tool_error"
         trace "Switched to the existing local branch '$2' in '$1'."
         return "$success"
     fi
 
     if git -C "$1" show-ref --verify --quiet "refs/remotes/origin/$2"; then
-        execute --quiet git -C "$1" switch -c "$2" --track "origin/$2" ||
-            return "$err_tool_error"
+        execute --quiet git -C "$1" switch -c "$2" --track "origin/$2"          || return "$err_tool_error"
         trace "Checked out the existing remote branch '$2' in '$1'."
         return "$success"
     fi
 
-    execute --quiet git -C "$1" switch -c "$2" || return "$err_tool_error"
+    execute --quiet git -C "$1" switch -c "$2"                                  || return "$err_tool_error"
 
     trace "Created and switched to branch '$2' in '$1'."
 }
@@ -145,7 +141,7 @@ function start_publish_branch()
 #-----------------------------------------------------------------------------------------------
 function commit_package_versions()
 {
-    (( $# >= 3 ))                                                               || bug "${FUNCNAME[0]}() requires at least 3 arguments (provided $#): the repository path, the commit message, and the paths to commit." -ec "$err_invalid_arguments"
+    (( $# >= 3 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 3 arguments (provided $#): the repository path, the commit message, and the paths to commit."
                                                                                 exit_if_has_bugs
 
     local _repo=$1
@@ -155,11 +151,11 @@ function commit_package_versions()
     shift 2
     for _pathspec in "$@"; do
         if [[ -n $(git -C "$_repo" ls-files --modified --deleted --others --exclude-standard -- "$_pathspec") ]]; then
-            execute git -C "$_repo" add -A -- "$_pathspec" || return "$err_tool_error"
+            execute git -C "$_repo" add -A -- "$_pathspec"                      || return "$err_tool_error"
         fi
     done
     git -C "$_repo" diff --cached --quiet && return "$negative"
-    execute git -C "$_repo" commit --quiet -m "$_message" || return "$err_tool_error"
+    execute git -C "$_repo" commit --quiet -m "$_message"                       || return "$err_tool_error"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -176,16 +172,15 @@ function commit_package_versions()
 #-----------------------------------------------------------------------------------------------
 function update_section_versions()
 {
-    (( $# == 4 ))                                                               || bug "${FUNCNAME[0]}() requires 4 arguments (provided $#):" \
-                                                                                       "  - the path of the file to be updated" \
-                                                                                       "  - the flag designating which section of the file must be updated must be either 'shared' or 'repo'" \
-                                                                                       "  - the summary label" \
-                                                                                       "  - the name of the summary rows array." \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -f $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1, the path of the file to be updated, to be a path to an existing file (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 || $2 == shared || $2 == repo ]]                                  || bug "${FUNCNAME[0]}() requires argument 2, the section of the file to update, to be 'shared' or 'repo' (provided '${2-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 3 || -n $3 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 3, the label, to be non-empty." -ec "$err_argument_value"
-    [[ ! -v 4 ]] || is_indexed_array "$4"                                       || bug "${FUNCNAME[0]}() requires argument 4 to be the name of an indexed array variable (provided '${4-<missing>}')." -ec "$err_argument_value"
+    (( $# == 4 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 4 arguments (provided $#):" \
+                                                                                                                "  - the path of the file to be updated" \
+                                                                                                                "  - the flag designating which section of the file must be updated must be either 'shared' or 'repo'" \
+                                                                                                                "  - the summary label" \
+                                                                                                                "  - the name of the summary rows array."
+    [[ ! -v 1 || -f $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the path of the file to be updated, to be a path to an existing file (provided '${1-<missing>}')."
+    [[ ! -v 2 || $2 == shared || $2 == repo ]]                                  || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the section of the file to update, to be 'shared' or 'repo' (provided '${2-<missing>}')."
+    [[ ! -v 3 || -n $3 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 3, the label, to be non-empty."
+    [[ ! -v 4 ]] || is_indexed_array "$4"                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 4 to be the name of an indexed array variable (provided '${4-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _file=$1
@@ -266,8 +261,8 @@ function update_section_versions()
 #-----------------------------------------------------------------------------------------------
 function refresh_lock_files()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the repository path." -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')." -ec "$err_not_directory"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the repository path."
+    [[ ! -v 1 || -d "$1" ]]                                                     || bug "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _repo=$1
@@ -285,7 +280,7 @@ function refresh_lock_files()
         # rewrites an existing lock file instead of failing with NU1004 (verified with dotnet 10)
         dotnet_restore "$_project" --force-evaluate || {
             _rc=$?
-            error "Failed to restore '$_project'." -ec "$_rc"
+            error "$_rc" "Failed to restore '$_project'."
         }
     done
     _t1=$(now_us)
@@ -307,14 +302,13 @@ function refresh_lock_files()
 #-----------------------------------------------------------------------------------------------
 function open_pull_request()
 {
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
-                                                                                       "  - the repository path" \
-                                                                                       "  - the branch" \
-                                                                                       "  - the URL output." \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the branch name, to be non-empty." -ec "$err_argument_value"
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 3 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
+                                                                                                                "  - the repository path" \
+                                                                                                                "  - the branch" \
+                                                                                                                "  - the URL output."
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')."
+    [[ ! -v 2 || -n $2 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the branch name, to be non-empty."
+    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _repo=$1 _branch=$2
@@ -323,19 +317,18 @@ function open_pull_request()
 
     __url_ref=$(cd "$_repo" && execute_with_retry --query --classify gh_failure \
                                     gh pr list \
-                                    --head "$_branch" \
-                                    --state open \
-                                    --json url \
-                                    --jq '.[0].url // empty' 2>/dev/null)       || true
+                                        --head "$_branch" \
+                                        --state open \
+                                        --json url \
+                                        --jq '.[0].url // empty' 2>/dev/null)   || true
     [[ -n $__url_ref ]] && return "$success"
 
     __url_ref=$(cd "$_repo" &&
                 execute_with_retry --classify gh_failure \
                         gh pr create --head "$_branch" \
-                        --title "chore(deps): update NuGet package versions in Directory.Packages.props" \
-                        --body "Automated dependency upgrade (stable versions only, never a downgrade) by 'update-packages.sh'." 2>/dev/null) || true
+                            --title "chore(deps): update NuGet package versions in Directory.Packages.props" \
+                            --body "Automated dependency upgrade (stable versions only, never a downgrade) by 'update-packages.sh'." 2>/dev/null) || true
     is_dry_run && return "$success" # the PR was only printed: there is no URL to report
-    [[ -n $__url_ref ]]                                                          || return "$err_tool_error"
+    [[ -n $__url_ref ]]                                                         || return "$err_tool_error"
     return "$success"
-
 }
