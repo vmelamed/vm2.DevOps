@@ -240,7 +240,7 @@ _run_build() {
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
     run _run_build "$BATS_TEST_TMPDIR/repo" 'FAKE_DOTNET_CLEAN_EXIT=1' App.csproj
     assert_failure
-    assert_output --partial "Cleaning the build project failed"
+    assert_output --partial "Cleaning 'App.csproj' failed"
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
     # index 0 is now the real-MSBuild ArtifactsPath evaluation from sanitize_common_dotnet_args
@@ -257,7 +257,7 @@ _run_build() {
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
     run _run_build "$BATS_TEST_TMPDIR/repo" 'FAKE_DOTNET_RESTORE_EXIT=1' App.csproj
     assert_failure
-    assert_output --partial "Restoring the build project failed"
+    assert_output --partial "Restoring 'App.csproj' failed."
 
     run cat "$BATS_TEST_TMPDIR/repo/calls.log"
     # regex-anchored, not --partial: "msbuild App.csproj" (from sanitize_common_dotnet_args'
@@ -270,7 +270,7 @@ _run_build() {
     _install_fake_dotnet "$BATS_TEST_TMPDIR/repo"
     run _run_build "$BATS_TEST_TMPDIR/repo" 'FAKE_DOTNET_BUILD_EXIT=1' App.csproj
     assert_failure
-    assert_output --partial "Building the build project failed"
+    assert_output --partial "Building 'App.csproj' failed."
 }
 
 # --- argument handling ---------------------------------------------------------------------
