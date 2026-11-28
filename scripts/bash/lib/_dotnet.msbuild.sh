@@ -151,7 +151,7 @@ function get_msbuild_property()
     convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}"      || return $?
 
     local -n __property=$3
-    __property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$noise_sink")         || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
+    __property=$(dotnet msbuild "${_msbuild_args[@]}" 2> "$noise_sink")         || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dc $?
 
     return "$_rc"
 }

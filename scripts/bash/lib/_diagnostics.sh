@@ -188,7 +188,7 @@ function now_us()
 #
 # @arg $@ string Ignored -- forwarded to `bug` as part of the "not overridden" message.
 #
-# @exitcode failure=1: Always -- this placeholder always exits.
+# @exitcode failure=1: Always -- this placeholder always exits with a bug.
 #-----------------------------------------------------------------------------------------------
 function usage()
 {
@@ -369,8 +369,7 @@ function reset_errors()
 # @description Tests the global error counter and exits the script (via `usage`) if any errors
 #   were recorded.
 #
-# @arg $1 boolean Optional. If true, displays the usage message when errors are present.
-#   Default is true.
+# @arg $1 boolean Optional. If true (the default) and errors are present, also invokes `usage()`.
 #
 # @exitcode success=0: No errors were recorded; execution continues normally.
 # @exitcode failure=1: The application exits with an error due to recorded errors.
@@ -392,18 +391,17 @@ function exit_if_has_errors()
     local -i _ec
     (( __last_error != 0 )) && _ec=$__last_error || _ec=$err_has_errors
 
-    # clear before reporting: helpers called below (is_exit_code, __test_with_regex, etc.) also
-    # follow the check-then-exit_if_has_errors convention, and would otherwise see the stale
-    # count and recurse back into this same exit path indefinitely.
+    # to prevent recursion clear before reporting: helpers called below (is_exit_code, __test_with_regex, etc.)
+    # also follow the check-then-exit_if_has_errors convention.
     __errors=0
     __last_error=0
     __errors_min_depth=0
 
     # exits with error message, code, and usage, if $_display_usage is true
-    ! $_display_usage                                                           || usage -ns "$_errors error(s) encountered. Fix the above issues and try again." -ec "$_ec"
+    ! $_display_usage                                                           || usage "$_ec" "$_errors error(s) encountered. Fix the above issues and try again." -ns
 
     # otherwise, report the error and exit immediately
-                                                                                exit_with_error "$_ec" -ns "$_errors error(s) encountered. Fix the above issues and try again. Exiting the script immediately..."
+    exit_with_error "$_ec" "$_errors error(s) encountered. Fix the above issues and try again. Exiting the script immediately..." -ns
 }
 
 #===============================================================================================
@@ -495,7 +493,7 @@ function exit_if_has_bugs()
     __last_bug=0
     __bugs_min_depth=0
 
-                                                                                exit_with_error "$_ec" -ns "$_bugs bug(s) detected. Fix the above issues and try again. Exiting the script immediately..."
+    exit_with_error "$_ec" "$_bugs bug(s) detected. Fix the above issues and try again. Exiting the script immediately..." -ns
 }
 
 #-----------------------------------------------------------------------------------------------

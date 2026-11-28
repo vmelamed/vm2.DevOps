@@ -80,17 +80,17 @@ function parse_arguments()
 
         case ${_option,,} in
             --vm2-repos|-r )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 vm2_repos="$1"; shift
                 ;;
 
             --file*|-f* )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 get_selector_action "$_option" "$1"; shift
                 ;;
 
             --summary-file|-sf )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 summary_file="$1"; shift
                 ;;
 
@@ -110,7 +110,7 @@ function parse_arguments()
                 ;;
 
             # -s|--source-of-truth )
-            #     (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
+            #     (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for $_option"
             #     sot="$1"; shift
             #     ;;
             #
@@ -125,7 +125,7 @@ function parse_arguments()
                                                                                    exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*)                                                                    usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
             * ) is_empty_array target_repos || ! is_in "$_option" "${target_repos[@]}" && target_repos+=("$_option")
@@ -158,7 +158,7 @@ function resolve_arguments()
     trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
     # resolve and validate sot. We cannot continue without it.
-    is_in "$sot" "${sources_of_truth[@]}"                                       || usage "Invalid source of truth '$sot'. Valid values are: $sources_of_truth_str." -ec "$err_argument_value"
+    is_in "$sot" "${sources_of_truth[@]}"                                       || usage "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: $sources_of_truth_str."
 
     # resolve and validate sot_path
     get_vm2_sot_path "$vm2_repos" sot_path "$sot"                               || with_error _rc $? "Failed to find the source-of-truth directory of the template '$sot' in '$vm2_repos'."

@@ -49,17 +49,17 @@ function parse_arguments()
 
         case "${_option,,}" in
             --minver-tag-prefix|-mp )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-mi )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
 
             --reason|-r )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 reason="$1"; shift
                 ;;
 
@@ -69,7 +69,7 @@ function parse_arguments()
                 exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            * ) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            * ) usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
         esac
     done

@@ -65,8 +65,8 @@ function parse_arguments()
 
         case "${_option,,}" in
             --delete|-d )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
-                (( _option_ndx == 0 ))                                          || usage "'--delete' takes exactly one tag and cannot be combined with other tags or another '--delete'." -ec "$err_too_many_arguments"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
+                (( _option_ndx == 0 ))                                          || usage "$err_too_many_arguments" "'--delete' takes exactly one tag and cannot be combined with other tags or another '--delete'."
                 delete_mode=true
                 del_tag=$1; shift
                 _option_ndx=2 # do not allow more arguments
@@ -78,7 +78,7 @@ function parse_arguments()
                                                                                    exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*)                                                                    usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
             * ) if (( _option_ndx == 0 )); then
@@ -88,7 +88,7 @@ function parse_arguments()
                     new_tag=$_option
                     (( ++_option_ndx ))
                 else
-                                                                                   usage "Too many arguments: '$_option'." -ec "$err_too_many_arguments"
+                                                                                   usage "$err_too_many_arguments" "Too many arguments: '$_option'."
                 fi
                 ;;
         esac

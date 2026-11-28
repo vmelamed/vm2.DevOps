@@ -116,7 +116,7 @@ declare -rA message_rules=(
     ['\(provided \$\{?[0-9]']="the provided value is quoted: '(provided '\${1-<missing>}')'"
     ['-ec "[^"]*" +"']="'-ec' comes after the message parts"
 )
-declare -r please_rule='\b(error|with_error|warning|info|trace|bug|usage|exit_with_error|exit_with_bug|fatal_exit)\b.*"[^"]*\bPlease\b|^[[:space:]]*"[^"]*\bPlease\b'
+declare -r please_rule='\b(error|with_error|warning|info|trace|bug|usage|exit_with_error|exit_with_bug)\b.*"[^"]*\bPlease\b|^[[:space:]]*"[^"]*\bPlease\b'
 declare -a message_files=()
 declare -r this_file="$script_dir/$script_name"
 for file in "$lib_dir"/*.sh "$script_dir"/*.sh "$lib_dir"/../../../.github/scripts/*.sh; do

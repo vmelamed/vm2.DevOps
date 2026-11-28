@@ -412,9 +412,9 @@ library provides functions to dump variables, print stack traces, and log messag
 ##### Logging Functions
 
 The four logging functions (`trace`, `info`, `warning`, `error`) are designed to be used in scripts to log messages with
-different severity levels. Each function reads from `stdin`  or from parameters and writes to the appropriate output stream
-(`stdout` or `stderr`). For better comprehension and maintainability, they add log level visual emojis, dump of the call stack,
-etc.
+different severity levels. Each function takes its message from its arguments (never from `stdin`) and writes to the
+appropriate output stream (`stdout` or `stderr`). For better comprehension and maintainability, they add log level visual
+emojis, dump of the call stack, etc.
 
 ```text
 ❌  ERROR: /home/valo/repos/vm2/vm2.DevOps/scripts/bash/lib/_predicates.sh (104): 5: An argument has an invalid nameref (e.g., expected a valid variable name reference but got an invalid one).
@@ -423,8 +423,8 @@ etc.
     - main                 (/home/valo/repos/vm2/vm2.DevOps/.github/scripts/run-tests.sh: 169)
 ```
 
-Three of the four central logging functions (`info`, `warning`, `error`) read from `stdin` and write to `stdout`/`stderr`, and --
-in GitHub Actions -- also to the step summary file, implementing a `tee`-like behavior. `trace` is the deliberate exception: it
+Three of the four central logging functions (`info`, `warning`, `error`) write to `stdout`/`stderr`, and -- in GitHub
+Actions -- also to the step summary file, implementing a `tee`-like behavior. `trace` is the deliberate exception: it
 always writes straight to `stderr` only, in both contexts, and never to the step summary (see below for why). The goal of the
 three tee-ing functions is to abstract the logging mechanism so that scripts can log messages without worrying about the
 underlying output streams and at the same time satisfy the logging requirements.

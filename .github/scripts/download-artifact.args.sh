@@ -50,36 +50,36 @@ function parse_arguments()
 
         case "${_option,,}" in
             --artifact|-a )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 artifact_name="$1"; shift
                 ;;
 
             --directory|-d )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 artifacts="$1"; shift
                 ;;
 
             --repository|--repo|-r )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 repository="$1"; shift
                 ;;
 
             --wf-id|-i )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id="$1"; shift
                 workflow_name=""
                 workflow_path=""
                 ;;
 
             --wf-name|-n )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id=""
                 workflow_name="$1"; shift
                 workflow_path=""
                 ;;
 
             --wf-path|-p )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id=""
                 workflow_name="";
                 workflow_path="$1"; shift
@@ -91,7 +91,7 @@ function parse_arguments()
                                                                                 exit_with_bug "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            * )                                                                 usage "Unknown argument '$_option'." -ec "$err_unknown_argument"
+            * )                                                                 usage "$err_unknown_argument" "Unknown argument '$_option'."
                 ;;
         esac
     done

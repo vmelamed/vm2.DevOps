@@ -47,17 +47,17 @@ function parse_arguments()
 
         case "${_option,,}" in
             -o|--repo-owner )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 repo_owner="$1"; shift
                 ;;
 
             -a|--app )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 app="$1"; shift
                 ;;
 
             -n|--secret-name )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 secret_name="$1"; shift
                 ;;
 
@@ -67,10 +67,10 @@ function parse_arguments()
                                                                                    exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*)                                                                    usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) ! $_option_set                                                  || usage "Too many positional arguments (secret name): $_option" -ec "$err_too_many_arguments"
+            * ) ! $_option_set                                                  || usage "$err_too_many_arguments" "Too many positional arguments (secret name): $_option"
                 secret_name="$_option"
                 _option_set=true
                 ;;

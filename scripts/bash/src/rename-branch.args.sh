@@ -76,7 +76,7 @@ function parse_arguments()
                                                                                    exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*)                                                                    usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
             * ) if (( _option_idx == 0 )); then
@@ -87,7 +87,7 @@ function parse_arguments()
                     new_branch_name=$_option
                     (( ++_option_idx ))
                 else
-                                                                                   usage "Too many positional arguments: $_option" -ec "$err_too_many_arguments"
+                                                                                   usage "$err_too_many_arguments" "Too many positional arguments: $_option"
                 fi
                 ;;
         esac

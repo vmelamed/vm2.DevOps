@@ -99,7 +99,7 @@ function set_case_sensitive()
 #-----------------------------------------------------------------------------------------------
 function is_variable_name()
 {
-    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires argument 1 to be the name of the variable to test (provided $#)."
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to test."
                                                                                 exit_if_has_bugs
 
     [[ $1 =~ $varNameRegex ]]
@@ -118,7 +118,7 @@ function is_variable_name()
 #-----------------------------------------------------------------------------------------------
 function is_variable()
 {
-    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires argument 1 to be the name of the variable to test (provided $#)."
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to test."
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1" && declare -p "$1" &> "$noise_sink"
@@ -137,7 +137,7 @@ function is_variable()
 #-----------------------------------------------------------------------------------------------
 function is_mutable()
 {
-    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires argument 1 to be the name of the variable to test (provided $#)."
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to test."
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1"                                                       || return "$negative"
@@ -170,7 +170,7 @@ function is_mutable()
 #-----------------------------------------------------------------------------------------------
 function is_indexed_array()
 {
-    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires argument 1 the name of the indexed array variable to test (provided $#)."
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the indexed array variable to test."
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1" || return "$negative"
@@ -203,7 +203,7 @@ function is_indexed_array()
 #-----------------------------------------------------------------------------------------------
 function is_associative_array()
 {
-    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the indexed array variable to test."
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the associative array variable to test."
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1" || return "$negative"

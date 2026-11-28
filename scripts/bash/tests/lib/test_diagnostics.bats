@@ -235,8 +235,8 @@ declare -gx err_tool_error
     assert_output "last=9"
 }
 
-@test "error: with no arguments (the message from stdin) does not trip set -u, and the last error code is failure" {
-    run bash -c "set -u; source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error <<< 'from stdin' 2>/dev/null; echo \"last=\$__last_error\""
+@test "error: without a code does not trip set -u, and the last error code is failure" {
+    run bash -c "set -u; source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error 'no code' 2>/dev/null; echo \"last=\$__last_error\""
     assert_success
     assert_output "last=1"
 }
@@ -300,22 +300,9 @@ declare -gx err_tool_error
     assert_output --partial "visible trace line"
 }
 
-# --- fatal_exit --------------------------------------------------------------------------------
-
-@test "fatal_exit: exits with the code given via -ec" {
-    run fatal_exit -ec 5 "fatal problem"
-    assert_failure 5
-    assert_output --partial "fatal problem"
-}
-
-@test "fatal_exit: defaults to failure/1 when no -ec is given" {
-    run fatal_exit "fatal problem, no code"
-    assert_failure "$failure"
-}
-
 # --- exit_with_error -----------------------------------------------------------------------
 
-@test "exit_with_error: exits with the code given via -ec, logging via error (not fatal_exit)" {
+@test "exit_with_error: exits with the code given via -ec, logging via error" {
     run exit_with_error -ec 5 "some problem"
     assert_failure 5
     assert_output --partial "some problem"
@@ -341,7 +328,7 @@ declare -gx err_tool_error
 
 # --- exit_with_bug -----------------------------------------------------------------------
 
-@test "exit_with_bug: exits with the code given via -ec, logging via bug (not fatal_exit)" {
+@test "exit_with_bug: exits with the code given via -ec, logging via bug" {
     run exit_with_bug -ec 5 "some problem"
     assert_failure 5
     assert_output --partial "some problem"
@@ -538,10 +525,10 @@ EOF
     assert_output --partial "requires argument 1"
 }
 
-@test "with_error: reports a dotnet exit code passed with -dec, and still records the vm2 code" {
+@test "with_error: reports a dotnet exit code passed with -dc, and still records the vm2 code" {
     _run_with_error_script <<'EOF'
 declare -i rc=0
-(exit 2) || with_error rc "$err_tool_error" "msbuild failed" -dec $?
+(exit 2) || with_error rc "$err_tool_error" "msbuild failed" -dc $?
 EOF
     assert_success
     assert_line --index 0 --partial "msbuild failed @ "
@@ -552,9 +539,9 @@ EOF
 
 # --- error: --dotnet-error-code ---------------------------------------------------------------
 
-@test "error: -dec and --dotnet-error-code print the dotnet code's message where the flag appears" {
+@test "error: -dc and --dotnet-error-code print the dotnet code's message where the flag appears" {
     _run_with_error_script <<'EOF'
-error "first" -dec 2 "last"
+error "first" -dc 2 "last"
 EOF
     assert_success
     assert_line --index 0 --partial "first @ "
@@ -568,32 +555,32 @@ EOF
     assert_output --partial 'Dotnet $dotnet_err_no_test_ran (8): '
 }
 
-@test "error: -dec falls back to the unknown-code message for an unrecognized dotnet code" {
+@test "error: -dc falls back to the unknown-code message for an unrecognized dotnet code" {
     _run_with_error_script <<'EOF'
-error "boom" -dec 99
+error "boom" -dc 99
 EOF
     assert_success
     assert_output --partial 'Dotnet $dotnet_err_unknown (99): The dotnet exit code is unknown.'
 }
 
-@test "error: -dec does not become the script's exit code -- only -ec does" {
+@test "error: -dc does not become the script's exit code -- only -ec does" {
     # a dotnet code and a vm2 code with the same number mean different things
     _run_with_error_script <<'EOF'
-error "only dotnet" -dec 8
+error "only dotnet" -dc 8
 echo "last_error=$__last_error"
-error "both" -dec 8 -ec "$err_tool_error"
+error "both" -dc 8 -ec "$err_tool_error"
 exit_if_has_errors false
 EOF
     assert_failure "$err_tool_error"
     assert_output --partial "last_error=$failure"
 }
 
-@test "error: -dec with an invalid code says so instead of failing" {
+@test "error: -dc with an invalid code says so instead of failing" {
     _run_with_error_script <<'EOF'
-error "boom" -dec not-a-code
+error "boom" -dc not-a-code
 echo "continued"
 EOF
     assert_success
-    assert_output --partial "Expected an error code (0..255) after the '--dotnet-error-code' flag, provided: 'not-a-code'"
+    assert_output --partial "after the '--dotnet-error-code' flag, provided: 'not-a-code'"
     assert_output --partial "continued"
 }

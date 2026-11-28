@@ -82,85 +82,85 @@ function parse_arguments()
 
         case "${_option,,}" in
             --build-projects|-bp )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 build_projects="$1"
                 shift
                 ;;
 
             --test-projects|-tp )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 test_projects="$1"
                 shift
                 ;;
 
             --benchmark-projects|-bmp )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 benchmark_projects="$1"
                 shift
                 ;;
 
             --package-projects|-pp )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 package_projects="$1"
                 shift
                 ;;
 
             --runners-os|-os )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 runners_os="$1"
                 shift
                 ;;
 
             --min-coverage-pct|-min )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 min_coverage_pct="$1"
                 shift
                 ;;
 
             --max-regression-pct|-max )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 max_regression_pct="$1"
                 shift
                 ;;
 
             --max-gen1-collects|-g1 )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 max_gen1_collects="$1"
                 shift
                 ;;
 
             --max-gen2-collects|-g2 )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 max_gen2_collects="$1"
                 shift
                 ;;
 
             --reset-benchmark-thresholds|-rt )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 reset_benchmark_thresholds="$1"
                 shift;
                 ;;
 
             --skip-build|-sb )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 skip_build="$1"
                 shift;
                 ;;
 
             --skip-tests|-st )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 skip_tests="$1"
                 shift;
                 ;;
 
             --skip-benchmarks|-sbm )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 skip_benchmarks="$1"
                 shift;
                 ;;
 
             --skip-packages|-sp )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 skip_packages="$1"
                 shift;
                 ;;
@@ -176,7 +176,7 @@ function parse_arguments()
                 exit_with_bug "$err_logic_error" "'$_option' should have been consumed by get_common_dotnet_arg."
                 ;;
 
-            * ) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            * ) usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
         esac
     done

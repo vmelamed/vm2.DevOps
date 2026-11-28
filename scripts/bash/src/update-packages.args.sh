@@ -67,13 +67,13 @@ function parse_arguments()
 
         case "${_option,,}" in
             -r|--vm2-repos )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 vm2_repos="$1"; shift
                 ;;
 
             # For now we have only one source of truth - 'AddNewPackages', so this option is effectively unused.
             # -s|--source-of-truth )
-            #     (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
+            #     (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for $_option"
             #     sot="$1"; shift
             #     ;;
             #
@@ -89,7 +89,7 @@ function parse_arguments()
                 ;;
 
             -sf|--summary-file )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 summary_file="$1"; shift
                 ;;
 
@@ -100,7 +100,7 @@ function parse_arguments()
                                                                                    exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*)                                                                    usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
             * ) is_in "$_option" "${!target_repos[@]}" || target_repos+=([$_option]='')

@@ -95,7 +95,6 @@
     - [with\_error()](#with_error)
     - [bug()](#bug)
     - [exit\_with\_bug()](#exit_with_bug)
-    - [fatal\_exit()](#fatal_exit)
     - [warning()](#warning)
     - [info()](#info)
     - [trace()](#trace)
@@ -619,8 +618,8 @@ Prints the current time in microseconds since the epoch (from `$EPOCHREALTIME`; 
 
 ## _diagnostics.messages.sh
 
-The logging functions (`error`, `with_error`, `bug`, `warning`, `info`, `trace`), their `exit_*` forms, and `fatal_exit`,
-all built on the internal `__message`.
+The logging functions (`error`, `with_error`, `bug`, `warning`, `info`, `trace`), and their `exit_*` forms are all built on the
+internal `__message`.
 
 ### __message()
 
@@ -648,10 +647,6 @@ Logs a bug message (caller-contract violation) to stderr and increments the glob
 ### exit_with_bug()
 
 Logs a bug message (like `bug`) and exits immediately with the recorded error code (or `$err_has_bugs`).
-
-### fatal_exit()
-
-Logs a message with a fatal prefix and exits immediately with a specified (or default) error code.
 
 ### warning()
 
@@ -1026,7 +1021,7 @@ arrays.
 ### dotnet_error_message()
 
 Prints `Dotnet <name> (<code>): <message>` for a `dotnet` process exit code, falling back to the unknown-code message. `error`'s
-`--dotnet-error-code`/`-dec` option uses it.
+`--dotnet-error-code`/`-dc` option uses it.
 
 ---
 

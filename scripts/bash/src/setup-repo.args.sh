@@ -123,32 +123,32 @@ function parse_arguments()
 
         case "${_option,,}" in
             --vm2-repos )
-                (( $# >= 1 ))                                                   || usage "Missing path after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing path after '$_option'."
                 vm2_repos="$1"; shift
                 ;;
 
             --owner|-o )
-                (( $# >= 1 ))                                                   || usage "Missing owner after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing owner after '$_option'."
                 repo_owner="$1"; shift
                 ;;
 
             --branch|-b )
-                (( $# >= 1 ))                                                   || usage "Missing branch name after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing branch name after '$_option'."
                 default_branch="$1"; shift
                 ;;
 
             --visibility )
-                (( $# >= 1 ))                                                   || usage "Missing visibility after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing visibility after '$_option'."
                 visibility="$1"; shift
                 ;;
 
             --ruleset-name|-rs )
-                (( $# >= 1 ))                                                   || usage "Missing the name of the ruleset for protecting the default branch after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing the name of the ruleset for protecting the default branch after '$_option'."
                 branch_protection_rs_name="$1"; shift
                 ;;
 
             --description )
-                (( $# >= 1 ))                                                   || usage "Missing description after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing description after '$_option'."
                 description="$1"; shift
                 ;;
 
@@ -206,10 +206,10 @@ function parse_arguments()
                                                                                    exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -*)                                                                    usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) ! $_option_set                                                  || usage "Too many positional arguments (project directory or repository name): $_option" -ec "$err_too_many_arguments"
+            * ) ! $_option_set                                                  || usage "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $_option"
                 repo_path="$_option"
                 _option_set=true
                 ;;

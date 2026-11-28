@@ -48,9 +48,9 @@ function parse_arguments()
             continue
         }
 
-        [[ "$_option" != -* ]]                                                  || usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+        [[ "$_option" != -* ]]                                                  || usage "$err_unknown_argument" "Unknown argument: $_option"
 
-        ! $_positional_arg_set                                                  || usage "Multiple build projects specified: $_option" -ec "$err_too_many_arguments"
+        ! $_positional_arg_set                                                  || usage "$err_too_many_arguments" "Multiple build projects specified: $_option"
         build_project="$_option"
         _positional_arg_set=true
     done

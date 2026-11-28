@@ -122,7 +122,7 @@ function dotnet_clean()
     (( $# == 0 ))           || _dotnet_args+=("$@")                             # any remaining arguments go to 'dotnet <command>' as they are
 
     # CLEAN the project using dotnet build
-    execute --quiet dotnet clean "${_dotnet_args[@]}"                           || with_error _rc "$err_tool_error" "Cleaning '$_project' failed." -dec $?
+    execute --quiet dotnet clean "${_dotnet_args[@]}"                           || with_error _rc "$err_tool_error" "Cleaning '$_project' failed." -dc $?
     return "$_rc"
 }
 
@@ -168,7 +168,7 @@ function dotnet_restore()
     (( $# == 0 ))       || _dotnet_args+=("$@")                                 # any remaining arguments go to 'dotnet <command>' as they are
 
     # RESTORE
-    execute --quiet dotnet restore "${_dotnet_args[@]}"                         || with_error _rc "$err_tool_error" "Restoring '$_project' failed." -dec $?
+    execute --quiet dotnet restore "${_dotnet_args[@]}"                         || with_error _rc "$err_tool_error" "Restoring '$_project' failed." -dc $?
     return "$_rc"
 }
 
@@ -236,7 +236,7 @@ function dotnet_build()
     local _build_rc=$dotnet_success
 
     execute dotnet build "${_dotnet_args[@]}" > "$_output_file" 2>&1; _build_rc=$?
-    (( _build_rc == dotnet_success ))                                           || with_error _rc "$err_tool_error" "Building '$_project' failed." -dec "$_build_rc"
+    (( _build_rc == dotnet_success ))                                           || with_error _rc "$err_tool_error" "Building '$_project' failed." -dc "$_build_rc"
 
     # in a dry run the file holds only execute's 'dry-run$ dotnet build ...' line: show it. The extraction below
     # still runs: it finds no build output and reports an 'Unknown' result, which is the truth for a dry run.
@@ -347,7 +347,7 @@ function dotnet_pack()
     (( $# == 0 ))                  || _dotnet_args+=("$@")                      # any remaining arguments go to 'dotnet <command>' as they are
 
     # PACK
-    execute --quiet dotnet pack "${_dotnet_args[@]}"                            || with_error _rc "$err_tool_error" "Packing '$_project' failed." -dec $?
+    execute --quiet dotnet pack "${_dotnet_args[@]}"                            || with_error _rc "$err_tool_error" "Packing '$_project' failed." -dc $?
 
     declare -a _msbuild_args=()
     (( _rc != success )) || convert_dotnet_args_to_msbuild_args _msbuild_args "${_dotnet_args[@]}" \
@@ -357,7 +357,7 @@ function dotnet_pack()
     # MSBUILD to find the packages paths
     local _msbuild_output=''
     (( _rc != success )) || _msbuild_output=$(dotnet msbuild "${_msbuild_args[@]}") \
-                                                                                || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dec $?
+                                                                                || with_error _rc "$err_tool_error" "Executing MSBuild for '$_project' failed." -dc $?
     (( _rc == success ))                                                        || return "$_rc"
 
     local _property='' _value=''

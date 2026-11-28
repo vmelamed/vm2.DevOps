@@ -23,6 +23,7 @@ declare -x err_not_git_directory
 declare -x err_logic_error
 declare -x err_root_not_repo_name
 declare -x err_invalid_arguments
+declare -x err_invalid_nameref
 declare -x err_tool_error
 
 # vm2 core lib constants
@@ -92,7 +93,7 @@ trace "The path  of repository '$repo_name': '$repo_path'"
 declare -A repo_state=()
 
 get_repo_state "$repo_path" repo_state                                          || rc=$?
-(( rc == success ))                                                             || usage "Failed to get the repository state for '$repo_path'." -ec "$rc"
+(( rc == success ))                                                             || usage "$rc" "Failed to get the repository state for '$repo_path'."
 dump_vars --quiet --header "Repository State 'repo_state':" repo_state
 
 declare -x suggested_repo_name=''
@@ -167,7 +168,7 @@ if has_local_repo repo_state; then
 
             IFS=', ' mismatched_arguments="${!mismatches[*]}"
             printf -v message "Do you want to continue with the adjusted arguments despite the mismatches with the arguments: %s?" "$mismatched_arguments"
-            confirm "$message" "N"                                              || usage "Detected invalid arguments: $mismatched_arguments" -ec "$err_invalid_arguments"
+            confirm "$message" "N"                                              || usage "$err_invalid_arguments" "Detected invalid arguments: $mismatched_arguments"
         fi
     fi
 fi
@@ -212,23 +213,27 @@ fi
 declare -a undos=()
 
 #-----------------------------------------------------------------------------------------------
-# @description Prints the recorded `undos` array (commands to revert side effects performed by this run, e.g.
-# deleting a newly created GitHub repository or removing a remote) in LIFO order, so the user can copy-paste them
-# to manually roll back a failed or aborted run. No-op if nothing has been recorded yet.
+# @description Displays the accumulated "undo" commands in reversed order as instruction to the user.
 #
-# @exitcode success=0: Always.
-# @stdout The list of undo commands in LIFO order, wrapped in explanatory text -- or nothing if `undos` is empty.
+# @arg $1 nameref the name of a function that will display the undos. E.g. `warning`, `info`, `error`.
+#
+# @ exitcode The exit code from executing $1
 #-----------------------------------------------------------------------------------------------
-function undo_changes()
+function show_undos()
 {
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 parameter (provided $#): the name of a function that will display the undos, e.g. warning, info, etc."
+    [[ ! -v 1 ]] || is_function "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a function that will display the undos, e.g. warning, info, etc."
+                                                                                exit_if_has_bugs
+
     is_empty_array undos && return "$success"
 
-    echo "To undo the changes above, you can run the following commands:"
+    local -a _lines=("To undo the changes above, you can run the following commands:")
     local -i _index
-    for (( _index=${#undos[@]}-1; _index>=0; _index-- )); do
-        echo "    ${undos[_index]}"
+    for (( _index = ${#undos[@]} - 1; _index >= 0; _index-- )); do
+        _lines+=("    ${undos[_index]}")
     done
-    echo "and then run the script again."
+
+    "$1" "${_lines[@]}"
 }
 
 if ! has_local_repo repo_state; then
@@ -315,8 +320,7 @@ if ! has_remote_repo repo_state; then
                                                                                                     "The repository may have been created successfully, but the script cannot continue with configuration." \
                                                                                                     "Check the repository at $repo_path."
     (( rc != success )) || dump_vars --quiet --header "Repository State 'repo_state':" repo_state
-
-    ! has_errors                                                                || undo_changes
+    (( rc == success ))                                                         || show_undos warning
                                                                                 exit_if_has_errors
 
     repo_url="${repo_state[$key_git_url]}"
@@ -396,5 +400,5 @@ audit_repo
 
 if [[ ${#undos[@]} -gt 0 ]]; then
     echo ""
-    undo_changes | info
+    show_undos info
 fi

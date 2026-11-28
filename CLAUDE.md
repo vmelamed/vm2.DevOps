@@ -255,18 +255,17 @@ fixed, therefore the function should exit after reporting all validation errors.
 function foo()
 {
     (( $# == <N> )) ||
-        bug -sd 3 "${FUNCNAME[0]}() requires <N> arguments (provided $#):" \
-                  "  - <arg1 role>" \
-                  "  - <arg2 role>" \
-                  "  - ... " \
-                  -ec "$err_invalid_arguments"
+        bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires <N> arguments (provided $#):" \
+                                     "  - <arg1 role>" \
+                                     "  - <arg2 role>" \
+                                     "  - ... "
 
     # if $1 is missing it is already reported by the argument count check, otherwise we validate its value
     [[ ! -v 1 || $1 =~ <regex> ]] ||
-        bug -sd 3 "${FUNCNAME[0]}() requires argument 1, <role>, to <constraint> (provided '${1-<missing>}')." -ec "$err_specific_code_1"
+        bug "$err_specific_code_1" "${FUNCNAME[0]}() requires argument 1, <role>, to <constraint> (provided '${1-<missing>}')."
     # if $1 is missing it is already reported by the argument count check, otherwise we validate its value
     [[ ! -v 2 ]] || is_boolean $2 ||
-        bug -sd 3 "${FUNCNAME[0]}() requires argument 2, <role>, to <constraint> (provided '${2-<missing>}')." -ec "$err_specific_code_2"
+        bug "$err_specific_code_2" "${FUNCNAME[0]}() requires argument 2, <role>, to <constraint> (provided '${2-<missing>}')."
 
     exit_if_has_bugs
 
@@ -323,7 +322,7 @@ an optional parameter: `exit_if_has_errors false`
 If possible and safe, use the value of the failed argument in the error message for easier debugging, e.g.:
 
   ```bash
-  error -sd 3 "${FUNCNAME[0]}() requires argument <N>, <role>, to <constraint> (provided '${N-<missing>}')." -ec "$err_specific_code"
+  error "$err_specific_code" "${FUNCNAME[0]}() requires argument <N>, <role>, to <constraint> (provided '${N-<missing>}')." -sd 3
   ```
 
 Functions that interleave positional-argument parsing with validation (`shift`-based, e.g. `execute_with_retry` in
@@ -676,7 +675,7 @@ failure for the rest, so the caller can fall through to the next one (e.g. a scr
   continue`, likewise `get_common_dotnet_arg`), so their options never reach it. Each `case` still carries one
   reservation arm per shared handler, listing exactly the options that handler consumes. The arm never runs; it is
   there so ShellCheck (SC2221/SC2222) flags any script-specific arm that reuses one of those options. Its body is
-  `exit_with_bug … -ec "$err_logic_error"`, so if a stale list ever lets a token through, the run fails loudly
+  `exit_with_bug "$err_logic_error" …`, so if a stale list ever lets a token through, the run fails loudly
   instead of swallowing the token. When a shared handler gains or loses an option, update its reservation arm in **every**
   parser: a missing name loses the ShellCheck protection, and an extra one turns a now-unknown option into a bug
   report instead of `-*)`'s "Unknown option".
@@ -691,11 +690,11 @@ failure for the rest, so the caller can fall through to the next one (e.g. a scr
 
 ```bash
             --summary-file|-sf )
-                (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for $_option"
                 summary_file="$1"; shift
                 ;;
 
-            -* ) usage "Unknown option: $_option" -ec "$err_unknown_argument"
+            -* ) usage "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
             * ) # positional arguments only -- every token starting with '-' was handled above
@@ -705,7 +704,7 @@ failure for the rest, so the caller can fall through to the next one (e.g. a scr
 
 A parser that is not a `case` (e.g. `build.args.sh`: a chain of `get_common_*_arg … && continue` and `[[ ]] ||`
 tests) puts the same check inline, before its positional handling:
-`[[ "$_option" != -* ]] || usage "Unknown option: $_option" -ec "$err_unknown_argument"`.
+`[[ "$_option" != -* ]] || usage "$err_unknown_argument" "Unknown option: $_option"`.
 
 ### Long-Form Options in Script Bodies
 
@@ -724,21 +723,24 @@ dump_vars --force --quiet --header "Arguments for $script_name:" package_project
 dump_vars -f -q -h "Arguments for $script_name:" package_project reason
 ```
 
-**Exception: the `message()`-family functions** (`error`, `warning`, `info`, `trace`, `bug`, `usage`,
-`exit_with_error`, `exit_with_bug`, `fatal_exit`). Their own options — `--error-code`/`-ec`, `--stack-depth`/`-sd`,
-`--no-stack`/`-ns`, `--stack-skip`/`-ss` — are used in **short** form throughout the codebase, by established
-convention: these calls appear at essentially every validation and error-reporting site in every script, and the
-short forms keep them visually compact, so the part that actually matters at each call site — the message text —
-stays the most prominent thing on the line.
+**Exception: the `__message()`-family functions** (`error`, `warning`, `info`, `trace`, `bug`, `usage`,
+`exit_with_error`, `exit_with_bug`). Their own options — `--error-code`/`-ec`, `--stack-depth`/`-sd`, `--no-stack`/`-ns`,
+`--stack-skip`/`-ss` — are used in **short** form throughout the codebase, by established convention: these calls appear at
+essentially every validation and error-reporting site in every script, and the short forms keep them visually compact, so the
+part that actually matters at each call site — the message text — stays the most prominent thing on the line.
 
-**Put `-ec` after the message parts** (and `--dotnet-error-code`/`-dec` too). These flags are positional: the code's message
+**Put `-ec` after the message parts** (and `--dotnet-error-code`/`-dc` too). These flags are positional: the code's message
 is printed exactly where the flag appears, so `error "$err_argument_value" "Bad commit message: $subject"` prints the
 specific message first and the generic text of the code below it.
+
+**Put the primary error code first.** `bug`, `error`, and all functions that call them, e.g. `usage`, `exit_with_error`,
+`exit_with_bug` accept as a first parameter a "primary error code". This is equivalent to `-ec` at the end of the call. For
+readability, put the primary error code first, instead of using -ec at the end of the call.
 
 ```bash
 # Exception: message()-family functions keep their short forms
 error "$err_argument_value" "Bad commit message: $subject"
-usage -sd 3 "Invalid argument value for the option <option_name>" -ec "$_rc"
+usage "$_rc" "Invalid argument value for the option <option_name>"
 ```
 
 ### Message Templates

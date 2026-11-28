@@ -141,6 +141,69 @@ declare -gx err_unknown_argument
     assert_failure "$failure"
 }
 
+@test "usage: a leading code exits with that code, the same as a trailing -ec" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/core.args.sh'; usage \"\$err_unknown_argument\" 'Unknown option: --bogus' 2>&1"
+    assert_failure "$err_unknown_argument"
+    local _leading=$output
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/core.args.sh'; usage 'Unknown option: --bogus' -ec \"\$err_unknown_argument\" 2>&1"
+    assert_failure "$err_unknown_argument"
+    # the two forms print the same, except for the line number of the call in the location and the stack
+    [[ ${_leading//[0-9]/} == "${output//[0-9]/}" ]]
+}
+
+@test "usage: a leading code after the boolean exits with that code and shows the long usage text" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/core.args.sh'; usage true \"\$err_unknown_argument\" 'Unknown option: --bogus'"
+    assert_failure "$err_unknown_argument"
+    assert_output --partial "Unknown option: --bogus"
+    assert_output --partial "Common switches:"
+}
+
+@test "usage: without messages exits 0, even when an earlier error left a last error code" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/core.args.sh'; error 7 'earlier' 2> /dev/null; usage true"
+    assert_success
+}
+
+@test "usage: a leading 0 is a message part, not a code: it exits 1 (failure), never 0" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/core.args.sh'; usage 0 'custom error' 2>&1"
+    assert_failure "$failure"
+    assert_output --partial "ERROR: 0 @ "
+}
+
+@test "usage: the error's location is the caller of usage, not usage itself" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        source '$lib_dir/core.args.sh'
+        caller_of_usage() { usage 'from the caller'; }
+        caller_of_usage 2>&1
+    "
+    assert_failure "$failure"
+    assert_line --index 0 --regexp "^.*ERROR: from the caller @ (environment|bash|main|-c)? ?\\([0-9]+\\):\$"
+    refute_output --partial "core.args.sh"
+    refute_output --partial "_diagnostics.messages.sh"
+    assert_output --partial "caller_of_usage"
+}
+
+@test "usage: -ns suppresses the location and the stack" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/core.args.sh'; usage \"\$err_unknown_argument\" 'no stack' -ns 2>&1"
+    assert_failure "$err_unknown_argument"
+    assert_line --index 0 --partial "ERROR: no stack"
+    refute_output --partial " @ "
+    refute_output --partial "↑ "
+}
+
+@test "usage: runs usage_text with tracing off" {
+    run bash -c "
+        source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+        source '$lib_dir/core.args.sh'
+        usage_text() { [[ \$- == *x* ]] && echo 'usage_text: tracing ON' || echo 'usage_text: tracing OFF'; }
+        exec 2> /dev/null   # the trace lines go to the shell's stderr, not to the command's
+        set -x
+        usage \"\$err_unknown_argument\" 'traced?'
+    "
+    assert_failure "$err_unknown_argument"
+    assert_line "usage_text: tracing OFF"
+}
+
 @test "usage: shows the long usage text (including common switches) only when \$1 is true" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; source '$lib_dir/core.args.sh'; usage true"
     assert_output --partial "Common switches:"

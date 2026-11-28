@@ -63,12 +63,12 @@ function parse_arguments()
 
         case "${_option,,}" in
             --branch|-b )
-                (( $# >= 1 ))                                                   || usage "Missing branch name after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing branch name after '$_option'."
                 new_branch="$1"; shift
                 ;;
 
             --commit-sha|-c )
-                (( $# >= 1 ))                                                   || usage "Missing commit SHA after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing commit SHA after '$_option'."
                 commit_sha="$1"; shift
                 ;;
 
@@ -82,7 +82,7 @@ function parse_arguments()
                                                                                    exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            * )                                                                    usage "Unknown argument '$_option'." -ec "$err_unknown_argument"
+            * )                                                                    usage "$err_unknown_argument" "Unknown argument '$_option'."
                 ;;
         esac
     done

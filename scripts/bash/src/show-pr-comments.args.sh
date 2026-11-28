@@ -62,7 +62,7 @@ function parse_arguments()
 
         case "${_option,,}" in
             -r|--repo )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 repo="$1"; shift
                 ;;
 
@@ -71,12 +71,12 @@ function parse_arguments()
                 ;;
 
             -i|--interval )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 interval="$1"; shift
                 ;;
 
             -t|--timeout )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 timeout="$1"; shift
                 ;;
 
@@ -87,10 +87,10 @@ function parse_arguments()
                 exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
                 ;;
 
-            -* ) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -* ) usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) ! $_option_set                                                  || usage "Too many positional arguments: $_option" -ec "$err_too_many_arguments"
+            * ) ! $_option_set                                                  || usage "$err_too_many_arguments" "Too many positional arguments: $_option"
                 pr_number="$_option"
                 _option_set=true
                 ;;
