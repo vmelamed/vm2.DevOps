@@ -106,9 +106,8 @@ if has_local_repo repo_state; then
                                                                                         repo_path=${repo_state[$key_git_root]}
                                                                                         mismatches["<repo-directory-path>"]=1
                                                                                     }
-    [[ -s "$repo_path/.github/workflows/CI.yaml" ]]                             || usage "The git-detected repository path '$repo_path' is missing a sub-directory '.github/workflows/CI.yaml'." \
-                                                                                         "Specify a valid path to the root of the project/repository as a positional parameter or use 'dotnet new vm2.NewPkg' to create a valid directory structure." \
-                                                                                         -ec "$err_repo_with_no_ci"
+    [[ -s "$repo_path/.github/workflows/CI.yaml" ]]                             || usage "$err_repo_with_no_ci" "The git-detected repository path '$repo_path' is missing a sub-directory '.github/workflows/CI.yaml'." \
+                                                                                                                "Specify a valid path to the root of the project/repository as a positional parameter or use 'dotnet new vm2.NewPkg' to create a valid directory structure."
     trace "Setting repo_path='$repo_path' from git-detected repository root"
 
     # now we can freeze $repo_path

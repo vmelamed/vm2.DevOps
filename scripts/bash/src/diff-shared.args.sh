@@ -154,7 +154,7 @@ function resolve_arguments()
     fi
 
     # resolve and validate vm2_repos. We cannot continue without it.
-    resolve_vm2_repos vm2_repos "$vm2_branch" "$sot_branch"                     || usage "Could not resolve the path of the vm2 repositories directory from the specified value of '$vm2_repos'." -ec $?
+    resolve_vm2_repos vm2_repos "$vm2_branch" "$sot_branch"                     || usage $? "Could not resolve the path of the vm2 repositories directory from the specified value of '$vm2_repos'."
     trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
     # resolve and validate sot. We cannot continue without it.

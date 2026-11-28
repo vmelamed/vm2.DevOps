@@ -54,9 +54,9 @@ if $build || [[ ! -s $pack_exec_path ]]; then
        $package_project == vm2.Templates* ]]                                    || warning "Build output '$pack_exec_path' was not found in the artifacts directory. Building the project before packing..."
     # The templates do not have a build phase, so it is natural that the build output would not exist.
     update_nuget_sources_with_github_vm2                                        || exit_with_error $? "Updating the NuGet sources with GitHub packages from vm2 failed."
-    dotnet_clean "$package_project"                                             || exit_with_error $? "Cleaning the build project failed."
-    dotnet_restore "$package_project"                                           || exit_with_error $? "Restoring the build project failed."
-    dotnet_build "$package_project"                                             || exit_with_error $? -sd 3 "Building the build project failed."
+    dotnet_clean "$package_project"                                             || exit_with_error $? "Cleaning the project $package_project failed."
+    dotnet_restore "$package_project"                                           || exit_with_error $? "Restoring the project $package_project failed."
+    dotnet_build "$package_project"                                             || exit_with_error $? -sd 3 "Building the project $package_project failed."
     [[ -s $pack_exec_path ]]                                                    || exit_with_error "$err_tool_error" -sd 3 "After building, the output '$pack_exec_path' was still NOT FOUND."
 fi
 

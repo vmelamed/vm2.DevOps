@@ -550,7 +550,7 @@ function resolve_repo_root()
             return "$_rc"
             ;;
 
-        * ) error -ec "$err_unexpected_error"
+        * ) error "$err_unexpected_error"
             ;;
     esac
 

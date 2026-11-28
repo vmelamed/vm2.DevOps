@@ -85,7 +85,7 @@ function configure_default_repo_settings()
     local _result
     _result=$(execute_with_retry --query --classify gh_failure \
                   gh api "$path_repo" -q "$jq_entries" 2>"$noise_sink")         || {
-                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo settings failed." -ec $?
+                                                                                        with_error _rc "$err_tool_error" "Retrieving the current repo settings failed."
                                                                                         return "$_rc"
                                                                                    }
 
