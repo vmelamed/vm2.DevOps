@@ -82,85 +82,85 @@ function parse_arguments()
 
         case "${_option,,}" in
             --build-projects|-bp )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 build_projects="$1"
                 shift
                 ;;
 
             --test-projects|-tp )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 test_projects="$1"
                 shift
                 ;;
 
             --benchmark-projects|-bmp )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 benchmark_projects="$1"
                 shift
                 ;;
 
             --package-projects|-pp )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 package_projects="$1"
                 shift
                 ;;
 
             --runners-os|-os )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 runners_os="$1"
                 shift
                 ;;
 
             --min-coverage-pct|-min )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 min_coverage_pct="$1"
                 shift
                 ;;
 
             --max-regression-pct|-max )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 max_regression_pct="$1"
                 shift
                 ;;
 
             --max-gen1-collects|-g1 )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 max_gen1_collects="$1"
                 shift
                 ;;
 
             --max-gen2-collects|-g2 )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 max_gen2_collects="$1"
                 shift
                 ;;
 
             --reset-benchmark-thresholds|-rt )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 reset_benchmark_thresholds="$1"
                 shift;
                 ;;
 
             --skip-build|-sb )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 skip_build="$1"
                 shift;
                 ;;
 
             --skip-tests|-st )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 skip_tests="$1"
                 shift;
                 ;;
 
             --skip-benchmarks|-sbm )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 skip_benchmarks="$1"
                 shift;
                 ;;
 
             --skip-packages|-sp )
-                (( $# >= 1 )) || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 skip_packages="$1"
                 shift;
                 ;;
@@ -168,15 +168,15 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                exit_with_bug "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
             # reserved: the options get_common_dotnet_arg consumes before this case (see the arm above).
             -c|-d|-tfm|-rid|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password )
-                exit_with_bug "'$_option' should have been consumed by get_common_dotnet_arg." -ec "$err_logic_error"
+                exit_with_bug "$err_logic_error" "'$_option' should have been consumed by get_common_dotnet_arg."
                 ;;
 
-            * ) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            * ) usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
         esac
     done
@@ -214,8 +214,8 @@ function resolve_arguments()
     is_valid_boolean "$skip_packages"                                                                                || true
     ! is_valid_min_coverage_pct "$min_coverage_pct"     || (( min_coverage_pct >= 50 && min_coverage_pct <= 100 ))   || warning_var min_coverage_pct "min-coverage-pct must be between 50-100." "$defaultMinCoveragePct"
     ! is_valid_max_regression_pct "$max_regression_pct" || (( max_regression_pct >= 0 && max_regression_pct <= 50 )) || warning_var max_regression_pct "max-regression-pct must be between 0-50." "$defaultMaxRegressionPct"
-    ! is_valid_integer "$max_gen1_collects"             || (( max_gen1_collects >= 0 ))                              || error "max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')." -ec "$err_argument_value"
-    ! is_valid_integer "$max_gen2_collects"             || (( max_gen2_collects >= 0 ))                              || error "max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')." -ec "$err_argument_value"
+    ! is_valid_integer "$max_gen1_collects"             || (( max_gen1_collects >= 0 ))                              || error "$err_argument_value" "max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')."
+    ! is_valid_integer "$max_gen2_collects"             || (( max_gen2_collects >= 0 ))                              || error "$err_argument_value" "max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')."
 
     # Find first valid project file (if any)
     declare -a all_projects

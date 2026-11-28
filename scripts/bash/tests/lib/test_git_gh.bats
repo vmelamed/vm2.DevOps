@@ -287,11 +287,8 @@ _run_get_repo_state_url() {
 }
 
 @test "print_repo_state: bug-exits with the wrong argument count (regression: was missing exit_if_has_bugs)" {
-    # NOTE: print_repo_state()'s nameref check (is_associative_array "$1") isn't '-v'-guarded, so
-    # it always runs even when $1 is simply missing, compounding a second bug (err_invalid_nameref)
-    # on top of the arity one -- exit_if_has_bugs reports the LAST one recorded either way.
     run print_repo_state
-    assert_failure "$err_invalid_nameref"
+    assert_failure "$err_invalid_arguments"
     run print_repo_state a b
     assert_failure "$err_invalid_nameref"
 }
@@ -678,6 +675,11 @@ _run_scripted_gh() {
     assert_success
 }
 
+@test "is_repo_state_initialized: true for a readonly state -- it only reads the array" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); initialize_repo_state state; readonly state; is_repo_state_initialized state"
+    assert_success
+}
+
 # --- get_gh_repo_state / get_repo_state with full_info=true, against a fake 'gh' ------------------------------------
 # The fake replaces 'gh' on the PATH. It prints $2 (the result of the jq query, as GitHub would produce it) and exits
 # with $1; with a non-zero exit code, it prints $3 to stderr. A 'Not Found'-like message is not transient, so the retry
@@ -748,6 +750,12 @@ _run_get_repo_state_full() {
 @test "get_gh_repo_state: bug-exits on a state that is not initialized" {
     run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); get_gh_repo_state vmelamed/vm2.Sample state"
     assert_failure "$err_invalid_nameref"
+}
+
+@test "get_gh_repo_state: bug-exits on a readonly state" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); initialize_repo_state state; readonly state; get_gh_repo_state vmelamed/vm2.Sample state"
+    assert_failure "$err_invalid_nameref"
+    assert_output --partial "requires argument 2 to name an initialized, writable associative array"
 }
 
 # --- get_gh_repo_property --------------------------------------------------------------------------------------------

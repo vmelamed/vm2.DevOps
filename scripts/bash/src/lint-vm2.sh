@@ -55,16 +55,14 @@ declare name=''
 for file in "$lib_dir"/_*.sh "$lib_dir"/core.*.sh; do
     name=${file##*/}
     # shellcheck disable=SC2016 # '$lib_dir' is literal text to find in core.sh, not something to expand
-    grep -qE '^[[:space:]]*source[[:space:]]+"\$lib_dir/'"${name//./\\.}"'"[[:space:]]*(#.*)?$' "$lib_dir/core.sh" ||
-        error "'$name' is not sourced by core.sh." -ec "$err_logic_error"
+    grep -qE '^[[:space:]]*source[[:space:]]+"\$lib_dir/'"${name//./\\.}"'"[[:space:]]*(#.*)?$' "$lib_dir/core.sh" \
+                                                                                || error "$err_logic_error" "'$name' is not sourced by core.sh."
 done
 
 # 3) No library file is left uncommitted.
 declare untracked=''
-untracked=$(git -C "$lib_dir" ls-files --others --exclude-standard -- '*.sh') ||
-    error "Failed to list the untracked files in '$lib_dir'." -ec "$err_tool_error"
-[[ -z $untracked ]] ||
-    error "Untracked library files:" "$untracked" -ec "$err_not_file"
+untracked=$(git -C "$lib_dir" ls-files --others --exclude-standard -- '*.sh')   || error "$err_tool_error" "Failed to list the untracked files in '$lib_dir'."
+[[ -z $untracked ]]                                                             || error "$err_not_file" "Untracked library files:" "$untracked"
 
 # 4) Every include guard is named after its file: core.args.sh -> __VM2_LIB_CORE_ARGS_SH_LOADED.
 #    Two files with the same guard silently skip each other.
@@ -75,9 +73,8 @@ for file in "$lib_dir"/*.sh; do
     expected=${expected//./_}
     expected="__VM2_LIB_${expected#_}_SH_LOADED"
     expected=${expected^^}
-    guard=$(grep -oE '__VM2_LIB_[A-Z0-9_]+_SH_LOADED' "$file" | head -n 1) || true
-    [[ $guard == "$expected" ]] ||
-        error "'${file##*/}': the include guard is '${guard:-<none>}', expected '$expected'." -ec "$err_logic_error"
+    guard=$(grep -oE '__VM2_LIB_[A-Z0-9_]+_SH_LOADED' "$file" | head -n 1)      || true
+    [[ $guard == "$expected" ]]                                                 || error "$err_logic_error" "'${file##*/}': the include guard is '${guard:-<none>}', expected '$expected'."
 done
 
 # 5) No function is defined in two files, except the deliberate overrides: gh_core.sh overrides
@@ -85,8 +82,7 @@ done
 declare -ra known_overrides=(tee_stdout tee_stderr tee_output usage)
 declare function_name=''
 while IFS= read -r function_name; do
-    is_in "$function_name" "${known_overrides[@]}" ||
-        error "The function '$function_name' is defined in more than one library file." -ec "$err_logic_error"
+    is_in "$function_name" "${known_overrides[@]}"                              || error "$err_logic_error" "The function '$function_name' is defined in more than one library file."
 done < <(grep -hoE '^function [a-zA-Z_][a-zA-Z0-9_]*' "$lib_dir"/*.sh | sort | uniq -d | cut -d' ' -f2)
 
 # 6) No readonly variable is left without a value: a readonly variable can never get one later,
@@ -94,18 +90,17 @@ done < <(grep -hoE '^function [a-zA-Z_][a-zA-Z0-9_]*' "$lib_dir"/*.sh | sort | u
 #    Plain forward declarations (e.g. 'declare -x repo_owner', set by the calling script) are fine.
 declare declarations=''
 # shellcheck disable=SC2016 # $1 is expanded by the child shell, not here
-declarations=$(env -i HOME="$HOME" PATH="$PATH" bash -c 'source "$1/gh_core.sh" > /dev/null 2>&1; declare -p' _ "$lib_dir") ||
-    error "Failed to list the variables declared by the library." -ec "$err_tool_error"
+declarations=$(env -i HOME="$HOME" PATH="$PATH" bash -c 'source "$1/gh_core.sh" > /dev/null 2>&1; declare -p' _ "$lib_dir") \
+                                                                                || error "$err_tool_error" "Failed to list the variables declared by the library."
 declare variable_name=''
 while IFS= read -r variable_name; do
-    error "The readonly variable '$variable_name' is declared, but never given a value." -ec "$err_logic_error"
+    error "$err_logic_error" "The readonly variable '$variable_name' is declared, but never given a value."
 done < <(awk '/^declare -[a-zA-Z]*r[a-zA-Z]* [a-zA-Z_][a-zA-Z0-9_]*$/ { print $3 }' <<< "$declarations") # awk, not grep: no match is not a failure
 
 # 7) No syntax errors in the library and in the scripts. bash -n parses without running anything.
 for file in "$lib_dir"/*.sh "$script_dir"/*.sh "$lib_dir"/../../../.github/scripts/*.sh; do
     [[ -f $file ]] || continue # an unmatched glob stays as the literal pattern
-    bash -n "$file" 2>&1 ||
-        error "Syntax error in '$(realpath "$file")'." -ec "$err_logic_error"
+    bash -n "$file" 2>&1                                                        || error "$err_logic_error" "Syntax error in '$(realpath "$file")'."
 done
 
 # 8) Messages follow the templates in vm2.DevOps/CLAUDE.md ("Message Templates"). Each rule is a common departure,
@@ -121,7 +116,7 @@ declare -rA message_rules=(
     ['\(provided \$\{?[0-9]']="the provided value is quoted: '(provided '\${1-<missing>}')'"
     ['-ec "[^"]*" +"']="'-ec' comes after the message parts"
 )
-declare -r please_rule='\b(error|with_error|warning|info|trace|bug|usage|exit_with_error|exit_with_bug|fatal_exit)\b.*"[^"]*\bPlease\b|^[[:space:]]*"[^"]*\bPlease\b'
+declare -r please_rule='\b(error|with_error|warning|info|trace|bug|usage|exit_with_error|exit_with_bug)\b.*"[^"]*\bPlease\b|^[[:space:]]*"[^"]*\bPlease\b'
 declare -a message_files=()
 declare -r this_file="$script_dir/$script_name"
 for file in "$lib_dir"/*.sh "$script_dir"/*.sh "$lib_dir"/../../../.github/scripts/*.sh; do
@@ -130,12 +125,10 @@ done
 declare rule='' hits=''
 for rule in "${!message_rules[@]}"; do
     hits=$(grep -nHE -- "$rule" "${message_files[@]}" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#') || true # no match is the good outcome
-    [[ -z $hits ]] ||
-        error "Messages that depart from the templates: ${message_rules[$rule]}." "$hits" -ec "$err_logic_error"
+    [[ -z $hits ]]                                                              || error "$err_logic_error" "Messages that depart from the templates: ${message_rules[$rule]}." "$hits"
 done
 hits=$(grep -nHE -- "$please_rule" "${message_files[@]}" | grep -vE '^[^:]+\.usage\.sh:|^[^:]+:[0-9]+:[[:space:]]*#') || true
-[[ -z $hits ]] ||
-    error "Messages that depart from the templates: a fix hint is an imperative, without 'Please'." "$hits" -ec "$err_logic_error"
+[[ -z $hits ]]                                                                  || error "$err_logic_error" "Messages that depart from the templates: a fix hint is an imperative, without 'Please'." "$hits"
 
 # 9) A library function's name says whether it reports (vm2.DevOps/CLAUDE.md, "Function Types"): a predicate
 #    (is_*, has_*) and an assert_* never call error, with_error, warning, or info (a bug is fine: it reports a
@@ -217,7 +210,7 @@ declare -r report_scanner='
     END                                         { for (key in calls) print key, calls[key] }
 '
 declare reports_text=''
-reports_text=$(awk "$report_scanner" "$lib_dir"/*.sh) || error "Failed to scan the library functions in '$lib_dir'." -ec "$err_tool_error"
+reports_text=$(awk "$report_scanner" "$lib_dir"/*.sh)                           || error "$err_tool_error" "Failed to scan the library functions in '$lib_dir'."
 
 declare location='' function_calls=''
 declare -a silent_hits=() validator_hits=()
@@ -230,12 +223,10 @@ while read -r location function_calls; do
         (( function_calls == 0 )) || silent_hits+=("$location")
     fi
 done <<< "$reports_text"
-(( ${#silent_hits[@]} == 0 )) ||
-    error "Predicates and assert_* functions that report (call error, with_error, warning, or info):" \
-          "$(printf '%s\n' "${silent_hits[@]}" | sort)" -ec "$err_logic_error"
-(( ${#validator_hits[@]} == 0 )) ||
-    error "Validators that never report (no call to error, with_error, warning, or info):" \
-          "$(printf '%s\n' "${validator_hits[@]}" | sort)" -ec "$err_logic_error"
+(( ${#silent_hits[@]} == 0 ))                                                   || error "$err_logic_error" "Predicates and assert_* functions that report (call error, with_error, warning, or info):" \
+                                                                                                            "$(printf '%s\n' "${silent_hits[@]}" | sort)"
+(( ${#validator_hits[@]} == 0 ))                                                || error "$err_logic_error" "Validators that never report (no call to error, with_error, warning, or info):" \
+                                                                                                            "$(printf '%s\n' "${validator_hits[@]}" | sort)"
 
 exit_if_has_errors false
 

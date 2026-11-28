@@ -53,7 +53,7 @@ declare -x hex_digits_set
 #-----------------------------------------------------------------------------------------------
 function is_valid_build_configuration()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the configuration value to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the configuration value to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -79,7 +79,7 @@ function is_valid_build_configuration()
 #-----------------------------------------------------------------------------------------------
 function is_valid_framework()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the Target Framework Moniker (TFM) value to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the Target Framework Moniker (TFM) value to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -105,7 +105,7 @@ function is_valid_framework()
 #-----------------------------------------------------------------------------------------------
 function is_valid_runtime()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the Runtime Identifier (RID) value to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the Runtime Identifier (RID) value to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -153,7 +153,7 @@ function is_preprocessor_symbol()
 #-----------------------------------------------------------------------------------------------
 function is_valid_preprocessor_symbol()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the preprocessor symbol to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the preprocessor symbol to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -187,8 +187,8 @@ declare -x __preprocessor_symbols_regex="^[\ \,:\;${digits_set}${letters_set}_]+
 #-----------------------------------------------------------------------------------------------
 function validate_preprocessor_symbols()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the NAME of the variable containing the preprocessor symbols to test." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be a valid variable name for the preprocessor-symbol list (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the NAME of the variable containing the preprocessor symbols to test."
+    [[ ! -v 1 ]] || { is_variable "$1" && is_mutable "$1"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable variable that holds the preprocessor symbols (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -240,7 +240,7 @@ function validate_preprocessor_symbols()
 #-----------------------------------------------------------------------------------------------
 function is_valid_min_coverage_pct()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the percentage to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -266,7 +266,7 @@ function is_valid_min_coverage_pct()
 #-----------------------------------------------------------------------------------------------
 function is_valid_max_regression_pct()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the percentage to test."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success

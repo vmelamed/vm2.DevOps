@@ -51,32 +51,32 @@ function parse_arguments()
 
         case "${_option,,}" in
             --tag|-t )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 tag="$1"; shift
                 ;;
 
             --minver-tag-prefix|-p )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --reason|-r )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 reason="$1"; shift
                 ;;
 
             --needs-empty-commit )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 needs_empty_commit="$1"; shift
                 ;;
 
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            * ) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            * ) usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
         esac
     done
@@ -85,9 +85,9 @@ function parse_arguments()
 
 function verify_environment()
 {
-    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "GITHUB_REPOSITORY and/or RELEASE_PAT are not set." -ec "$err_argument_value"
+    [[ -n "${GITHUB_REPOSITORY:-}" && -n "${RELEASE_PAT:-}" ]]                  || error "$err_argument_value" "GITHUB_REPOSITORY and/or RELEASE_PAT are not set."
     verify_git                                                                  || true
-    is_tool_present git-cliff                                                   || error "'git-cliff' is not installed." "Install it from <https://git-cliff.org/docs/installation>." -ec "$err_tool_not_found"
+    is_tool_present git-cliff                                                   || error "$err_tool_not_found" "'git-cliff' is not installed." "Install it from <https://git-cliff.org/docs/installation>."
     return "$success"
 }
 
@@ -104,7 +104,7 @@ function resolve_arguments()
         is_prerelease=true
         reason=${reason:-"pre-release"}
     else
-        error "Tag '$tag' is not a valid semver release or prerelease tag." -ec "$err_argument_value"
+        error "$err_argument_value" "Tag '$tag' is not a valid semver release or prerelease tag."
     fi
 
     is_valid_boolean "$needs_empty_commit"                                      || true

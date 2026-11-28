@@ -15,12 +15,13 @@ declare -x lib_dir
 
 source "$lib_dir/core.sh"
 
+# vm2 core lib exit codes
 declare -x success
 declare -x negative
 declare -x err_tool_error
 declare -x err_invalid_file
 
-# core constants
+# vm2 core lib constants
 declare -x edit_em
 declare -x check_em
 declare -x no_entry_em
@@ -29,16 +30,17 @@ declare -x warn_em
 
 declare -x vm2_sot_repo_name   # vm2.Templates
 
-# script constants
+# this script constants
 declare -xr dpp_file_name="Directory.Packages.props"
-declare -x diff_shared_script="${UPDATE_PACKAGES_DIFF_SHARED:-$script_dir/diff-shared.sh}"    # overridable so the tests can replace the fan-out step with a fake
+declare -r diff_shared_script="${UPDATE_PACKAGES_DIFF_SHARED:-$script_dir/diff-shared.sh}"      # overridable so the tests can replace the fan-out step with a fake
 
 source "$script_dir/update-packages.functions.sh"
 source "$script_dir/update-packages.repos.sh"
 source "$script_dir/update-packages.args.sh"
 source "$script_dir/update-packages.usage.sh"
 
-# script arguments
+# this script arguments
+get_arguments "$@"
 declare -x vm2_repos            # the path to the folder containing all vm2 repositories, usually '$VM2_REPOS'
 declare -x sot                  # the source of truth name, usually 'AddNewPackages'
 declare -x sot_path             # the path to the source of truth folder, usually '$VM2_REPOS/vm2.Templates/templates/<sot>/content'
@@ -54,8 +56,6 @@ declare -a summary_rows=()
 declare -A modes=()
 declare -A reasons=()
 declare -a warnings=()
-
-get_arguments "$@"
 
 info "All vm2 repositories are expected to be in '$vm2_repos'"
 info "The Source of Truth '$sot' folder is in '$sot_path'"
@@ -99,7 +99,7 @@ fi
 {
     echo "# Update Packages Summary"
     echo
-} > "$summary_file" || exit_with_error "Failed to write to the summary file '$summary_file'." -ec "$err_invalid_file"
+} > "$summary_file"                                                             || exit_with_error "$err_invalid_file" "Failed to write to the summary file '$summary_file'."
 
 declare new_branch
 new_branch="deps/update-packages-$(date +%Y-%m-%d-%H-%M-%S)"
@@ -107,14 +107,15 @@ readonly new_branch
 
 # Create the new branch in all repositories marked for publishing
 trace "Creating branch '$new_branch' in the repositories marked for publishing..."
+
 for repo in "${!target_repos[@]}"; do
-    [[ ${modes[$repo]} == publish ]] ||
-        continue
+    [[ ${modes[$repo]} == publish ]] || continue
     if ! start_publish_branch "${target_repos[$repo]}" "$new_branch"; then
         modes[$repo]=inplace
         reasons[$repo]="could not create branch '$new_branch'; edited in place, nothing committed"
     fi
 done
+
 (( publish_count > 0 )) && info "Created branch '$new_branch' in $publish_count repositor$([[ $publish_count == 1 ]] && echo y || echo ies)..."
 
 # PHASE 1: the shared block in the SoT, then the fan-out to the repositories
@@ -140,6 +141,7 @@ if $include_sot_repo; then
     for repo in "${!target_repos[@]}"; do
         [[ ${modes[$repo]} == skip ]] || fan_out_names+=("$repo")
     done
+
     if (( ${#fan_out_names[@]} > 0 )); then
         diff_shared_args=(
             "--vm2-repos" "$vm2_repos"
@@ -153,8 +155,7 @@ if $include_sot_repo; then
         info "Running: $diff_shared_script ${diff_shared_args[*]}"
 
         fanout_0=$(now_us)
-        "$diff_shared_script" "${diff_shared_args[@]}" ||
-            error "diff-shared.sh failed while copying the shared block to the repositories." -ec "$err_tool_error"
+        "$diff_shared_script" "${diff_shared_args[@]}"                          || error "$err_tool_error" "diff-shared.sh failed while copying the shared block to the repositories."
         fanout_1=$(now_us)
         fanout_us=$(( fanout_1 - fanout_0 ))
     fi
@@ -163,6 +164,7 @@ fi
 
 # PHASE 2: each repository's own section, then the lock files
 info "Phase 2: checking each repository's own packages against NuGet..."
+
 phase_0=$(now_us)
 for repo in "${!target_repos[@]}"; do
     [[ ${modes[$repo]} == skip ]] && continue
@@ -177,11 +179,11 @@ lock_0=$(now_us)
 for repo in "${!target_repos[@]}"; do
     [[ ${modes[$repo]} == skip ]] && continue
     info "  $repo: running dotnet restore --force-evaluate..."
-    refresh_lock_files "${target_repos[$repo]}" || error "Failed to regenerate packages.lock.json in '$repo'." -ec "$err_tool_error"
+    refresh_lock_files "${target_repos[$repo]}"                                 || error "$err_tool_error" "Failed to regenerate packages.lock.json in '$repo'."
 done
 lock_1=$(now_us)
 lock_us=$(( lock_1 - lock_0 ))
-exit_if_has_errors false
+                                                                                exit_if_has_errors false
 
 # only 'publish' repositories are committed, pushed, and get a pull request
 (( publish_count > 0 )) && info "Committing, pushing, and opening pull requests for $publish_count repositor$([[ $publish_count == 1 ]] && echo y || echo ies)..."
@@ -206,14 +208,14 @@ for repo in "${!target_repos[@]}"; do
             reasons[$repo]="$check_em already up to date -- nothing to commit"
         continue
     elif (( _commit_rc != success )); then
-        error "Failed to commit the package versions in '$repo'." -ec "$err_tool_error"
+        error "$err_tool_error" "Failed to commit the package versions in '$repo'."
         continue
     fi
 
-    execute --quiet git -C "$repo_path" push --quiet -u origin "$new_branch" || {
-        error "Failed to push '$new_branch' in '$repo'." -ec "$err_tool_error"
-        continue
-    }
+    execute --quiet git -C "$repo_path" push --quiet -u origin "$new_branch"    ||  {
+                                                                                        error "$err_tool_error" "Failed to push '$new_branch' in '$repo'."
+                                                                                        continue
+                                                                                    }
 
     if open_pull_request "$repo_path" "$new_branch" _pr_link; then
         is_dry_run &&
@@ -226,7 +228,7 @@ for repo in "${!target_repos[@]}"; do
 done
 commit_1=$(now_us)
 commit_us=$(( commit_1 - commit_0 ))
-exit_if_has_errors false
+                                                                                exit_if_has_errors false
 
 for w in "${warnings[@]}"; do
     warning "$w"
@@ -307,4 +309,4 @@ trace "  lock refresh          $(ms "$lock_us")  (of which dotnet restore: $(ms 
 trace "  commit and push       $(ms "${commit_us:-0}")"
 trace "  package searches      $search_count calls, $(ms "$search_us") total"
 
-exit_if_has_errors
+                                                                                exit_if_has_errors

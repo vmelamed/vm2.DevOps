@@ -48,7 +48,7 @@ declare -x workflow_path
 
 [[ -n $repository ]] || repository=$(execute_with_retry --query --classify gh_failure \
                                         gh repo view --json nameWithOwner --jq .nameWithOwner 2>"$noise_sink") \
-                                                                                || exit_with_error "The current directory is not in a GitHub repository; use '--repository <owner/repo>'." -ec "$err_not_found"
+                                                                                || exit_with_error "$err_not_found" "The current directory is not in a GitHub repository; use '--repository <owner/repo>'."
 
 readonly repository
 
@@ -71,7 +71,7 @@ if [[ -z "$workflow_id" ]]; then
     elif [[ -n "$workflow_path" ]]; then
         query='.[] | select(.path==$p).id'
     else
-        exit_with_error "Either the workflow id, the workflow name, or the workflow path must be specified." -ec "$err_missing_argument"
+        exit_with_error "$err_missing_argument" "Either the workflow id, the workflow name, or the workflow path must be specified."
     fi
 
     declare _workflows
@@ -80,7 +80,7 @@ if [[ -z "$workflow_id" ]]; then
 
     _workflows=$(execute_with_retry --query --classify gh_failure \
                     gh workflow list --repo "$repository" --json "id,name,path") \
-                                                                                || exit_with_error "Failed to list the workflows of '$repository'." -ec $?
+                                                                                || exit_with_error $? "Failed to list the workflows of '$repository'."
 
     declare _workflows_ids_result
     _workflows_ids_result=$(jq -r --arg n "$workflow_name" --arg p "$workflow_path" "$query" <<< "$_workflows")
@@ -91,17 +91,17 @@ if [[ -z "$workflow_id" ]]; then
         0)  [[ -n "$workflow_name" ]] &&
                 what="path '$workflow_name'" ||
                 what="name '$workflow_path'"
-            error "The specified workflow $what is not in the repository '$repository'." -ec "$err_argument_value"
+            error "$err_argument_value" "The specified workflow $what is not in the repository '$repository'."
             ;;
         1)  workflow_id="${workflow_ids[0]}"
             ;;
-        *)  exit_with_error "Found more than one workflow: '${workflow_ids[*]}'." -ec "$err_argument_value"
+        *)  exit_with_error "$err_argument_value" "Found more than one workflow: '${workflow_ids[*]}'."
             ;;
     esac
 fi
 exit_if_has_errors
 
-execute mkdir -p "$artifacts" || exit_with_error "Failed to create artifacts directory." -ec "$err_tool_error"
+execute mkdir -p "$artifacts" || exit_with_error "$err_tool_error" "Failed to create artifacts directory."
 
 if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
     renamed_artifacts_dir="$artifacts-$(date -u +"%Y%m%dT%H%M%S")"
@@ -126,7 +126,7 @@ if [[ -d "$artifacts" && -n "$(ls -A "$artifacts")" ]]; then
         3)  trace "Exiting the script."
             exit 0
             ;;
-        *)  exit_with_error -ns "Invalid option $choice. Exiting." -ec "$failure"
+        *)  exit_with_error "$failure" -ns "Invalid option $choice. Exiting."
             ;;
     esac
 fi
@@ -150,8 +150,8 @@ runs_text=$(execute_with_retry --query --classify gh_failure \
                 --json databaseId \
                 --jq '.[].databaseId')                                          || with_error rc "$err_tool_error" "Failed to list the successful runs of the workflow '$workflow_id'."
 [[ $rc -ne $success || -z $runs_text ]] || readarray -t runs <<< "$runs_text"   || with_error rc "$err_io_failure" "Failed to read the list of runs."
-(( rc == success ))                                                             || exit_with_error "Failed to retrieve the list of successful runs of the workflow '$workflow_id' in the repository '$repository'." -ec "$rc"
-(( ${#runs[@]} > 0 ))                                                           || exit_with_error "No successful runs found for the workflow '$workflow_id' in the repository '$repository'." -ec "$err_not_found"
+(( rc == success ))                                                             || exit_with_error "$rc" "Failed to retrieve the list of successful runs of the workflow '$workflow_id' in the repository '$repository'."
+(( ${#runs[@]} > 0 ))                                                           || exit_with_error "$err_not_found" "No successful runs found for the workflow '$workflow_id' in the repository '$repository'."
 
 # iterate over the runs and try to find and download the specified artifact
 # starting from the most recent one down to the oldest one
@@ -180,7 +180,7 @@ for run in "${runs[@]}"; do
                             gh run download "$run" \
                             --repo "$repository" \
                             --name "$artifact_name" \
-                            --dir "$artifacts" 2>&1)                            || exit_with_error "Failed to download the artifact '$artifact_name'." "$download_result" -ec "$err_tool_error"
+                            --dir "$artifacts" 2>&1)                            || exit_with_error "$err_tool_error" "Failed to download the artifact '$artifact_name'." "$download_result"
     # the above capture also swallowed execute's dry-run$ line: show it, it is the point of a dry run
     if is_dry_run; then
         printf '%s\n' "$download_result" >&2
@@ -191,4 +191,4 @@ for run in "${runs[@]}"; do
     exit 0
 done
 
-exit_with_error "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow ID '$workflow_id' in the repository '$repository'." -ec "$err_logic_error"
+exit_with_error "$err_logic_error" "The artifact '$artifact_name' was not found in the last ${#runs[@]} successful runs of the workflow ID '$workflow_id' in the repository '$repository'."

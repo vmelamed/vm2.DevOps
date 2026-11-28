@@ -237,7 +237,7 @@ jobs:
                               gh api "repos/$GH_REPO/actions/runs/$RUN_ID/artifacts" \
                               --paginate \
                               --jq '.artifacts[] | select(.name | startswith("nuget-packages-")) | .id') \
-                                                                                || exit_with_error "Failed to get artifact IDs." -ec "$err_tool_error"
+                                                                                || exit_with_error "$err_tool_error" "Failed to get artifact IDs."
           artifact_ids=$(paste -sd, - <<< "$ids")
 
           {

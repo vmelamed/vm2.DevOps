@@ -70,55 +70,55 @@ function parse_arguments()
 
         case "${_option,,}" in
             --repeat|-n )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 repeat="$1"; shift
                 ;;
 
             --define|-d )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 preprocessor_symbols="$1"; shift
                 ;;
 
             --minver-tag-prefix|-mp )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_tag_prefix="$1"; shift
                 ;;
 
             --minver-prerelease-id|-mi )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 minver_prerelease_id="$1"; shift
                 ;;
 
             --bencher-project|-bp )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 bencher_project="$1"; shift
                 ;;
 
             --bencher-testbed|-tb )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 bencher_testbed="$1"; shift
                 ;;
 
             --bencher-branch|-br )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 bencher_branch="$1"; shift
                 ;;
 
             --bencher-adapter|-ad )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 bencher_adapter="$1"; shift
                 ;;
 
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*) usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            *)  ! $_positional_arg_set                                          || usage "Multiple benchmark projects specified: $_option" -ec "$err_too_many_arguments"
+            *)  ! $_positional_arg_set                                          || usage "$err_too_many_arguments" "Multiple benchmark projects specified: $_option"
                 benchmark_project="$_option"
                 _positional_arg_set=true
                 ;;
@@ -131,7 +131,7 @@ function parse_arguments()
 function verify_environment()
 {
     is_tool_present bencher                                                     || error "'bencher' is not installed." "Install it from <https://bencher.dev/docs/how-to/install-cli/>." -ec "$err_tool_not_found"
-    [[ -n "${BENCHER_API_TOKEN:-}" ]]                                           || error "The BENCHER_API_TOKEN environment variable is required." -ec "$err_missing_argument"
+    [[ -n "${BENCHER_API_TOKEN:-}" ]]                                           || error "$err_missing_argument" "The BENCHER_API_TOKEN environment variable is required."
 
     return "$success"
 }
@@ -140,18 +140,18 @@ declare -x __bencher_symbol_regex="^[${letters_set}_][${letters_set}${digits_set
 
 function resolve_arguments()
 {
-    is_positive "$repeat"                                                       || error "repeat must be a positive integer (got '$repeat')." -ec "$err_argument_value"
+    is_positive "$repeat"                                                       || error "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
     validate_preprocessor_symbols preprocessor_symbols                          || true
     is_valid_minver_settings "$minver_tag_prefix" "$minver_prerelease_id"       || true
 
     [[ -n $bencher_project ]]                                                   || error "The Bencher project is not set." "Use '--bencher-project <project>'." -ec "$err_argument_value"
-    [[ -z $bencher_project || $bencher_project =~ $__bencher_symbol_regex ]]    || error "The Bencher project '$bencher_project' is not a valid project name (slug)." -ec "$err_argument_value"
+    [[ -z $bencher_project || $bencher_project =~ $__bencher_symbol_regex ]]    || error "$err_argument_value" "The Bencher project '$bencher_project' is not a valid project name (slug)."
 
     [[ -n $bencher_testbed ]]                                                   || error "The Bencher testbed is not set." "Use '--bencher-testbed <testbed>'." -ec "$err_argument_value"
-    [[ -z $bencher_testbed || $bencher_testbed =~ $__bencher_symbol_regex ]]    || error "The Bencher testbed '$bencher_testbed' is not a valid testbed name." -ec "$err_argument_value"
+    [[ -z $bencher_testbed || $bencher_testbed =~ $__bencher_symbol_regex ]]    || error "$err_argument_value" "The Bencher testbed '$bencher_testbed' is not a valid testbed name."
 
     is_valid_branch_name "$bencher_branch"                                      || true
-    is_variable_name "$bencher_adapter"                                         || error "The Bencher adapter '$bencher_adapter' is not a valid adapter name." -ec "$err_argument_value"
+    is_variable_name "$bencher_adapter"                                         || error "$err_argument_value" "The Bencher adapter '$bencher_adapter' is not a valid adapter name."
 
     # Determine the benchmark projects: the explicit one if given, otherwise discover every *.csproj under benchmarks/
     # recursively, pruning generated bin/obj/BenchmarkDotNet.Artifacts so BenchmarkDotNet's autogenerated projects are ignored.
@@ -166,7 +166,7 @@ function resolve_arguments()
         trace "Auto-detected benchmark projects: ${benchmark_projects[*]}"
     fi
 
-    if (( ${#benchmark_projects[@]} == 0 )); then                                  error "No benchmark projects found under 'benchmarks/' and none specified." -ec "$err_argument_value"
+    if (( ${#benchmark_projects[@]} == 0 )); then                                  error "$err_argument_value" "No benchmark projects found under 'benchmarks/' and none specified."
     else
         get_artifacts_path "${benchmark_projects[0]}" artifacts                 || true
     fi

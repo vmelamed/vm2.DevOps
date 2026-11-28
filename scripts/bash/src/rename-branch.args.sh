@@ -73,10 +73,10 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                                                                                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                   exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*)                                                                 usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
             * ) if (( _option_idx == 0 )); then
@@ -87,7 +87,7 @@ function parse_arguments()
                     new_branch_name=$_option
                     (( ++_option_idx ))
                 else
-                                                                                usage "Too many positional arguments: $_option" -ec "$err_too_many_arguments"
+                                                                                   usage "$err_too_many_arguments" "Too many positional arguments: $_option"
                 fi
                 ;;
         esac
@@ -99,7 +99,7 @@ function parse_arguments()
 function verify_environment
 {
     # Note: fetch runs directly, not through execute: it only refreshes remote-tracking refs, and the checks below need them fresh, even in a dry run.
-    ! verify_git || git fetch origin 1>"$noise_sink"                            || error "Failed to fetch from remote." -ec "$err_tool_error"
+    ! verify_git || git fetch origin 1>"$noise_sink"                            || error "$err_tool_error" "Failed to fetch from remote."
     return "$success"
 }
 

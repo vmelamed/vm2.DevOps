@@ -37,7 +37,7 @@ declare -x repo=''
 declare -x ci_yaml=''
 declare -x default_branch=$default_default_branch
 declare -x visibility=$default_visibility
-declare -x main_protection_rs_name=''
+declare -x branch_protection_rs_name=''
 declare -x description=''
 declare -x use_ssh=true
 declare -x use_https=false
@@ -57,7 +57,7 @@ declare -xra arguments=(
     repo_name
     default_branch
     visibility
-    main_protection_rs_name
+    branch_protection_rs_name
     description
     use_ssh
     use_https
@@ -123,32 +123,32 @@ function parse_arguments()
 
         case "${_option,,}" in
             --vm2-repos )
-                (( $# >= 1 ))                                                   || usage "Missing path after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing path after '$_option'."
                 vm2_repos="$1"; shift
                 ;;
 
             --owner|-o )
-                (( $# >= 1 ))                                                   || usage "Missing owner after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing owner after '$_option'."
                 repo_owner="$1"; shift
                 ;;
 
             --branch|-b )
-                (( $# >= 1 ))                                                   || usage "Missing branch name after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing branch name after '$_option'."
                 default_branch="$1"; shift
                 ;;
 
             --visibility )
-                (( $# >= 1 ))                                                   || usage "Missing visibility after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing visibility after '$_option'."
                 visibility="$1"; shift
                 ;;
 
             --ruleset-name|-rs )
-                (( $# >= 1 ))                                                   || usage "Missing the name of the ruleset for protecting the default branch after '$_option'." -ec "$err_missing_argument"
-                main_protection_rs_name="$1"; shift
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing the name of the ruleset for protecting the default branch after '$_option'."
+                branch_protection_rs_name="$1"; shift
                 ;;
 
             --description )
-                (( $# >= 1 ))                                                   || usage "Missing description after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing description after '$_option'."
                 description="$1"; shift
                 ;;
 
@@ -203,13 +203,13 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                   exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) ! $_option_set                                                  || usage "Too many positional arguments (project directory or repository name): $_option" -ec "$err_too_many_arguments"
+            * ) ! $_option_set                                                  || usage "$err_too_many_arguments" "Too many positional arguments (project directory or repository name): $_option"
                 repo_path="$_option"
                 _option_set=true
                 ;;
@@ -251,7 +251,7 @@ function verify_environment()
 #   - Two circuit breakers exit the process at once, because nothing after them can be checked meaningfully: an
 #     unresolvable `vm2_repos`, and a target directory that cannot be resolved to a repository root (or to a directory
 #     with a CI configuration that can become one).
-#   - `repo_owner`, `repo_path`, `repo_name`, `description`, `default_branch`, `main_protection_rs_name`, `use_ssh`,
+#   - `repo_owner`, `repo_path`, `repo_name`, `description`, `default_branch`, `branch_protection_rs_name`, `use_ssh`,
 #     and `use_https` stay writable: `setup-repo.sh` adjusts them to what Git and GitHub report, or asks the user.
 #
 # @exitcode success=0: Always, unless a circuit breaker exits the process: every other failure is reported with
@@ -263,7 +263,7 @@ function resolve_arguments()
 
     is_valid_gh_repo_owner "$repo_owner"                                        || true
 
-    resolve_vm2_repos vm2_repos "$branches" "$branches"                         || exit_with_error "Failed to resolve the parent directory of all vm2 repositories (usually \$VM2_REPOS)." -ec $?
+    resolve_vm2_repos vm2_repos "$branches" "$branches"                         || exit_with_error $? "Failed to resolve the parent directory of all vm2 repositories (usually \$VM2_REPOS)."
 
     local _resolved
     resolve_repo_root "$vm2_repos" "$repo_path" _resolved void                  || _rc=$?
@@ -277,7 +277,7 @@ function resolve_arguments()
                  "A new Git repository will be initialized in '$_resolved'."
             ;;
 
-        * )                                                                     exit_with_error "Failed to resolve the path of the target repository '$repo_path'." -ec "$_rc"
+        * )                                                                     exit_with_error "$_rc" "Failed to resolve the path of the target repository '$repo_path'."
             ;;
     esac
 
@@ -301,12 +301,10 @@ function resolve_arguments()
 
     # shellcheck disable=SC2015 # Info: Note that A && B || C is not if-then-else. C may run when A is true.
     if $audit; then
-        ! $interactive_secrets && ! $interactive_vars                           || error "Secrets and variables cannot be interactively set during audit." \
-                                                                                         "Remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'." \
-                                                                                         -ec "$err_logic_error"
-        ! $purge_secrets && ! $purge_vars                                       || error "Secrets and variables cannot be purged during audit." \
-                                                                                         "Remove the '--purge-secrets' and '--purge-vars' options when running the script with '--audit'." \
-                                                                                         -ec "$err_logic_error"
+        ! $interactive_secrets && ! $interactive_vars                           || error "$err_logic_error" "Secrets and variables cannot be interactively set during audit." \
+                                                                                                            "Remove the '--interactive-secrets' and '--interactive-vars' options when running the script with '--audit'."
+        ! $purge_secrets && ! $purge_vars                                       || error "$err_logic_error" "Secrets and variables cannot be purged during audit." \
+                                                                                                            "Remove the '--purge-secrets' and '--purge-vars' options when running the script with '--audit'."
     fi
 
     readonly vm2_repos
@@ -325,7 +323,7 @@ function resolve_arguments()
     # readonly repo_name
     # readonly description
     # readonly default_branch
-    # readonly main_protection_rs_name
+    # readonly branch_protection_rs_name
     # readonly use_ssh
     # readonly use_https
 

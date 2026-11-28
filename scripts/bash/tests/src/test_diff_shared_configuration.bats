@@ -24,6 +24,7 @@ load '../helpers/setup'
 declare -gx lib_dir
 declare -gx err_invalid_arguments
 declare -gx err_argument_value
+declare -gx err_invalid_nameref
 declare -gx err_invalid_json
 
 _src_dir="$(cd "$lib_dir/../src" && pwd)"
@@ -248,7 +249,7 @@ EOF
 
 @test "configure_target_files: bug-exits on a non-indexed-array output variable name" {
     run _ds "declare -A not_an_array=(); configure_target_files '$BATS_TEST_TMPDIR' not_an_array"
-    assert_failure "$err_argument_value"
+    assert_failure "$err_invalid_nameref"
 }
 
 # =====================================================================================

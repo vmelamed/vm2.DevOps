@@ -50,36 +50,36 @@ function parse_arguments()
 
         case "${_option,,}" in
             --artifact|-a )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 artifact_name="$1"; shift
                 ;;
 
             --directory|-d )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 artifacts="$1"; shift
                 ;;
 
             --repository|--repo|-r )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 repository="$1"; shift
                 ;;
 
             --wf-id|-i )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id="$1"; shift
                 workflow_name=""
                 workflow_path=""
                 ;;
 
             --wf-name|-n )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id=""
                 workflow_name="$1"; shift
                 workflow_path=""
                 ;;
 
             --wf-path|-p )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow_id=""
                 workflow_name="";
                 workflow_path="$1"; shift
@@ -88,10 +88,10 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                                                                                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                exit_with_bug "$err_logic_error" "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            * )                                                                 usage "Unknown argument '$_option'." -ec "$err_unknown_argument"
+            * )                                                                 usage "$err_unknown_argument" "Unknown argument '$_option'."
                 ;;
         esac
     done
@@ -109,17 +109,17 @@ function verify_environment()
 
 function resolve_arguments()
 {
-    [[ -n "$artifact_name" ]]                                                   || error "The name of the artifact to download must be specified." -ec "$err_missing_argument"
+    [[ -n "$artifact_name" ]]                                                   || error "$err_missing_argument" "The name of the artifact to download must be specified."
     is_safe_input "$artifact_name"                                              || true
 
     [[ -z "$artifacts" ]] || is_safe_path "$artifacts"                          || true
-    [[ -n "$artifacts" ]]                                                       || error "The directory to download the artifact to must be specified." -ec "$err_missing_argument"
+    [[ -n "$artifacts" ]]                                                       || error "$err_missing_argument" "The directory to download the artifact to must be specified."
 
     is_safe_input "$repository"                                                 || true
     is_safe_input "$workflow_id"                                                || true
     is_safe_input "$workflow_name"                                              || true
     [[ -z $workflow_path ]] || is_safe_path "$workflow_path"                    || true
-    [[ -z $workflow_id ]] || is_natural "$workflow_id"                          || error "The specified workflow identifier '$workflow_id' is not valid." -ec "$err_argument_type"
+    [[ -z $workflow_id ]] || is_natural "$workflow_id"                          || error "$err_argument_type" "The specified workflow identifier '$workflow_id' is not valid."
 
     readonly artifact_name
     readonly artifacts

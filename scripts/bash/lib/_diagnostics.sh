@@ -3,11 +3,6 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-#-----------------------------------------------------------------------------------------------
-# This script defines diagnostic functions for logging messages to stdout, stderr, and trace output.
-# It also defines a global error counter and functions to manipulate it.
-#-----------------------------------------------------------------------------------------------
-
 # Circular include guard
 (( ${__VM2_LIB_DIAGNOSTICS_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_DIAGNOSTICS_SH_LOADED=1
@@ -21,10 +16,16 @@ declare -x err_invalid_arguments
 declare -x err_not_overridden
 declare -x err_invalid_nameref
 declare -x err_argument_type
-declare -x err_argument_value
-declare -x err_missing_argument
 declare -x err_has_bugs
 declare -x err_has_errors
+
+# vm2 core lib constants
+declare -x fatal_em
+declare -x bug_em
+declare -x error_em
+declare -x warn_em
+declare -x info_em
+declare -x trace_em
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║ IMPORTANT: The tee_* functions are designed to be used on the RIGHT side   ║
@@ -122,9 +123,128 @@ function tee_output()
         echo "$_line"
     done
 }
+declare -xa __summary_output
+
+#-----------------------------------------------------------------------------------------------
+# @description Logs one or more summary messages with a `## Summary` markdown heading, via
+# `__summary_output` — so, if glow is installed, the summary will be pretty-printed using
+#   glow; otherwise, it will be sent to `tee_stdout` as a markdown. Creates an abstraction,
+#   designed to be overridden in other scripts to redirect to alternate destination(s), e.g.,
+#   to the GitHub Actions step summary file. Alternatively, `__summary_output` can be modified
+#   to redirect elsewhere considering more environment conditions like the CI environment
+#   variable.
+#
+# @arg $@ nil No arguments; reads its input from stdin.
+#
+# @exitcode success=0: The summary was printed (always).
+#
+# @stdout `## Summary` markdown heading followed by each message line.
+#
+# @example
+#   to_summary "Build completed successfully"
+# @example
+#   echo "Deployment finished" | to_summary
+#-----------------------------------------------------------------------------------------------
+# shellcheck disable=SC2120 # to_summary references arguments, but none are ever passed - usually passed in stdin
+function to_summary()
+{
+    local _line
+    local _first=true
+
+    while IFS= read -r _line || [[ -n $_line ]]; do
+        $_first && echo "## Summary" && _first=false
+        echo "$_line"
+    done | "${__summary_output[@]}"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Returns the current time in microseconds since the epoch. us stands for
+#   microseconds: visually close to the Greek letter mu - 'μ', the symbol for micro.
+#
+#   Note: Requires Bash 5.0 or later for $EPOCHREALTIME.
+#
+# @stdout The current time in microseconds since the epoch.
+#
+# @exitcode success=0: Always succeeds.
+#
+# @example
+#   point0_us=$(now_us)
+#   sleep 1
+#   point1_us=$(now_us)
+#   echo "Elapsed time: $((point1_us - point0_us)) us"
+#-----------------------------------------------------------------------------------------------
+function now_us()
+{
+    echo "${EPOCHREALTIME//[!0-9]/}"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Should be overridden in the top level script by sourcing core.args.sh, akin to
+#   a forward declaration in C/C++ for use within this script (e.g., `exit_if_has_errors()`).
+#   Local implementation of usage() to avoid circular dependency with core.args.sh
+#
+# Note: This implementation of usage() is meant to be a 'forward declaration'! It MUST be
+#   overridden in the top-level script or by sourcing core.args.sh.
+#
+# @arg $@ string Ignored -- forwarded to `bug` as part of the "not overridden" message.
+#
+# @exitcode failure=1: Always -- this placeholder always exits with a bug.
+#-----------------------------------------------------------------------------------------------
+function usage()
+{
+    bug "$err_not_overridden" "This implementation of usage() is meant to be a 'forward declaration'!" \
+                              "Either re-define usage() or source core.args.sh."
+                              "$@"
+    exit "$failure";
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Displays the current call stack. Consider redirecting the output to stderr at
+#   the call site.
+#
+# @arg $1 int How many stack frames to skip, not including the caller of `show_stack`.
+#   Optional, default: 0.
+# @arg $2 int How many stack frames to show. Optional, default: all remaining frames after the
+#   skip.
+#
+# @exitcode success=0
+#
+# @stdout string The formatted stack trace, one line per frame, showing function name, source
+#   file, and line number (consider redirecting to stderr at the call site).
+#
+# @example
+#   show_stack 2 3 # typically called during debugging or error handling
+#-----------------------------------------------------------------------------------------------
+function show_stack()
+{
+    local _skip=${1:-0}
+    (( ++_skip ))                                           # skip the frame of this call
+
+    local _max_take=$(( ${#FUNCNAME[@]} - _skip ))          # take no more than the remaining stack frames
+    local _take=${2:-$_max_take}
+
+    _take=$(( _take < _max_take ? _take : _max_take ))      # adjust take if it exceeds the available stack frames
+    (( _take <= 0 )) && return "$success"
+
+    local _func
+    local _source
+    local _lineno
+
+    local -i _index
+    local _end=$(( _skip + _take ))
+
+    for (( _index=_skip; _index<_end; _index++ )); do
+        _func=${FUNCNAME[_index]:-}
+        _source=${BASH_SOURCE[_index]:-}
+        _lineno=${BASH_LINENO[_index-1]:-}
+        printf "    ↑ %-20s (%s: %d)\n" "$_func" "$_source" "$_lineno"
+    done
+
+    return "$success"
+}
 
 #===============================================================================================
-# Global error variables for use by core only
+# Errors State
 #===============================================================================================
 
 #-----------------------------------------------------------------------------------------------
@@ -184,8 +304,8 @@ function has_errors()
 #-----------------------------------------------------------------------------------------------
 function get_last_error()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of a variable to receive the last error code." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a variable to receive the last error code (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of a variable to receive the last error code."
+    [[ ! -v 1 ]] || { is_variable "$1" && is_mutable "$1"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable variable for the last error code (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __error=$1
@@ -223,9 +343,8 @@ function get_errors()
 #-----------------------------------------------------------------------------------------------
 function set_errors()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the new value for the global error counter." \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_non_negative "$1"                                        || bug "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1-<missing>}')." -ec "$err_argument_type"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the new value for the global error counter."
+    [[ ! -v 1 ]] || is_non_negative "$1"                                        || bug "$err_argument_type" "${FUNCNAME[0]}() requires argument 1 to be provided as a non-negative integer: the new value for the global error counter (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     __errors=$1
@@ -246,8 +365,47 @@ function reset_errors()
     __last_error=$success
 }
 
+#-----------------------------------------------------------------------------------------------
+# @description Tests the global error counter and exits the script (via `usage`) if any errors
+#   were recorded.
+#
+# @arg $1 boolean Optional. If true (the default) and errors are present, also invokes `usage()`.
+#
+# @exitcode success=0: No errors were recorded; execution continues normally.
+# @exitcode failure=1: The application exits with an error due to recorded errors.
+#
+# @example
+#   exit_if_has_errors  # exits (via usage) with code 1 if errors exist
+#-----------------------------------------------------------------------------------------------
+function exit_if_has_errors()
+{
+    has_errors                                                                  || return "$success"
+
+    local -i _depth=${#FUNCNAME[@]}
+    (( __errors_min_depth >= _depth ))                                          || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
+
+    local _display_usage=true
+    [[ -v 1 ]] && is_boolean "$1" && _display_usage="$1"
+
+    local -i _errors=$__errors
+    local -i _ec
+    (( __last_error != 0 )) && _ec=$__last_error || _ec=$err_has_errors
+
+    # to prevent recursion clear before reporting: helpers called below (is_exit_code, __test_with_regex, etc.)
+    # also follow the check-then-exit_if_has_errors convention.
+    __errors=0
+    __last_error=0
+    __errors_min_depth=0
+
+    # exits with error message, code, and usage, if $_display_usage is true
+    ! $_display_usage                                                           || usage "$_ec" "$_errors error(s) encountered. Fix the above issues and try again." -ns
+
+    # otherwise, report the error and exit immediately
+    exit_with_error "$_ec" "$_errors error(s) encountered. Fix the above issues and try again. Exiting the script immediately..." -ns
+}
+
 #===============================================================================================
-# Global bug counter
+# Bugs State
 #===============================================================================================
 
 #-----------------------------------------------------------------------------------------------
@@ -335,647 +493,7 @@ function exit_if_has_bugs()
     __last_bug=0
     __bugs_min_depth=0
 
-                                                                                exit_with_error -ns "$_bugs bug(s) detected. Fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Should be overridden in the top level script by sourcing _core_args.sh, akin to
-#   a forward declaration in C/C++ for use within this script (e.g., `exit_if_has_errors()`).
-#   Local implementation of usage() to avoid circular dependency with _core_args.sh
-#
-# Note: This implementation of usage() is meant to be a 'forward declaration'! It should be
-#   overridden in the top-level script or by sourcing _core_args.sh.
-#
-# @arg $@ string Ignored -- forwarded to `bug` as part of the "not overridden" message.
-#
-# @exitcode failure=1: Always -- this placeholder always exits.
-#-----------------------------------------------------------------------------------------------
-function usage()
-{
-    bug "This implementation of usage() is meant to be a 'forward declaration'!" \
-        "Either re-define usage() or source _core_args.sh." \
-        "$@" -ec "$err_not_overridden"
-    exit "$failure";
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Tests the global error counter and exits the script (via `usage`) if any errors
-#   were recorded.
-#
-# @arg $1 boolean Optional. If true, displays the usage message when errors are present.
-#   Default is true.
-#
-# @exitcode success=0: No errors were recorded; execution continues normally.
-# @exitcode failure=1: The application exits with an error due to recorded errors.
-#
-# @example
-#   exit_if_has_errors  # exits (via usage) with code 1 if errors exist
-#-----------------------------------------------------------------------------------------------
-function exit_if_has_errors()
-{
-    has_errors                                                                  || return "$success"
-
-    local -i _depth=${#FUNCNAME[@]}
-    (( __errors_min_depth >= _depth ))                                          || return "$success" # not mine to report -- defer to the ancestor whose validation block is still open
-
-    local _display_usage=true
-    [[ -v 1 ]] && is_boolean "$1" && _display_usage="$1"
-
-    local -i _errors=$__errors
-    local -i _ec
-    (( __last_error != 0 )) && _ec=$__last_error || _ec=$err_has_errors
-
-    # clear before reporting: helpers called below (is_exit_code, __test_with_regex, etc.) also
-    # follow the check-then-exit_if_has_errors convention, and would otherwise see the stale
-    # count and recurse back into this same exit path indefinitely.
-    __errors=0
-    __last_error=0
-    __errors_min_depth=0
-
-    # exits with error message, code, and usage, if $_display_usage is true
-    ! $_display_usage                                                           || usage -ns "$_errors error(s) encountered. Fix the above issues and try again." -ec "$_ec"
-
-    # otherwise, report the error and exit immediately
-                                                                                exit_with_error -ns "$_errors error(s) encountered. Fix the above issues and try again. Exiting the script immediately..." -ec "$_ec"
-}
-
-#===============================================================================================
-# Diagnostic messages
-#===============================================================================================
-
-#-----------------------------------------------------------------------------------------------
-# @description Prints one or more message lines with a given prefix, optionally translating
-#   embedded error codes to messages and optionally appending a stack dump. Used internally by
-#   `error()`, `warning()`, `info()`, and `trace()` -- not meant to be called directly from
-#   top-level scripts.
-#
-# Notes:
-#   - This function is intended for internal use only.
-#   - It is used by the higher-level diagnostic functions to standardize message formatting.
-#   - The message prefix and the named parameters must be provided as arguments to the
-#     function - they are not expected in stdin.
-#
-# @arg $1 string The severity prefix to prepend to the first printed line. SHOULD be one of:
-#   `$error_prefix`, `$warning_prefix`, `$info_prefix`, or `$trace_prefix`.
-# @arg $@ string The message parts to print, each on a new line. Optional -- if none are given
-#   (after removing the possible named parameters below), the message parts are instead read
-#   line-by-line from `stdin`. May include the following named parameters (not in stdin!),
-#   interspersed anywhere among the message parts parameters:
-#     - `--error-code`|`-ec` followed by a positive error code -- translated to its error
-#       message (via `error_message()`) and substituted into the output in place of the flag
-#       and its argument. If occurs multiple times, every occurrence is translated and
-#       substituted into the output.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`|`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: all). May occur multiple times; only the last occurrence takes
-#       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. Shortcut for `--stack-depth 0`. May occur
-#       multiple times with `--stack-depth`/`-sd`; only the last occurrence takes effect.
-#
-# @exitcode success=0: Message printed successfully.
-#
-# @stdout string The formatted message: the prefix followed by the first line (prefixed
-#   further with the immediate caller's source file and line number if `--stack-depth`/`-sd`
-#   was given a value greater than 0), then any remaining lines indented to align under the
-#   first, then (if a stack depth was requested) the call stack via `show_stack`.
-#-----------------------------------------------------------------------------------------------
-function __message()
-{
-    local -i _rc="$success"
-
-    (( $# > 0 ))                                                                || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#): the prefix, followed by the message parts." -ec "$err_missing_argument"
-    (( $# > 1 )) || [[ ! -t 0 ]]                                                || bug "${FUNCNAME[0]}() requires the message parts, as arguments or on stdin (provided none)." -ec "$err_missing_argument"
-                                                                                exit_if_has_bugs
-
-    # The first parameter MUST be the prefix to prepend to each message line, e.g. "ERROR: ", "WARN: ", etc.
-    local _prefix="$1"
-    shift
-
-    # The remaining parameters are
-    #   - the message parts
-    #   - error codes to be translated to messages, prefixed by the `-ec` or `--error-code` flag
-    #   - the stack skip and depth to display, prefixed by the `-ss` `--stack-skip`, `-sd` or `--stack-depth` flag
-    # If there are no remaining parameters, the message will be read from `stdin`.
-
-    local -i _skip=2
-    # by default skips the frames of:
-    #   2 show_stack()
-    #   1 message()
-    # show at the top the caller of message() -- e.g. error()
-    local -i _depth=1000000 # stack dump depth - default is full stack dump
-
-    local -a _message_parts=()
-
-    # preprocess the arguments array for -ec and -sd flags, and then print the messages lines with the prefix.
-    while (( $# > 0 )); do
-        case "$1" in
-
-            "--error-code"|"-ec" )
-                # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-                if (( $# > 0 )); then
-                    shift
-                    is_exit_code "$1" && _message_parts+=("$(error_message "$1")") ||
-                        printf "%s Expected an error code (0..255) after the '--error-code' flag, provided: '%s'.\n Ignoring both arguments." "$bug_prefix" "$1"
-                fi
-                ;;
-
-            "--dotnet-error-code"|"-dec" )
-                # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-                if (( $# > 0 )); then
-                    shift
-                    is_exit_code "$1" && _message_parts+=("$(dotnet_error_message "$1")") ||
-                        printf "%s Expected an error code (0..255) after the '--dotnet-error-code' flag, provided: '%s'.\nIgnoring both arguments." "$bug_prefix" "$1"
-                fi
-                ;;
-
-            "--stack-depth"|"-sd" )
-                # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-                if (( $# > 0 )); then
-                    shift
-                    is_non_negative "$1" &&
-                        _depth="$1" ||
-                        printf "%s Expected a positive number or 0 number of frames to display after the '--stack-depth' flag, provided: '%s'.\nIgnoring both arguments." "$bug_prefix" "$1"
-                fi
-                ;;
-
-            "--stack-skip"|"-ss" )
-                # shellcheck disable=SC2015 # Note that A && B || C is not if-then-else. C may run when A is true.
-                if (( $# > 0 )); then
-                    shift
-                    is_non_negative "$1" &&
-                        _skip="$1" ||
-                        printf "%s Expected a positive number or 0 number of frames to skip after the '--stack-skip' flag, provided: '%s'.\nIgnoring both arguments." "$bug_prefix" "$1"
-                fi
-                ;;
-
-            "--no-stack"|"-ns" )
-                _depth=0
-                ;;
-
-            * ) _message_parts+=("$1")
-                ;;
-        esac
-        shift
-    done
-
-    local -i _count=${#_message_parts[@]}
-
-    [[ $_count -gt 0 || ! -t 0 ]]                                               || bug "${FUNCNAME[0]}() requires the message parts, as arguments or on stdin (provided none)." -ec "$err_missing_argument"
-                                                                                exit_if_has_bugs
-
-    local _first_part=true
-
-    function __print_message_part()
-    {
-        local __part="$1"
-
-        if $_first_part; then
-            if (( _depth > 0 )); then
-                printf "%s%s @ %s (%s):\n" "$_prefix" "$__part" "${BASH_SOURCE[_skip+1]:-}" "${BASH_LINENO[_skip]:-}"
-            else
-                printf "%s%s\n" "$_prefix" "$__part"
-            fi
-            _first_part=false
-        else
-            printf "           %s\n" "$__part"
-        fi
-        return "$success"
-    }
-
-    if (( _count > 0 )); then
-        for _part in "${_message_parts[@]}"; do
-            __print_message_part "$_part"
-        done
-    else
-        while IFS= read -r _part || [[ -n $_part ]]; do
-            __print_message_part "$_part"
-        done
-    fi
-
-    (( _depth > 0 )) &&
-        show_stack "$_skip" "$_depth" true
-
-    return "$success"
-}
-
-declare -x fail_em
-declare -x fatal_em
-declare -x bug_em
-declare -x error_em
-declare -x warn_em
-declare -x info_em
-declare -x trace_em
-
-declare -xr error_exit_prefix="$error_em  ERROR: "
-declare -xr error_prefix="$error_em  ERROR: "
-declare -xr bug_prefix="$bug_em  BUG:   "
-declare -xr fatal_prefix="$fatal_em  FATAL: "
-declare -xr warning_prefix="$warn_em  WARN:  "
-declare -xr info_prefix="$info_em  INFO:  "
-declare -xr trace_prefix="$trace_em  TRACE: "
-
-#-----------------------------------------------------------------------------------------------
-# @description Logs an error message to stderr (via `message`, prefixed with `$error_prefix`)
-# and increments the global error counter.
-#
-# Notes:
-#   - Increments the global `$errors` counter by 1, every call.
-#   - The named parameters must be provided as arguments to the function - they are not
-#     expected in stdin.
-#
-# @arg $@ string Error message parts (optional -- if none are given, the message is read from
-#   stdin instead). May include the named parameters described in `message`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
-#       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
-#
-# @exitcode success=0: Message printed successfully.
-#
-# @example
-#   error "File not found: $filename"
-# @example
-#   error "Build failed"
-#-----------------------------------------------------------------------------------------------
-function error()
-{
-    # scan the parameters for --error-code to record it in __last_error
-    local -i _error=$failure
-    local -i _i
-
-    for (( _i=1; _i<=$#; _i++ )); do
-        if [[ ${!_i} == "-ec" || ${!_i} == "--error-code" ]]; then
-            (( ++_i <= $# )) && _error=${!_i}
-            break
-        fi
-    done
-    __last_error=$_error
-
-    __message "$error_prefix" "$@" > >(tee_stderr); wait "$!" || true
-    local -i _depth=${#FUNCNAME[@]}
-    (( __errors == 0 || _depth < __errors_min_depth )) && __errors_min_depth=$_depth
-    (( ++__errors ))
-    return "$success"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Logs an error message to stderr (via `message`, prefixed with `$error_prefix`)
-# and exits immediately with the last error code or `$err_has_errors`.
-#
-# @arg $@ string Error message parts (optional -- if none are given, the message is read from
-#   stdin instead). May include the named parameters described in `message`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
-#       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
-#
-# @exitcode N: Never returns -- always exits the script, with the error code recorded by
-#   `error()` from `-ec`/`--error-code` (default `$failure` if that flag was not given), or
-#   `$err_has_errors` in the unlikely case that recorded code is itself 0.
-#
-# @example
-#   exit_with_error -ns "Invalid file specified." -ec "$err_not_file"
-#-----------------------------------------------------------------------------------------------
-function exit_with_error()
-{
-    error "$@"
-
-    local -i _ec
-    (( __last_error != success )) &&
-        _ec=$__last_error ||
-        _ec=$err_has_errors
-
-    exit "$_ec"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Logs a bug message to stderr (via `message`, prefixed with `$bug_prefix`)
-# and increments the global bug counter. Should be used when there is an obvious bug in
-# the code.
-#
-# Notes:
-#   - Increments the global `$__bugs` counter by 1, every call.
-#   - The named parameters must be provided as arguments to the function - they are not
-#     expected in stdin.
-#
-# @arg $@ string Error message parts (optional -- if none are given, the message is read from
-#   stdin instead). May include the named parameters described in `message`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
-#       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
-#
-# @exitcode success=0: Message printed successfully.
-#
-# @example
-#   error "File not found: $filename"
-# @example
-#   error "Build failed"
-#-----------------------------------------------------------------------------------------------
-function bug()
-{
-    # scan the parameters for --error-code to record it in __last_bug
-    local -i _bug=$failure
-    local -i _i
-
-    for (( _i=1; _i<=$#; _i++ )); do
-        if [[ ${!_i} == "-ec" || ${!_i} == "--error-code" ]]; then
-            (( ++_i <= $# )) && _bug=${!_i}
-            break
-        fi
-    done
-    __last_bug=$_bug
-
-    __message "$bug_prefix" "$@" > >(tee_stderr); wait "$!" || true
-    local -i _depth=${#FUNCNAME[@]}
-    (( __bugs == 0 || _depth < __bugs_min_depth )) && __bugs_min_depth=$_depth
-    (( ++__bugs ))
-    return "$success"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Logs a bug message to stderr (via `message`, prefixed with `$bug_prefix`)
-# and exits immediately with the last error code or `$err_has_bugs`.
-#
-# @arg $@ string Error message parts (optional -- if none are given, the message is read from
-#   stdin instead). May include the named parameters described in `message`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
-#       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
-#
-# @exitcode N: Never returns -- always exits the script, with the error code recorded by
-#   `bug()` from `-ec`/`--error-code` (default `$failure` if that flag was not given), or
-#   `$err_has_bugs` in the unlikely case that recorded code is itself 0.
-#
-# @example
-#   exit_with_bug -ns "Invalid file specified." -ec "$err_not_file"
-#-----------------------------------------------------------------------------------------------
-function exit_with_bug()
-{
-    bug "$@"
-
-    local -i _ec
-    (( __last_bug != success )) &&
-        _ec=$__last_bug ||
-        _ec=$err_has_bugs
-
-    exit "$_ec"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Logs a message with a fatal prefix and exits with the specified error code.
-#
-# Notes:
-#   - Exits the script with the specified error code.
-#   - Accepts named parameters provided as arguments to the function - not in stdin.
-#
-# @arg $@ string Exit message parts (optional -- if none are given, the message is read from
-#   stdin instead). May include the named parameters described in `message`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
-#       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
-#
-# @exitcode The exit code specified by the `--error-code`/`-ec` named parameter, or the
-#   default failure code if none is provided.
-#
-# @example
-#   fatal_exit "File not found: $filename" -ec $err_file_not_found
-#-----------------------------------------------------------------------------------------------
-function fatal_exit()
-{
-    local -i _exit_code=$failure
-    local -a _args=("$@")
-    local -i _i
-
-    for (( _i = 0; _i < ${#_args[@]}; _i++ )); do
-        [[ ${_args[_i]} == "--error-code" || ${_args[_i]} == "-ec" ]] || continue
-        is_exit_code "${_args[_i+1]:-}" && _exit_code=${_args[_i+1]}
-        break
-    done
-
-    __message "$fatal_prefix" "$@" > >(tee_stderr); wait "$!" || true
-    exit "$_exit_code"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Logs a warning message to stderr (via `message`, prefixed with
-#   `$warning_prefix`).
-#
-# Notes:
-#   - The named parameters must be provided as arguments to the function - they are not
-#     expected in stdin.
-#
-# @arg $@ string Warning message parts (optional -- if none are given, the message is read
-#   from stdin instead). May include the named parameters as described in `message`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
-#       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
-#
-# @exitcode success=0: Message printed successfully.
-#
-# @example
-#   warning "The option is deprecated"
-# @example
-#   warning -sd 3 "Missing optional configuration"
-#-----------------------------------------------------------------------------------------------
-function warning()
-{
-    __message "$warning_prefix" --no-stack "$@" > >(tee_stderr); wait "$!" || true
-}
-
-
-#-----------------------------------------------------------------------------------------------
-# @description Logs an informational message to stdout (via `message`, prefixed with
-#   `$info_prefix`).
-#
-# Notes:
-#   - The named parameters must be provided as arguments to the function - they are not
-#     expected in stdin.
-#
-# @arg $@ string Informational message parts (optional -- if none are given, the message is
-#   read from stdin instead). May include the named parameters as described in `message()`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
-#       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
-#
-# @stdout string The formatted info message, prefixed with `$info_prefix`.
-#
-# @exitcode success=0: Message printed successfully.
-#
-# @example
-#   info "Starting build process"
-# @example
-#   echo "Configuration loaded" | info
-#-----------------------------------------------------------------------------------------------
-function info()
-{
-    __message "$info_prefix" --no-stack "$@" > >(tee_stdout); wait "$!" || true
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Logs a trace message to stderr (via `message`, prefixed with `$trace_prefix`),
-#   but only when verbose mode is enabled.
-#
-# Notes:
-#   - The named parameters must be provided as arguments to the function - they are not
-#     expected in stdin.
-#
-# @arg $@ string Trace message parts (optional -- if none are given, the message is read from
-#   stdin instead, unless verbose mode is off, in which case stdin is never read). May include
-#   the named parameters as described in `message()`:
-#     - `--error-code`/`-ec` followed by a positive error code -- translated to its error
-#       message and included in the output. May occur multiple times.
-#     - `--stack-skip`|`-ss` followed by an integer -- how many stack frames to skip before
-#       showing the stack (default: 2). May occur multiple times; only the last occurrence
-#       takes effect.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
-#       the message (default: 0). If given more than once, only the last occurrence takes
-#       effect.
-#     - `--no-stack`|`-ns` do not dump the stack. May occur multiple times with
-#       `--stack-depth`/`-sd`; only the last occurrence takes effect.
-#
-# @exitcode success=0: Message printed successfully.
-#
-# @example
-#   trace "Processing item: $item"
-# @example
-#   echo "Debug: variable value = $var" | trace
-#-----------------------------------------------------------------------------------------------
-function trace()
-{
-    is_verbose || return "$success"
-    __message "$trace_prefix" --no-stack "$@" >&2
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Displays the passed-in warning about a variable's value, and sets that variable
-#   to a specified default value.
-#
-# Notes:
-#   - The named parameters must be provided as arguments to the function - they are not
-#     expected in stdin.
-#   - This function uses a bash nameref (`local -n`) to set the variable by name. Do NOT pipe
-#     a call to this function into `tee_stdout` or similar -- the left side of a pipe runs in a
-#     subshell, so the variable assignment would be lost (see the file-level warning at the
-#     top of this file).
-#
-# @arg $1 nameref to a variable to assign the default value to.
-# @arg $2 string The warning message to display.
-# @arg $3 string The default value to assign to the variable.
-#
-# @exitcode success=0: The variable was set successfully.
-#
-# @example
-#   warning_var timeout "Timeout not specified." 30
-#-----------------------------------------------------------------------------------------------
-function warning_var()
-{
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
-                                                                                       "  - variable name" \
-                                                                                       "  - warning message" \
-                                                                                       "  - default value" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1 to be a valid variable name (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 2 || -n $2 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 2, the warning message, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
-                                                                                exit_if_has_bugs
-
-    warning "$2" "Assuming the default value of '$3'."
-
-    local -n __var=$1;
-    __var="$3"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Displays the current call stack. Consider redirecting the output to stderr at
-#   the call site.
-#
-# @arg $1 int How many stack frames to skip, not including the caller of `show_stack`.
-#   Optional, default: 0.
-# @arg $2 int How many stack frames to show. Optional, default: all remaining frames after the
-#   skip.
-#
-# @exitcode success=0
-#
-# @stdout string The formatted stack trace, one line per frame, showing function name, source
-#   file, and line number (consider redirecting to stderr at the call site).
-#
-# @example
-#   show_stack 2 3 # typically called during debugging or error handling
-#-----------------------------------------------------------------------------------------------
-function show_stack()
-{
-    local _skip=${1:-0}
-    (( ++_skip ))                                           # skip the frame of this call
-
-    local _max_take=$(( ${#FUNCNAME[@]} - _skip ))          # take no more than the remaining stack frames
-    local _take=${2:-$_max_take}
-
-    _take=$(( _take < _max_take ? _take : _max_take ))      # adjust take if it exceeds the available stack frames
-    (( _take <= 0 )) && return "$success"
-
-    local _func
-    local _source
-    local _lineno
-
-    local -i _index
-    local _end=$(( _skip + _take ))
-
-    for (( _index=_skip; _index<_end; _index++ )); do
-        _func=${FUNCNAME[_index]:-}
-        _source=${BASH_SOURCE[_index]:-}
-        _lineno=${BASH_LINENO[_index-1]:-}
-        printf "    ↑ %-20s (%s: %d)\n" "$_func" "$_source" "$_lineno"
-    done
-
-    return "$success"
+    exit_with_error "$_ec" "$_bugs bug(s) detected. Fix the above issues and try again. Exiting the script immediately..." -ns
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -988,10 +506,9 @@ function show_stack()
 #   redirect output to `to_summary` function
 #-----------------------------------------------------------------------------------------------
 declare -a __summary_output
-
 declare -x ci
 
-if ! $ci && [[ -t 1 ]] &&is_tool_present glow; then
+if ! $ci && [[ -t 1 ]] && is_tool_present glow; then
     # redirect summary markdown to glow for pretty printing on the console
     # there is no $GITHUB_STEP_SUMMARY in local runs
     __summary_output=(glow -w 168)
@@ -1002,120 +519,3 @@ else
 fi
 
 readonly __summary_output
-
-#-----------------------------------------------------------------------------------------------
-# @description Logs one or more summary messages with a `## Summary` markdown heading, via
-# `__summary_output` — so, if glow is installed, the summary will be pretty-printed using
-#   glow; otherwise, it will be sent to `tee_stdout` as a markdown. Creates an abstraction,
-#   designed to be overridden in other scripts to redirect to alternate destination(s), e.g.,
-#   to the GitHub Actions step summary file. Alternatively, `__summary_output` can be modified
-#   to redirect elsewhere considering more environment conditions like the CI environment
-#   variable.
-#
-# @arg $@ nil No arguments; reads its input from stdin.
-#
-# @exitcode success=0: The summary was printed (always).
-#
-# @stdout `## Summary` markdown heading followed by each message line.
-#
-# @example
-#   to_summary "Build completed successfully"
-# @example
-#   echo "Deployment finished" | to_summary
-#-----------------------------------------------------------------------------------------------
-# shellcheck disable=SC2120 # to_summary references arguments, but none are ever passed - usually passed in stdin
-function to_summary()
-{
-    local _line
-    local _first=true
-
-    while IFS= read -r _line || [[ -n $_line ]]; do
-        $_first && echo "## Summary" && _first=false
-        echo "$_line"
-    done | "${__summary_output[@]}"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Returns the current time in microseconds since the epoch. us stands for
-#   microseconds: visually close to the Greek letter mu - 'μ', the symbol for micro.
-#
-#   Note: Requires Bash 5.0 or later for $EPOCHREALTIME.
-#
-# @stdout The current time in microseconds since the epoch.
-#
-# @exitcode success=0: Always succeeds.
-#
-# @example
-#   point0_us=$(now_us)
-#   sleep 1
-#   point1_us=$(now_us)
-#   echo "Elapsed time: $((point1_us - point0_us)) us"
-#-----------------------------------------------------------------------------------------------
-function now_us()
-{
-    echo "${EPOCHREALTIME//[!0-9]/}"
-}
-
-#-----------------------------------------------------------------------------------------------
-# @description Switches a chain of fallible steps to the error track (railway-oriented
-#   programming by hand): records a vm2 `$err_*` code in the caller's variable and reports the
-#   failure with `error`. Meant to be called right after the failed command, as
-#   `cmd || with_error ...`: it captures `$?` first thing, and appends it to the message as
-#   "Exit code: N" when non-zero, so the log shows both the logical vm2 code and the tool's (or
-#   the OS's) own exit status. The steps after it are guarded by `(( rc != success )) ||` and
-#   are skipped once the variable holds the error code. See CLAUDE.md, "Chaining Fallible Steps
-#   with `with_error`".
-#
-#   The stack dump and the `@ file (line)` location skip this function and start at its caller.
-#
-#   The output variable comes first, against the usual rule (outputs after inputs), so that a
-#   call reads like the assignment it performs: `with_error _rc "$err_x" ...` sets `_rc` to
-#   `$err_x`, the way `readarray -t arr < <(...)` puts its target before its source.
-#
-# @arg $1 string The name of a declared integer variable that receives the code from `$2`.
-# @arg $2 integer The vm2 error code (`$err_*`) to record and report, in the range [1, 255].
-# @arg $@ string The message parts for `error`; MAY include `error`'s named parameters.
-#
-# @set The variable named in `$1` is set to `$2`. Also everything `error` sets: the global error
-#   counter and the last error code.
-#
-# @exitcode success=0: Always, so that `cmd || with_error ...` does not trip `errexit`. The
-#   failure is carried in the variable named in `$1`.
-#
-# @example
-#   declare -i rc=$success
-#   declare results_text=''
-#   declare -a results=()
-#   results_text=$(get_results)                                || with_error rc "$err_tool_error" "Failed to get the results."
-#   (( rc != success )) || [[ -z $results_text ]] || readarray -t results <<< "$results_text"
-#   (( rc != success )) || some_tool --input "$input_file"     || with_error rc "$err_tool_error" "some_tool failed."
-#   (( rc == success ))                                        || return "$rc"   # or, in a top-level script: exit_if_has_errors
-#-----------------------------------------------------------------------------------------------
-function with_error()
-{
-    local -i _prev_error=$? # capture the previous command's exit code immediately
-
-    (( $# >= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
-                                                                                       "  - the name of a variable to receive the error code" \
-                                                                                       "  - the error code to record and report" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_variable  "$1"                                           || bug "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 2 ]] || { is_exit_code "$2" && (( $2 > 0 )); }                      || bug "${FUNCNAME[0]}() requires argument 2 to be a valid return code in the range [1, 255] (provided '${2-<missing>}')." -ec "$err_argument_value"
-                                                                                exit_if_has_bugs
-
-    local -n __err_code_var=$1
-    local -i __err_code=$2
-    shift 2
-
-    __err_code_var=$__err_code
-    if (( _prev_error != 0 )); then
-        error "$@" "Exit code: $_prev_error" -ec "$__err_code" -ss 3 # 3 skips this function in the stack dump
-    else
-        error "$@" -ec "$__err_code" -ss 3
-    fi
-
-    local -i _depth=${#FUNCNAME[@]}
-    (( __errors_min_depth <= _depth )) || __errors_min_depth=$_depth   # the error belongs to the caller, not to with_error
-
-    return "$success"   # __err_code_var carries the actual failure
-}

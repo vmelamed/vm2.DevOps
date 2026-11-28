@@ -252,6 +252,16 @@ function _ci_probe()
     assert_failure "$err_logic_error"
 }
 
+@test "save_state, restore_state: bug-exit on a readonly state array" {
+    # restore_state writes the array too: it marks the state as restored
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -rA state=(); save_state state"
+    assert_failure "$err_invalid_nameref"
+    assert_output --partial "requires argument 1 to name a writable associative array"
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; declare -A state=(); save_state state; readonly state; restore_state state"
+    assert_failure "$err_invalid_nameref"
+    assert_output --partial "requires argument 1 to name a writable associative array"
+}
+
 @test "restore_state: does not recurse/hang (regression for the save_state cycle)" {
     run --separate-stderr timeout 5 bash -c "
         source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1

@@ -65,8 +65,8 @@ function parse_arguments()
 
         case "${_option,,}" in
             --delete|-d )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
-                (( _option_ndx == 0 ))                                          || usage "'--delete' takes exactly one tag and cannot be combined with other tags or another '--delete'." -ec "$err_too_many_arguments"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
+                (( _option_ndx == 0 ))                                          || usage "$err_too_many_arguments" "'--delete' takes exactly one tag and cannot be combined with other tags or another '--delete'."
                 delete_mode=true
                 del_tag=$1; shift
                 _option_ndx=2 # do not allow more arguments
@@ -75,10 +75,10 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                                                                                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                   exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*)                                                                 usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
             * ) if (( _option_ndx == 0 )); then
@@ -88,7 +88,7 @@ function parse_arguments()
                     new_tag=$_option
                     (( ++_option_ndx ))
                 else
-                                                                                usage "Too many arguments: '$_option'." -ec "$err_too_many_arguments"
+                                                                                   usage "$err_too_many_arguments" "Too many arguments: '$_option'."
                 fi
                 ;;
         esac
@@ -101,7 +101,7 @@ function verify_environment
 {
     verify_git                                                                  || return "$success"
 
-    git rev-parse --git-dir &>"$noise_sink"                                     || error "The current directory is not a git repository." -ec "$err_logic_error"
+    git rev-parse --git-dir &>"$noise_sink"                                     || error "$err_logic_error" "The current directory is not a git repository."
 
     return "$success"
 }
@@ -120,7 +120,7 @@ function resolve_arguments()
         [[ -n $old_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required old tag argument."
         (( _rc != success )) || is_valid_tag_name "$old_tag"                    || _rc=$?
         (( _rc != success )) || old_tag=${old_tag#"$git_tags_ns"}               # canonicalize by stripping refs/tags/
-        
+
         # test the new tag
         _rc=$success
         [[ -n $new_tag ]]                                                       || with_error _rc "$err_missing_argument" "Missing required new tag argument."

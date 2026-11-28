@@ -71,11 +71,11 @@ declare -x new_tag
 
 # Resolve the commit the old/del tag points to (dereference annotated tags)
 if $delete_mode; then
-    commit=$(git rev-list -n1 "${git_tags_ns}$del_tag" 2>"$noise_sink")         || usage "Tag '$del_tag' not found locally." -ec "$err_argument_value"
+    commit=$(git rev-list -n1 "${git_tags_ns}$del_tag" 2>"$noise_sink")         || usage "$err_argument_value" "Tag '$del_tag' not found locally."
     info "Tag '$del_tag' → commit ${commit:0:12}"
 else
-    commit=$(git rev-list -n1 "${git_tags_ns}$old_tag" 2>"$noise_sink")         || usage "Tag '$old_tag' not found locally." -ec "$err_argument_value"
-    existing_sha=$(git rev-list -n1 "${git_tags_ns}$new_tag" 2>"$noise_sink")   && usage "Tag '$new_tag' already exists → commit ${existing_sha:0:12}." -ec "$err_argument_value"
+    commit=$(git rev-list -n1 "${git_tags_ns}$old_tag" 2>"$noise_sink")         || usage "$err_argument_value" "Tag '$old_tag' not found locally."
+    existing_sha=$(git rev-list -n1 "${git_tags_ns}$new_tag" 2>"$noise_sink")   && usage "$err_argument_value" "Tag '$new_tag' already exists → commit ${existing_sha:0:12}."
     info "Tag '$old_tag' → commit ${commit:0:12}"
 fi
 

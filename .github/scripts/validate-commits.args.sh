@@ -50,13 +50,13 @@ function parse_arguments()
 
         case "${_option,,}" in
             -r|--repo-dir )
-                (( $# >= 1 ))                                                   || usage "Missing value for '$_option'" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for '$_option'"
                 repo_path="$1"
                 shift
                 ;;
 
             -b|--base-ref )
-                (( $# >= 1 ))                                                   || usage "Missing value for '$_option'" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for '$_option'"
                 base_ref="$1"
                 shift
                 ;;
@@ -64,10 +64,10 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            * ) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            * ) usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
         esac
     done
@@ -112,7 +112,7 @@ function resolve_arguments()
                                                                                                                         "upstream tracking branch either. Pass a base ref explicitly, or set \$BASE_REF."
         (( _rc == success ))                                                    || return "$success"
 
-        base_ref=$(git -C "$repo_path" merge-base HEAD "$_default_ref")         || error "Failed to compute the merge-base with '$_default_ref'." -ec "$err_argument_value"
+        base_ref=$(git -C "$repo_path" merge-base HEAD "$_default_ref")         || error "$err_argument_value" "Failed to compute the merge-base with '$_default_ref'."
 
         trace "No base ref given -- defaulting to the merge-base with '$_default_ref' (${base_ref:0:8})," \
               "i.e. commits since this branch diverged. Pass a base ref explicitly to check a different range."

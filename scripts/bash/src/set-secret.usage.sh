@@ -3,9 +3,9 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
-declare -x common_args_usage
 declare -x script_name
 
+declare -x common_args_usage
 declare -x gh_apps_with_secrets
 declare -x default_repo_owner
 
@@ -23,9 +23,7 @@ declare -x default_repo_owner
 #-----------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a boolean, whether to display the long or short usage text."
-    [[ ! -v 1 ]]  || is_boolean "$1"                                            || bug "${FUNCNAME[0]}() requires argument 1, whether to display the long or short usage text, to be 'true' or 'false' (provided '${1-<missing>}')."
-                                                                                exit_if_has_bugs
+    assert_usage_text_args "$@"
 
     local _long_text=$1
     local _common_args=''

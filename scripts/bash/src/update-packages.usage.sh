@@ -3,13 +3,10 @@
 
 # shellcheck disable=SC2148 # This file is intended to be sourced, not executed directly.
 
-declare -x common_args_usage
 declare -x script_name
 
-# constants from lib:
-declare -x err_invalid_arguments
-declare -x err_argument_value
-
+# vm2 core constants
+declare -x common_args_usage
 declare -x default_vm2_repos_path
 
 #-----------------------------------------------------------------------------------------------
@@ -22,9 +19,7 @@ declare -x default_vm2_repos_path
 #-----------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# == 1 ))                   || bug "${FUNCNAME[0]}() requires 1 argument (provided $#)." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_boolean "$1" || bug "${FUNCNAME[0]}() requires argument 1 to be 'true' or 'false' (provided '${1-<missing>}')." -ec "$err_argument_value"
-    exit_if_has_bugs
+    assert_usage_text_args "$@"
 
     local _common_args=''
     $1 && _common_args=$common_args_usage

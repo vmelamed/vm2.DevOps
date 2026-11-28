@@ -10,7 +10,6 @@
 # values, e.g. array.
 #-----------------------------------------------------------------------------------------------
 
-# Circular include guard
 (( ${__VM2_LIB_PREDICATES_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_PREDICATES_SH_LOADED=1
 
@@ -100,7 +99,7 @@ function set_case_sensitive()
 #-----------------------------------------------------------------------------------------------
 function is_variable_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires argument 1 to be the name of the variable to test (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to test."
                                                                                 exit_if_has_bugs
 
     [[ $1 =~ $varNameRegex ]]
@@ -119,10 +118,42 @@ function is_variable_name()
 #-----------------------------------------------------------------------------------------------
 function is_variable()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires argument 1 to be the name of the variable to test (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to test."
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1" && declare -p "$1" &> "$noise_sink"
+}
+
+#-----------------------------------------------------------------------------------------------
+# @description Tests if the specified variable is mutable.
+#
+# @arg $1 string variable_name - name of the variable to test
+#
+# @exitcode positive=0: the variable is mutable (is writable)
+# @exitcode negative=1: the variable is readonly
+#
+# @example
+#   if is_mutable MY_VAR; then MY_VAR=42; fi
+#-----------------------------------------------------------------------------------------------
+function is_mutable()
+{
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to test."
+                                                                                exit_if_has_bugs
+
+    is_variable_name "$1"                                                       || return "$negative"
+
+    local -i _rc=$negative
+    local _decl
+
+    begin_scope
+    set_case_sensitive
+
+    _decl=$(declare -p "$1" 2>"$noise_sink") &&
+    [[ $_decl =~ ^declare\ -[-aAilntux]+\ .*$ ]] && _rc="$positive" || _rc="$negative"
+
+    end_scope
+
+    return "$_rc"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -135,11 +166,11 @@ function is_variable()
 #
 # @example
 #   declare -a MY_ARRAY=(aaa bbb ccc)
-#   if is_indexed_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
+#   if is_indexed_array MY_ARRAY; then echo "MY_ARRAY is defined indexed array"; fi
 #-----------------------------------------------------------------------------------------------
 function is_indexed_array()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires argument 1 the name of the indexed array variable to test (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the indexed array variable to test."
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1" || return "$negative"
@@ -150,7 +181,8 @@ function is_indexed_array()
     begin_scope
     set_case_sensitive
 
-    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -a ]]    || _rc="$negative"
+    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -[A-Zb-z]*a ]] \
+                                                                                || _rc="$negative"
 
     end_scope
 
@@ -167,11 +199,11 @@ function is_indexed_array()
 #
 # @example
 #   declare -A MY_ARRAY=([aaa]=aaa [bbb]=bbb [ccc]=ccc)
-#   if is_associative_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
+#   if is_associative_array MY_ARRAY; then echo "MY_ARRAY is defined associative array"; fi
 #-----------------------------------------------------------------------------------------------
 function is_associative_array()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the indexed array variable to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the associative array variable to test."
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1" || return "$negative"
@@ -182,7 +214,8 @@ function is_associative_array()
     begin_scope
     set_case_sensitive
 
-    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -A ]]    || _rc="$negative"
+    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -[B-Za-z]*A ]] \
+                                                                                || _rc="$negative"
 
     end_scope
 
@@ -205,7 +238,7 @@ function is_associative_array()
 #-----------------------------------------------------------------------------------------------
 function is_array()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the array variable to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the array variable to test."
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1" || return "$negative"
@@ -217,7 +250,8 @@ function is_array()
     local _decl
 
      # -a or -A case insensitive!
-    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -a ]]    || _rc="$negative"
+    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -[b-z]*a ]] \
+                                                                                || _rc="$negative"
 
     end_scope
 
@@ -238,8 +272,8 @@ function is_array()
 function is_empty_array()
 {
 
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the array variable to test." -ec "$err_invalid_arguments"
-    [[ ! -v 1 ]] || is_array "$1"                                               || bug "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed or an associative array variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the array variable to test."
+    [[ ! -v 1 ]] || is_array "$1"                                               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an indexed or an associative array (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __array="$1"
@@ -260,7 +294,7 @@ function is_empty_array()
 #-----------------------------------------------------------------------------------------------
 function is_function()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name to test."
                                                                                 exit_if_has_bugs
 
     is_variable_name "$1" || return "$negative"
@@ -280,7 +314,7 @@ function is_function()
 #-----------------------------------------------------------------------------------------------
 function __test_with_regex()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[1]}() requires 1 argument (provided $(($#-1))): the value to test." -ec "$err_invalid_arguments"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[1]}() requires 1 argument (provided $(($#-1))): the value to test."
                                                                                 exit_if_has_bugs
 
     [[  $1 =~ $2 ]]
@@ -471,10 +505,9 @@ function is_base64()
 #-----------------------------------------------------------------------------------------------
 function is_in()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
-                                                                                       "  - the value to test" \
-                                                                                       "  - options to compare against" \
-                                                                                       -ec "$err_invalid_arguments"
+    (( $# >= 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
+                                                                                                                "  - the value to test" \
+                                                                                                                "  - options to compare against"
                                                                                 exit_if_has_bugs
 
     local _sought="$1"; shift
@@ -501,10 +534,9 @@ function is_in()
 #-----------------------------------------------------------------------------------------------
 function is_in_i()
 {
-    (( $# >= 1 ))                                                               || bug "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
-                                                                                       "  - the value to test" \
-                                                                                       "  - options to compare against" \
-                                                                                       -ec "$err_invalid_arguments"
+    (( $# >= 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 1 argument (provided $#):" \
+                                                                                                                "  - the value to test" \
+                                                                                                                "  - options to compare against"
                                                                                 exit_if_has_bugs
 
     local _sought="$1"; shift
@@ -541,7 +573,7 @@ declare -x __is_windows=''
 #-----------------------------------------------------------------------------------------------
 function is_windows()
 {
-    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 0 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires no arguments (provided $#)."
                                                                                 exit_if_has_bugs
 
     if [[ -z $__is_windows ]]; then
@@ -570,7 +602,7 @@ function is_windows()
 #-----------------------------------------------------------------------------------------------
 function is_filename()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to test."
                                                                                 exit_if_has_bugs
 
     [[ -n $1 && $1 != */* && $1 != . && $1 != .. ]]
@@ -589,7 +621,7 @@ function is_filename()
 #-----------------------------------------------------------------------------------------------
 function is_path()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the value to test."
                                                                                 exit_if_has_bugs
 
     pathchk -- "$1" &> "$noise_sink"
@@ -606,7 +638,7 @@ function is_path()
 #-----------------------------------------------------------------------------------------------
 function is_secret()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the secret value to validate." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the secret value to validate."
                                                                                 exit_if_has_bugs
 
     [[ -n $1 && ! $1 =~ [[:cntrl:]] ]]
@@ -628,7 +660,7 @@ function is_secret()
 #-----------------------------------------------------------------------------------------------
 function is_percentage()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the percentage to test." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the percentage to test."
                                                                                 exit_if_has_bugs
 
     is_non_negative "$1" && (( $1 <= 100 ))

@@ -83,9 +83,9 @@ Build the test suite bottom-up, from pure leaf modules to orchestrators:
 
 ### Layer 2 — I/O and argument parsing  *(touch env/stderr, no external processes)*
 
-`lib/_diagnostics.sh`, `lib/core.args.sh`
+`lib/_diagnostics.sh`, `lib/_diagnostics.messages.sh`, `lib/core.args.sh`
 
-- `_diagnostics.sh`: redirect stderr to a temp file; assert error/warn/info output format.
+- `_diagnostics.sh`, `_diagnostics.messages.sh`: redirect stderr to a temp file; assert error/warn/info output format.
 - `core.args.sh`: invoke argument-parse functions with crafted `$@` arrays; assert flag variables
   are set correctly and that invalid input returns `err_invalid_arguments`.
 

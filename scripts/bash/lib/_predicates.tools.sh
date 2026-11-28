@@ -48,7 +48,7 @@ readonly gh_min_version
 #-----------------------------------------------------------------------------------------------
 function is_tool_present()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the tool to check." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the tool to check."
                                                                                 exit_if_has_bugs
 
     command -v "$1" &>"$noise_sink"
@@ -66,7 +66,7 @@ declare git_present=''
 #-----------------------------------------------------------------------------------------------
 function verify_git()
 {
-    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 0 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires no arguments (provided $#)."
                                                                                 exit_if_has_bugs
 
     if [[ -z $git_present ]]; then
@@ -96,7 +96,7 @@ declare gh_present=''
 #-----------------------------------------------------------------------------------------------
 function verify_gh()
 {
-    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 0 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires no arguments (provided $#)."
                                                                                 exit_if_has_bugs
 
     if [[ -z $gh_present ]]; then
@@ -129,7 +129,7 @@ declare jq_present=''
 #-----------------------------------------------------------------------------------------------
 function verify_jq()
 {
-    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 0 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires no arguments (provided $#)."
                                                                                 exit_if_has_bugs
 
     if [[ -z $jq_present ]]; then
@@ -157,7 +157,7 @@ declare check_jsonschema_present=''
 #-----------------------------------------------------------------------------------------------
 function verify_check_jsonschema()
 {
-    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 0 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires no arguments (provided $#)."
                                                                                 exit_if_has_bugs
 
     if [[ -z $check_jsonschema_present ]]; then
@@ -184,7 +184,7 @@ declare yq_present=''
 #-----------------------------------------------------------------------------------------------
 function verify_yq()
 {
-    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 0 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires no arguments (provided $#)."
                                                                                 exit_if_has_bugs
 
     if [[ -z $yq_present ]]; then
@@ -209,7 +209,7 @@ function verify_yq()
 #-----------------------------------------------------------------------------------------------
 function verify_dotnet()
 {
-    (( $# == 0 ))                                                               || bug "${FUNCNAME[0]}() requires no arguments (provided $#)." -ec "$err_invalid_arguments"
+    (( $# == 0 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires no arguments (provided $#)."
                                                                                 exit_if_has_bugs
     # no caching - has different answers in different cwd-s
     local -i _rc=$success

@@ -80,17 +80,17 @@ function parse_arguments()
 
         case ${_option,,} in
             --vm2-repos|-r )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 vm2_repos="$1"; shift
                 ;;
 
             --file*|-f* )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 get_selector_action "$_option" "$1"; shift
                 ;;
 
             --summary-file|-sf )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 summary_file="$1"; shift
                 ;;
 
@@ -110,7 +110,7 @@ function parse_arguments()
                 ;;
 
             # -s|--source-of-truth )
-            #     (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
+            #     (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for $_option"
             #     sot="$1"; shift
             #     ;;
             #
@@ -122,14 +122,13 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                   exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) is_empty_array target_repos || ! is_in "$_option" "${target_repos[@]}" &&
-                    target_repos+=("$_option")
+            * ) is_empty_array target_repos || ! is_in "$_option" "${target_repos[@]}" && target_repos+=("$_option")
                 ;;
         esac
     done
@@ -155,11 +154,11 @@ function resolve_arguments()
     fi
 
     # resolve and validate vm2_repos. We cannot continue without it.
-    resolve_vm2_repos vm2_repos "$vm2_branch" "$sot_branch"                     || usage "Could not resolve the path of the vm2 repositories directory from the specified value of '$vm2_repos'." -ec $?
+    resolve_vm2_repos vm2_repos "$vm2_branch" "$sot_branch"                     || usage $? "Could not resolve the path of the vm2 repositories directory from the specified value of '$vm2_repos'."
     trace "All vm2 repositories are expected to be in '$vm2_repos'"
 
     # resolve and validate sot. We cannot continue without it.
-    is_in "$sot" "${sources_of_truth[@]}"                                       || usage "Invalid source of truth '$sot'. Valid values are: $sources_of_truth_str." -ec "$err_argument_value"
+    is_in "$sot" "${sources_of_truth[@]}"                                       || usage "$err_argument_value" "Invalid source of truth '$sot'. Valid values are: $sources_of_truth_str."
 
     # resolve and validate sot_path
     get_vm2_sot_path "$vm2_repos" sot_path "$sot"                               || with_error _rc $? "Failed to find the source-of-truth directory of the template '$sot' in '$vm2_repos'."
@@ -240,10 +239,9 @@ declare -x action_ask_to_copy_shared
 
 function get_selector_action()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - option" \
-                                                                                       "  - file selector" \
-                                                                                       -ec "$err_invalid_arguments"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - option" \
+                                                                                                                "  - file selector"
                                                                                 exit_if_has_bugs
 
     local _option="$1"
@@ -251,8 +249,7 @@ function get_selector_action()
     local _action=""
 
     # get the action from the option name, e.g. --file-ask-to-merge => "ask-to-merge"
-    [[ $_option =~ ^-(-file|f)(-?([a-z-]+))?$ ]] ||
-        error "Unknown argument: $_option" -ec "$err_unknown_argument"
+    [[ $_option =~ ^-(-file|f)(-?([a-z-]+))?$ ]]                                || error "$err_unknown_argument" "Unknown argument: $_option"
 
     # get the action and replace the dashes with spaces in the action name, e.g. "ask-to-merge" => "ask to merge"
     _action="${BASH_REMATCH[3]//-/ }"
@@ -267,11 +264,10 @@ function get_selector_action()
         "cs" | "$action_copy_shared"        ) _action="$action_copy_shared" ;;
         "acs"| "$action_ask_to_copy_shared" ) _action="$action_ask_to_copy_shared" ;;
         ""                                  ) ;;
-        *                                   ) error "Invalid action '$_action'." "Use one of: $valid_actions_str."  -ec "$err_argument_value" ;;
+        *                                   )                                      error "$err_argument_value" "Invalid action '$_action'." "Use one of: $valid_actions_str." ;;
     esac
 
-    [[ $_file_selector != -* ]] ||
-        error "The argument '$_file_selector' does not appear to be a valid file selector." -ec "$err_argument_value"
+    [[ $_file_selector != -* ]]                                                 || error "$err_argument_value" "The argument '$_file_selector' does not appear to be a valid file selector."
 
     exit_if_has_errors
 

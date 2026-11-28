@@ -61,7 +61,7 @@ declare usage_requested=""
 #-----------------------------------------------------------------------------------------------
 function get_common_arg()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the command-line argument to process." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the command-line argument to process."
                                                                                 exit_if_has_bugs
 
     # the calling scripts should not use any of the common arguments options:
@@ -102,81 +102,70 @@ function usage_if_requested()
 }
 
 #-----------------------------------------------------------------------------------------------
-# @description Displays an optional error message, then the (long or short) usage text, and
-#   exits the script.
-#
-# 1. Displays an optional error message at the top, via `error`.
-# 1. Displays the long or short usage text, via `usage_text`.
-# 1. Exits the script with the resolved exit code (see @exitcode below).
+# @description This function:
+#   - displays an optional error message, via `error`.
+#   - displays the long or the short usage text, via `usage_text`.
+#   - exits the script with the resolved exit code (see @exitcode below).
 #
 # Notes:
 #   - Overrides the function defined in _diagnostics.sh
-#   - Temporarily disables bash trace mode (`set -x`) while it runs, restoring the prior
-#     tracing state before exiting, so the usage text itself is never polluted by trace
-#     output.
+#   - Temporarily disables bash trace mode (`set -x`) while it runs, so the usage text itself is
+#     never polluted by trace output.
 #
 # @arg $1 bool `_long_usage` whether to display the long (`true`) or the short (`false`) version
 #   of the usage text. The long version includes the common flags like verbose, quiet, etc.
-#   Optional, default: `false`.
-# @arg $2 int `_exit_code` the exit code to use when exiting. Optional, non-negative integer
-#   less than 256. Default: 0 without error messages; with error messages, the code of their
-#   first `--error-code`/`-ec`, or 1 (see @exitcode below).
-# @arg $@ strings Additional error message parts to display at the top of the output.
-#   Optional, if omitted, no message is shown. Supports the same named parameters as
-#    `message`/`error`:
-#     - `--error-code`/`-ec` followed by a positive error code less than 256 -- translated to
-#       a message, if defined in `_error_codes.sh`, and included in the output. May occur
-#       multiple times; each occurrence is translated independently.
-#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show
-#       (default: 1). If given more than once, only the last occurrence is used.
+#   Optional, default: `false`. Recognized only in the first position.
+# @arg $2 int the vm2 `$err_*` code, passed on to error as its leading code. Optional.
+#   Recognized only in the second position, if first position is boolean, otherwise in the first
+#   position.
+# @arg $@ string Error message parts. Optional. May include the following named parameters:
+#     - `--error-code`/`-ec` followed by an error code -- the form before the leading code;
+#       translated to its error message and included in the output where it appears. If $1 is
+#       omitted, the last `--error-code` is assigned to `$__last_error` (`get_last_error()`)
+#     - `--stack-depth`/`-sd` followed by an integer -- how many stack frames to show below
+#       the message (default: all). If given more than once, the last occurrence takes effect.
+#     - `--no-stack`/`-ns` -- do not dump the stack. Combined with `--stack-depth`/`-sd`, the
+#       last occurrence takes effect.
 #
-# @exitcode success=0: No error messages were given, and $2 was omitted or 0.
-# @exitcode N The exit code from $2, if it is a positive value (whether or not error messages
-#   are present).
-# @exitcode N The code of the first `--error-code`/`-ec` among the error messages, if $2 was
-#   omitted -- the same rule as `exit_with_error`/`exit_with_bug`, so `usage "…" -ec "$err_x"`
-#   exits with `$err_x`.
-# @exitcode failure=1: Error messages were given, $2 was omitted or 0, and the messages carry no
-#   (non-zero) `--error-code`/`-ec`.
+# @stderr string The formatted error message, prefixed with `$error_prefix`.
+# @stdout string the usage text
+#
+# @exitcode success=0: When only $1 is specified.
+# @exitcode failure=1: Error messages were given, $2 was omitted, and no `--error-code`/`-ec`
+#   named arguments were specified.
+# @exitcode N The exit code from $2 (or $1), if it is a valid exit code or the code of the last
+#   `--error-code`/`-ec` named argument.
 #
 # @example
 #   usage true
 # @example
-#   usage "Unknown argument: $_option" -ec "$err_unknown_argument"     # exits with $err_unknown_argument
+#   usage "$err_unknown_argument" "Unknown argument: $_option" # exits with $err_unknown_argument
 # @example
-#   usage "$err_invalid_arguments" -sd 3 -ec "$err_argument_value" "Invalid argument value for
-#   the option <option_name>"                                        # explicit $2 wins: $err_invalid_arguments
+#   # explicit $2 (here $1) wins: exit with $err_invalid_arguments
+#   usage "$err_invalid_arguments" "Invalid argument value for the option <option_name>" \
+#                                  -ec "$err_unsafe_argument" -sd 3
 #-----------------------------------------------------------------------------------------------
 function usage()
 {
+    # save the tracing state and disable tracing
+    local -A _core_state=()
+    save_state _core_state
+    set +x
+
     local _long_usage=false
     (( $# > 0 )) &&
         is_boolean "$1" &&
         _long_usage=$1 &&
         shift
 
-    local -i _exit_code=$success
-    local _explicit_exit_code=false
-    (( $# > 0 )) &&
-        is_non_negative "$1" &&
-        _exit_code=$1 &&
-        _explicit_exit_code=true &&
-        shift
+    local -i _ec=$success
 
-    # save the tracing state and disable tracing
-    local -A _core_state=()
-    save_state _core_state
-    set +x
-
-    # the remaining arguments are error messages to display at the top of the usage text
     if (( $# > 0 )); then
-        error "$@"
-        # without an explicit (non-zero) exit code, exit with the code error() just recorded from the first
-        # --error-code/-ec (or $failure) -- the same rule as exit_with_error/exit_with_bug; with messages, never exit 0
-        if ! $_explicit_exit_code || (( _exit_code == success )); then
-            get_last_error _exit_code
-        fi
-        (( _exit_code != success )) || _exit_code=$failure
+        # the remaining arguments are error messages to display at the top of the usage text
+        error "$@" --stack-skip 3
+
+        # the last error code is the exit code
+        get_last_error _ec
     fi
 
     echo ""
@@ -184,8 +173,7 @@ function usage()
 
     # restore the tracing state
     restore_state _core_state
-
-    exit "$_exit_code"
+    exit "$_ec"
 }
 
 #-----------------------------------------------------------------------------------------------
@@ -222,6 +210,21 @@ Common environment variables:
 "
 
 #-----------------------------------------------------------------------------------------------
+# @description Verifies the arguments of the function usage_text usually defined in each top-
+#   level script.
+#
+# @arg $1 bool _long_text whether Indicates whether to display the long (`true`) or short
+#   (`false`) version of the usage text. The long version includes the standard flags like
+#   verbose, quiet, etc. Optional, default: `false`.
+#-----------------------------------------------------------------------------------------------
+function assert_usage_text_args()
+{
+    (( $# ==1 ))                                                                || bug "$err_invalid_arguments" "${FUNCNAME[1]}() requires 1 argument (provided $#): a boolean, whether to display the long or short usage text."
+    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "$err_argument_type" "${FUNCNAME[1]}() requires argument 1, whether to display the long or short usage text, to be 'true' or 'false' (provided '${1-<missing>}')."
+                                                                                exit_if_has_bugs
+}
+
+#-----------------------------------------------------------------------------------------------
 # @description Displays the usage text for the script. This default implementation is a
 #   placeholder -- override it in each top-level script to show script-specific usage
 #   information.
@@ -235,9 +238,7 @@ Common environment variables:
 #-----------------------------------------------------------------------------------------------
 function usage_text()
 {
-    (( $# ==1 ))                                                                || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a boolean, whether to display the long or short usage text."
-    [[ ! -v 1 ]] || is_boolean "$1"                                             || bug "${FUNCNAME[0]}() requires argument 1, whether to display the long or short usage text, to be 'true' or 'false' (provided '${1-<missing>}')."
-                                                                                exit_if_has_bugs
+    assert_usage_text_args "$@"
 
     local _long_text=$1
     local _common_args

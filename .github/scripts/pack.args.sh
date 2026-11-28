@@ -58,13 +58,13 @@ function parse_arguments()
         case "${_option,,}" in
             # get the arguments specific to this script
             --reason|-r )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 reason="$1"
                 shift
                 ;;
 
             --build|-b )
-                (( $# > 0 ))                                                    || usage "Missing boolean value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing boolean value for ${_option,,}"
                 build="$1"
                 shift
                 ;;
@@ -72,18 +72,18 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
             # reserved: the options get_common_dotnet_arg consumes before this case (see the arm above).
             -c|-d|-tfm|-rid|--define|--configuration|--framework|--runtime|--artifacts-path|--minver-tag-prefix|--minver-prerelease-id|--nuget-username|--nuget-password )
-                exit_with_bug "'$_option' should have been consumed by get_common_dotnet_arg." -ec "$err_logic_error"
+                exit_with_bug "'$_option' should have been consumed by get_common_dotnet_arg." "'$_option' should have been consumed by get_common_dotnet_arg."
                 ;;
 
-            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*) usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) ! $_positional_arg_set                                          || usage "Multiple package projects specified: $_option" -ec "$err_too_many_arguments"
+            * ) ! $_positional_arg_set                                          || usage "$err_too_many_arguments" "Multiple package projects specified: $_option"
                 package_project="$_option"
                 _positional_arg_set=true
                 ;;
@@ -106,7 +106,7 @@ function resolve_arguments()
     # validate the values of the variables common for many vm2.DevOps scripts,
     # usually set from CLI arguments, environment variables, or defaults
     is_safe_existing_file "$package_project"                                    || true
-    [[ $package_project == *.csproj ]]                                          || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
+    [[ $package_project == *.csproj ]]                                          || error "$err_argument_value" "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
     is_valid_boolean "$build"                                                   || true
     is_safe_gh_reason "$reason"                                                 || true
     sanitize_common_dotnet_args "$package_project"

@@ -48,9 +48,9 @@ function parse_arguments()
             continue
         }
 
-        [[ "$_option" != -* ]]                                                  || usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+        [[ "$_option" != -* ]]                                                  || usage "$err_unknown_argument" "Unknown argument: $_option"
 
-        ! $_positional_arg_set                                                  || usage "Multiple build projects specified: $_option" -ec "$err_too_many_arguments"
+        ! $_positional_arg_set                                                  || usage "$err_too_many_arguments" "Multiple build projects specified: $_option"
         build_project="$_option"
         _positional_arg_set=true
     done
@@ -81,7 +81,7 @@ function resolve_arguments()
 
         end_scope
 
-        (( ${#_projects[@]} > 0 ))                                              || error "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory." -ec "$err_not_found"
+        (( ${#_projects[@]} > 0 ))                                              || error "$err_not_found" "No build project (*.slnx, *.sln, *.csproj) was specified or found in the current directory."
         build_project=${_projects[0]:-}
         (( ${#_projects[@]} == 1 ))                                             || warning "Multiple projects found: (${_projects[*]}), using the first one: '$build_project'."
         trace "Auto-detected build project: $build_project"

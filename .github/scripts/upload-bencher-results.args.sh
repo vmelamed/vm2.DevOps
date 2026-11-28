@@ -61,67 +61,67 @@ function parse_arguments()
 
         case "${_option,,}" in
             --testbed )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 testbed="$1"
                 shift
                 ;;
 
             --repository )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 repository="$1"
                 shift
                 ;;
 
             --event-name )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 event_name="$1"
                 shift
                 ;;
 
             --ref-name )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 ref_name="$1"
                 shift
                 ;;
 
             --head-ref )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 head_ref="$1"
                 shift
                 ;;
 
             --pr-number )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 pr_number="$1"
                 shift
                 ;;
 
             --pr-base-sha )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 pr_base_sha="$1"
                 shift
                 ;;
 
             --max-regression-pct )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 max_regression_pct="$1"
                 shift
                 ;;
 
             --max-gen1-collects )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 max_gen1_collects="$1"
                 shift
                 ;;
 
             --max-gen2-collects )
-                (( $# > 0 ))                                                    || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 max_gen2_collects="$1"
                 shift
                 ;;
 
             --reset-thresholds )
-                (( $# > 0 ))                                                    || usage "Missing boolean value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# > 0 ))                                                    || usage "$err_missing_argument" "Missing boolean value for ${_option,,}"
                 reset_thresholds="$1"
                 shift
                 ;;
@@ -129,13 +129,13 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*) usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*) usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) ! $_positional_arg_set                                          || usage "Multiple results directories specified: $_option" -ec "$err_too_many_arguments"
+            * ) ! $_positional_arg_set                                          || usage "$err_too_many_arguments" "Multiple results directories specified: $_option"
                 results_dir="$_option"
                 _positional_arg_set=true
                 ;;
@@ -147,10 +147,10 @@ function parse_arguments()
 
 function verify_environment()
 {
-    [[ -n ${BENCHER_API_TOKEN:-} ]]                                             || error "The BENCHER_API_TOKEN environment variable is required." -ec "$err_missing_argument"
+    [[ -n ${BENCHER_API_TOKEN:-} ]]                                             || error "$err_missing_argument" "The BENCHER_API_TOKEN environment variable is required."
 
-    is_tool_present bc                                                          || error "'bc' is not installed." "Install it: 'sudo apt install bc'." -ec "$err_tool_not_found"
-    is_tool_present bencher                                                     || error "'bencher' is not installed." "Install it from <https://bencher.dev/docs/how-to/install-cli/>." -ec "$err_tool_not_found"
+    is_tool_present bc                                                          || error "$err_tool_not_found" "'bc' is not installed." "Install it: 'sudo apt install bc'."
+    is_tool_present bencher                                                     || error "$err_tool_not_found" "'bencher' is not installed." "Install it from <https://bencher.dev/docs/how-to/install-cli/>."
 
     return "$success"
 }
@@ -179,22 +179,22 @@ function resolve_arguments()
     # reject absolute paths by design (the framework's convention for user-facing --artifacts-path-style inputs), but
     # this value is an internal, already-resolved absolute path handed off from run-benchmarks.sh's own output, not a
     # raw CLI/env path a caller is expected to type in relative form.
-    [[ -n $results_dir ]]                                                       || error "The results directory is required." -ec "$err_missing_argument"
-    [[ -z $results_dir || -d $results_dir ]]                                    || error "The results directory '$results_dir' is not a directory." -ec "$err_argument_value"
-    [[ $repository == */* ]]                                                    || error "--repository must be in 'owner/repo' form (provided '${repository:-<empty>}')." -ec "$err_argument_value"
-    [[ -n $event_name ]]                                                        || error "--event-name is required." -ec "$err_missing_argument"
-    [[ -n $ref_name ]]                                                          || error "--ref-name is required." -ec "$err_missing_argument"
+    [[ -n $results_dir ]]                                                       || error "$err_missing_argument" "The results directory is required."
+    [[ -z $results_dir || -d $results_dir ]]                                    || error "$err_argument_value" "The results directory '$results_dir' is not a directory."
+    [[ $repository == */* ]]                                                    || error "$err_argument_value" "--repository must be in 'owner/repo' form (provided '${repository:-<empty>}')."
+    [[ -n $event_name ]]                                                        || error "$err_missing_argument" "--event-name is required."
+    [[ -n $ref_name ]]                                                          || error "$err_missing_argument" "--ref-name is required."
     is_valid_max_regression_pct "$max_regression_pct"                           || true
-    is_non_negative "$max_gen1_collects"                                        || error "--max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')." -ec "$err_argument_value"
-    is_non_negative "$max_gen2_collects"                                        || error "--max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')." -ec "$err_argument_value"
+    is_non_negative "$max_gen1_collects"                                        || error "$err_argument_value" "--max-gen1-collects must be a non-negative integer (got '$max_gen1_collects')."
+    is_non_negative "$max_gen2_collects"                                        || error "$err_argument_value" "--max-gen2-collects must be a non-negative integer (got '$max_gen2_collects')."
     is_valid_boolean "$reset_thresholds"                                        || true
 
     if [[ $event_name == "pull_request" ]]; then
-        [[ -n $head_ref ]]                                                      || error "--head-ref is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
-        [[ -n $pr_number ]]                                                     || error "--pr-number is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
-        [[ -z $pr_number ]] || is_natural "$pr_number"                          || error "The PR number must be a natural number." -ec "$err_argument_value"
-        [[ -n $pr_base_sha ]]                                                   || error "--pr-base-sha is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
-        [[ -n ${GH_TOKEN:-} ]]                                                  || error "The GH_TOKEN environment variable is required when --event-name is 'pull_request'." -ec "$err_missing_argument"
+        [[ -n $head_ref ]]                                                      || error "$err_missing_argument" "--head-ref is required when --event-name is 'pull_request'."
+        [[ -n $pr_number ]]                                                     || error "$err_missing_argument" "--pr-number is required when --event-name is 'pull_request'."
+        [[ -z $pr_number ]] || is_natural "$pr_number"                          || error "$err_argument_value" "The PR number must be a natural number."
+        [[ -n $pr_base_sha ]]                                                   || error "$err_missing_argument" "--pr-base-sha is required when --event-name is 'pull_request'."
+        [[ -n ${GH_TOKEN:-} ]]                                                  || error "$err_missing_argument" "The GH_TOKEN environment variable is required when --event-name is 'pull_request'."
     fi
 
     # freeze the parameters

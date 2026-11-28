@@ -187,31 +187,32 @@ function get_arguments()
 
 All core library files live in `scripts/bash/lib/` and are sourced by scripts that need them:
 
-| File                    | Purpose                                                           |
-|-------------------------|-------------------------------------------------------------------|
-| `gh_core.sh`            | GitHub Actions environment integration (sources core.sh)          |
-| `core.sh`               | Initialization, trap handlers                                     |
-| `_constants.sh`         | ANSI color codes and a few other constants                        |
-| `core.state.sh`         | Common state variables (quiet, verbose, dry-run, trace modes)     |
-| `_error_codes.sh`       | Error code constants                                              |
-| `_predicates.sh`        | Boolean checks (`is_array`, `is_positive`, etc.)                  |
-| `_predicates.tools.sh`  | Tool presence checks (`is_tool_present`, `verify_git`, etc.)      |
-| `_predicates.json.sh`   | JSON checks (`is_json`, `validate_json_array`, etc.)              |
-| `_diagnostics.sh`       | Logging (`tee_stdout`, `error`, `warning`, `trace`, etc.)         |
-| `core.args.sh`          | Common argument parsing to initialize core state                  |
-| `_semver.sh`            | Semantic versioning utilities                                     |
-| `_sanitize.sh`          | Input validation (`is_safe_path`, `is_valid_gh_reason`, etc.)     |
-| `_dump_vars.sh`         | Dumps the values of bash variables in a tabular format            |
-| `_user.sh`              | User interface primitives                                         |
-| `_git.sh`               | Git operations (plain git, no hosting service)                    |
-| `_git.gh.sh`            | GitHub: naming rules, repo state, `gh` transient predicate        |
-| `_git.vm2.sh`           | Git operations with focus on vm2 repos                            |
-| `_xml.sh`               | Generic XML value reading via `yq`                                |
-| `_dotnet.constants.sh`  | `dotnet` exit codes, build-information keys, values in use        |
-| `_dotnet.predicates.sh` | Validation of configuration, TFM, RID, MinVer, NuGet server, etc. |
-| `_dotnet.args.sh`       | Common `dotnet` argument parsing and validation                   |
-| `_dotnet.msbuild.sh`    | MSBuild properties, argument conversion, build information        |
-| `_dotnet.sh`            | Clean, restore, build, pack, and solution helpers                 |
+| File                       | Purpose                                                           |
+|----------------------------|-------------------------------------------------------------------|
+| `gh_core.sh`               | GitHub Actions environment integration (sources core.sh)          |
+| `core.sh`                  | Initialization, trap handlers                                     |
+| `_constants.sh`            | ANSI color codes and a few other constants                        |
+| `core.state.sh`            | Common state variables (quiet, verbose, dry-run, trace modes)     |
+| `_error_codes.sh`          | Error code constants                                              |
+| `_predicates.sh`           | Boolean checks (`is_array`, `is_positive`, etc.)                  |
+| `_predicates.tools.sh`     | Tool presence checks (`is_tool_present`, `verify_git`, etc.)      |
+| `_predicates.json.sh`      | JSON checks (`is_json`, `validate_json_array`, etc.)              |
+| `_diagnostics.sh`          | Output streams (`tee_stdout`, `to_summary`), error/bug counters   |
+| `_diagnostics.messages.sh` | Logging (`error`, `with_error`, `bug`, `warning`, `trace`, etc.)  |
+| `core.args.sh`             | Common argument parsing to initialize core state                  |
+| `_semver.sh`               | Semantic versioning utilities                                     |
+| `_sanitize.sh`             | Input validation (`is_safe_path`, `is_valid_gh_reason`, etc.)     |
+| `_dump_vars.sh`            | Dumps the values of bash variables in a tabular format            |
+| `_user.sh`                 | User interface primitives                                         |
+| `_git.sh`                  | Git operations (plain git, no hosting service)                    |
+| `_git.gh.sh`               | GitHub: naming rules, repo state, `gh` transient predicate        |
+| `_git.vm2.sh`              | Git operations with focus on vm2 repos                            |
+| `_xml.sh`                  | Generic XML value reading via `yq`                                |
+| `_dotnet.constants.sh`     | `dotnet` exit codes, build-information keys, values in use        |
+| `_dotnet.predicates.sh`    | Validation of configuration, TFM, RID, MinVer, NuGet server, etc. |
+| `_dotnet.args.sh`          | Common `dotnet` argument parsing and validation                   |
+| `_dotnet.msbuild.sh`       | MSBuild properties, argument conversion, build information        |
+| `_dotnet.sh`               | Clean, restore, build, pack, and solution helpers                 |
 
 See `scripts/bash/lib/FUNCTIONS_REFERENCE.md` for the full function inventory.
 
@@ -254,18 +255,17 @@ fixed, therefore the function should exit after reporting all validation errors.
 function foo()
 {
     (( $# == <N> )) ||
-        bug -sd 3 "${FUNCNAME[0]}() requires <N> arguments (provided $#):" \
-                  "  - <arg1 role>" \
-                  "  - <arg2 role>" \
-                  "  - ... " \
-                  -ec "$err_invalid_arguments"
+        bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires <N> arguments (provided $#):" \
+                                     "  - <arg1 role>" \
+                                     "  - <arg2 role>" \
+                                     "  - ... "
 
     # if $1 is missing it is already reported by the argument count check, otherwise we validate its value
     [[ ! -v 1 || $1 =~ <regex> ]] ||
-        bug -sd 3 "${FUNCNAME[0]}() requires argument 1, <role>, to <constraint> (provided '${1-<missing>}')." -ec "$err_specific_code_1"
+        bug "$err_specific_code_1" "${FUNCNAME[0]}() requires argument 1, <role>, to <constraint> (provided '${1-<missing>}')."
     # if $1 is missing it is already reported by the argument count check, otherwise we validate its value
     [[ ! -v 2 ]] || is_boolean $2 ||
-        bug -sd 3 "${FUNCNAME[0]}() requires argument 2, <role>, to <constraint> (provided '${2-<missing>}')." -ec "$err_specific_code_2"
+        bug "$err_specific_code_2" "${FUNCNAME[0]}() requires argument 2, <role>, to <constraint> (provided '${2-<missing>}')."
 
     exit_if_has_bugs
 
@@ -322,7 +322,7 @@ an optional parameter: `exit_if_has_errors false`
 If possible and safe, use the value of the failed argument in the error message for easier debugging, e.g.:
 
   ```bash
-  error -sd 3 "${FUNCNAME[0]}() requires argument <N>, <role>, to <constraint> (provided '${N-<missing>}')." -ec "$err_specific_code"
+  error "$err_specific_code" "${FUNCNAME[0]}() requires argument <N>, <role>, to <constraint> (provided '${N-<missing>}')." -sd 3
   ```
 
 Functions that interleave positional-argument parsing with validation (`shift`-based, e.g. `execute_with_retry` in
@@ -333,7 +333,7 @@ happened.
 ##### Chaining Fallible Steps with `with_error`
 
 A sequence of steps where each one runs only if all previous ones succeeded is railway-oriented programming (ROP) done by
-hand: a failure switches to the error track, and every later step stays on it. `with_error` (`_diagnostics.sh`) is the
+hand: a failure switches to the error track, and every later step stays on it. `with_error` (`_diagnostics.messages.sh`) is the
 "switch tracks" operation. It records a vm2 `$err_*` code in the caller's variable, reports the failure with `error`, and
 returns `$success`, so `cmd || with_error …` never trips `errexit`:
 
@@ -389,10 +389,10 @@ buffering, and error-propagation behavior, especially when command substitution 
   piping mechanism like command substitution, e.g., `output_value="$(my_function)"`. Use this method when your function does
   not have side effects that modify the state of the calling script, like global variables.
 
-  For example, the function `error` in `_diagnostics.sh` increments the global error counter `__errors`, which is tested by
-  `exit_if_has_errors`. However, `$(...)` is executed in a subshell, so **no** changes to global variables within the command
-  substitution will affect the caller's environment, e.g., in this case the global counter `__errors` would not be updated at
-  all. Therefore, this code will **not** have the desired effect:
+  For example, the function `error` in `_diagnostics.messages.sh` increments the global error counter `__errors`, which is
+  tested by `exit_if_has_errors`. However, `$(...)` is executed in a subshell, so **no** changes to global variables within the
+  command substitution will affect the caller's environment, e.g., in this case the global counter `__errors` would not be
+  updated at all. Therefore, this code will **not** have the desired effect:
 
   ```bash
   # (( __errors == 0 )) == true
@@ -452,11 +452,11 @@ buffering, and error-propagation behavior, especially when command substitution 
   ```bash
   my_function() {
       (( $# == 1 )) ||
-            bug "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of a variable to receive the result." -ec "$err_invalid_arguments"
+            bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of a variable to receive the result."
       # properly validate the parameter as a defined variable within a param validation pattern - see above
       [[ ! -v "$1" ]] ||
             is_defined_variable "$1" ||
-            bug "${FUNCNAME[0]}() requires argument 1 to be the name of a defined variable (provided '${1-<missing>}')." -ec "$err_invalid_nameref"
+            bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a defined variable (provided '${1-<missing>}')."
 
       exit_if_has_bugs
 
@@ -487,7 +487,7 @@ buffering, and error-propagation behavior, especially when command substitution 
 Predicate functions are named `is_xyz` or `has_xyz`, e.g. `is_defined_array`, `is_positive`, and `has_errors`. They are pure:
 they return `$positive` (0) for **true** or `$negative` (1) for **false**, print no messages, and have no side effects. The
 only thing they report is a `bug`: a call that violates their contract (e.g. the wrong number of arguments). This makes them
-the right tool for the formal argument checks: `is_xyz "$1" || bug "…" -ec "$err_…"`.
+the right tool for the formal argument checks: `is_xyz "$1" || bug "$err_…" "…"`.
 
 A nameref parameter of a predicate is read-only, and is used only to pass an array.
 
@@ -616,15 +616,15 @@ function example()
 
     (( $# == 1 || $# == 2 )) || {
         _rc="$err_invalid_arguments"
-        error "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#)." -ec "$_rc"
+        error "$_rc" "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#)."
     }
     [[ ! -v 1 || -n $1 ]] || {
         _rc="$err_argument_value"
-        error "${FUNCNAME[0]}() requires argument 1, the input name, to be non-empty (provided '${1-<missing>}')." -ec "$_rc"
+        error "$_rc" "${FUNCNAME[0]}() requires argument 1, the input name, to be non-empty (provided '${1-<missing>}')."
     }
     [[ ! -v 2 || $2 =~ ^(true|false)$ ]] || {
         _rc="$err_argument_type"
-        error "${FUNCNAME[0]}() requires optional argument 2 to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$_rc"
+        error "$_rc" "${FUNCNAME[0]}() requires optional argument 2 to be 'true' or 'false' (provided '${2-<missing>}')."
     }
 
     (( _rc == success )) || return "$err_invalid_arguments"
@@ -675,7 +675,7 @@ failure for the rest, so the caller can fall through to the next one (e.g. a scr
   continue`, likewise `get_common_dotnet_arg`), so their options never reach it. Each `case` still carries one
   reservation arm per shared handler, listing exactly the options that handler consumes. The arm never runs; it is
   there so ShellCheck (SC2221/SC2222) flags any script-specific arm that reuses one of those options. Its body is
-  `exit_with_bug … -ec "$err_logic_error"`, so if a stale list ever lets a token through, the run fails loudly
+  `exit_with_bug "$err_logic_error" …`, so if a stale list ever lets a token through, the run fails loudly
   instead of swallowing the token. When a shared handler gains or loses an option, update its reservation arm in **every**
   parser: a missing name loses the ShellCheck protection, and an extra one turns a now-unknown option into a bug
   report instead of `-*)`'s "Unknown option".
@@ -690,11 +690,11 @@ failure for the rest, so the caller can fall through to the next one (e.g. a scr
 
 ```bash
             --summary-file|-sf )
-                (( $# >= 1 )) || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 )) || usage "$err_missing_argument" "Missing value for $_option"
                 summary_file="$1"; shift
                 ;;
 
-            -* ) usage "Unknown option: $_option" -ec "$err_unknown_argument"
+            -* ) usage "$err_unknown_argument" "Unknown option: $_option"
                 ;;
 
             * ) # positional arguments only -- every token starting with '-' was handled above
@@ -704,7 +704,7 @@ failure for the rest, so the caller can fall through to the next one (e.g. a scr
 
 A parser that is not a `case` (e.g. `build.args.sh`: a chain of `get_common_*_arg … && continue` and `[[ ]] ||`
 tests) puts the same check inline, before its positional handling:
-`[[ "$_option" != -* ]] || usage "Unknown option: $_option" -ec "$err_unknown_argument"`.
+`[[ "$_option" != -* ]] || usage "$err_unknown_argument" "Unknown option: $_option"`.
 
 ### Long-Form Options in Script Bodies
 
@@ -723,21 +723,24 @@ dump_vars --force --quiet --header "Arguments for $script_name:" package_project
 dump_vars -f -q -h "Arguments for $script_name:" package_project reason
 ```
 
-**Exception: the `message()`-family functions** (`error`, `warning`, `info`, `trace`, `bug`, `usage`,
-`exit_with_error`, `exit_with_bug`, `fatal_exit`). Their own options — `--error-code`/`-ec`, `--stack-depth`/`-sd`,
-`--no-stack`/`-ns`, `--stack-skip`/`-ss` — are used in **short** form throughout the codebase, by established
-convention: these calls appear at essentially every validation and error-reporting site in every script, and the
-short forms keep them visually compact, so the part that actually matters at each call site — the message text —
-stays the most prominent thing on the line.
+**Exception: the `__message()`-family functions** (`error`, `warning`, `info`, `trace`, `bug`, `usage`,
+`exit_with_error`, `exit_with_bug`). Their own options — `--error-code`/`-ec`, `--stack-depth`/`-sd`, `--no-stack`/`-ns`,
+`--stack-skip`/`-ss` — are used in **short** form throughout the codebase, by established convention: these calls appear at
+essentially every validation and error-reporting site in every script, and the short forms keep them visually compact, so the
+part that actually matters at each call site — the message text — stays the most prominent thing on the line.
 
-**Put `-ec` after the message parts** (and `--dotnet-error-code`/`-dec` too). These flags are positional: the code's message
-is printed exactly where the flag appears, so `error "Bad commit message: $subject" -ec "$err_argument_value"` prints the
+**Put `-ec` after the message parts** (and `--dotnet-error-code`/`-dc` too). These flags are positional: the code's message
+is printed exactly where the flag appears, so `error "$err_argument_value" "Bad commit message: $subject"` prints the
 specific message first and the generic text of the code below it.
+
+**Put the primary error code first.** `bug`, `error`, and all functions that call them, e.g. `usage`, `exit_with_error`,
+`exit_with_bug` accept as a first parameter a "primary error code". This is equivalent to `-ec` at the end of the call. For
+readability, put the primary error code first, instead of using -ec at the end of the call.
 
 ```bash
 # Exception: message()-family functions keep their short forms
-error "Bad commit message: $subject" -ec "$err_argument_value"
-usage -sd 3 "Invalid argument value for the option <option_name>" -ec "$_rc"
+error "$err_argument_value" "Bad commit message: $subject"
+usage "$_rc" "Invalid argument value for the option <option_name>"
 ```
 
 ### Message Templates
@@ -803,7 +806,7 @@ what is already up to date); a dry run reports the intended changes of one parti
 if ! git -C "$repo" show-ref --verify --quiet "$git_heads_ns$branch"; then      # a query: runs directly
     execute --quiet git -C "$repo" switch -c "$branch"                        # a side effect: dry run prints it
 fi
-is_dry_run || [[ -s $package ]] || error "Package '$package' not found or empty." -ec "$err_tool_error"
+is_dry_run || [[ -s $package ]] || error "$err_tool_error" "Package '$package' not found or empty."
 
 # Avoid: a query behind execute, a redirected execute, and is_dry_run as an on/off switch for a whole block
 if ! execute dotnet tool list "$tool" --global; then ...; fi                 # always "installed" in a dry run

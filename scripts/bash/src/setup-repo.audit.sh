@@ -49,13 +49,13 @@ declare -x gh_apps_with_secrets
 declare -x default_local_git_settings
 declare -x default_local_git_settings_order
 
-declare -x main_protection_rs_name
+declare -x branch_protection_rs_name
 
 # this script constants for operating gh
 declare -x path_repo
 declare -x path_permissions
 declare -x path_vars
-declare -x path_main_protection_ruleset
+declare -x path_branch_protection_ruleset
 
 declare -x jq_entries
 declare -x jq_secrets
@@ -116,22 +116,21 @@ function compare_settings()
 {
     local -i _rc="$success"
 
-    (( $# == 6 || $# == 7 ))                                                    || bug "${FUNCNAME[0]}() requires 6 or 7 arguments (provided $#):" \
-                                                                                       "  - the GitHub API endpoint path to fetch settings from" \
-                                                                                       "  - jq transform JSON -> key=value lines" \
-                                                                                       "  - display-format flag: if true, change expected-values array's keys to sentence-capitalized" \
-                                                                                       "  - unknown-or-obsolete flag: if true, include unknown or obsolete values in the comparison" \
-                                                                                       "  - name of an associative array variable to store the expected key-values" \
-                                                                                       "  - name of an indexed array variable to store the summary results: [matches], [diffs], [errors], and [unknowns]" \
-                                                                                       "  - optional name of an indexed array with the display order of the keys." \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -n "$1" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 1, the GitHub API path, to be non-empty (provided '${1-<missing>}'); for example, 'repos/\$repo'." -ec "$err_argument_value"
-    [[ ! -v 2 || -n "$2" ]]                                                     || bug "${FUNCNAME[0]}() requires argument 2, the jq transformation query, to be non-empty (provided '${2-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 3 ]] || is_boolean "$3"                                             || bug "${FUNCNAME[0]}() requires argument 3, the display-key formatting flag, to be 'true' or 'false' (provided '${3-<missing>}')." -ec "$err_argument_type"
-    [[ ! -v 4 ]] || is_boolean "$4"                                             || bug "${FUNCNAME[0]}() requires argument 4, the display unknown key flag, to be 'true' or 'false' (provided '${4-<missing>}')." -ec "$err_argument_type"
-    [[ ! -v 5 ]] || is_associative_array "$5"                                   || bug "${FUNCNAME[0]}() requires argument 5 to name an associative array containing expected key-value pairs (provided '${5-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 6 ]] || is_associative_array "$6"                                   || bug "${FUNCNAME[0]}() requires argument 6 to name an indexed array for summary results: [matches], [diffs], [errors], and [unknowns] (provided '${6-<missing>}')." -ec "$err_invalid_nameref"
-    [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7"                        || bug "${FUNCNAME[0]}() requires optional argument 7 to name an indexed array containing the display order (provided '${7-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 6 || $# == 7 ))                                                    || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 6 or 7 arguments (provided $#):" \
+                                                                                                                "  - the GitHub API endpoint path to fetch settings from" \
+                                                                                                                "  - jq transform JSON -> key=value lines" \
+                                                                                                                "  - display-format flag: if true, change expected-values array's keys to sentence-capitalized" \
+                                                                                                                "  - unknown-or-obsolete flag: if true, include unknown or obsolete values in the comparison" \
+                                                                                                                "  - name of an associative array variable to store the expected key-values" \
+                                                                                                                "  - name of an indexed array variable to store the summary results: [matches], [diffs], [errors], and [unknowns]" \
+                                                                                                                "  - optional name of an indexed array with the display order of the keys."
+    [[ ! -v 1 || -n "$1" ]]                                                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the GitHub API path, to be non-empty (provided '${1-<missing>}'); for example, 'repos/\$repo'."
+    [[ ! -v 2 || -n "$2" ]]                                                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the jq transformation query, to be non-empty (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || is_boolean "$3"                                             || bug "$err_argument_type" "${FUNCNAME[0]}() requires argument 3, the display-key formatting flag, to be 'true' or 'false' (provided '${3-<missing>}')."
+    [[ ! -v 4 ]] || is_boolean "$4"                                             || bug "$err_argument_type" "${FUNCNAME[0]}() requires argument 4, the display unknown key flag, to be 'true' or 'false' (provided '${4-<missing>}')."
+    [[ ! -v 5 ]] || is_associative_array "$5"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 5 to name an associative array that holds the expected key-value pairs (provided '${5-<missing>}')."
+    [[ ! -v 6 ]] || { is_associative_array "$6" && is_mutable "$6"; }           || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 6 to name a writable associative array for the summary results: [matches], [diffs], [errors], and [unknowns] (provided '${6-<missing>}')."
+    [[ ! -v 7 || -z "${7:-}" ]] || is_indexed_array "$7"                        || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires optional argument 7 to name an indexed array that holds the display order (provided '${7-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __expected_key_values="$5"
@@ -261,7 +260,7 @@ function get_default_branch_protection_ruleset()
 
     _ruleset_id=$(execute_with_retry --query --classify gh_failure \
                     gh api --paginate "$path_rulesets" --jq "$jq_ruleset_id" 2>"$noise_sink") \
-                                                                                || with_error _rc $? "$failure" "Ruleset '$main_protection_rs_name' for branch '$default_branch' does not exist."
+                                                                                || with_error _rc $? "$failure" "Ruleset '$branch_protection_rs_name' for branch '$default_branch' does not exist."
     return "$_rc"
 }
 
@@ -273,8 +272,8 @@ function audit_branch_ruleset()
     _ruleset_id=$(execute_with_retry --query --classify gh_failure \
                     gh api --paginate "$path_rulesets" --jq "$jq_ruleset_id" 2>"$noise_sink") \
                                                                                 || with_error _rc "$failure" "Failed to get the rulesets."
-    (( _rc != success )) || [[ -n "$_ruleset_id" ]]                             || with_error _rc "$failure" "Ruleset '$main_protection_rs_name' for branch '$default_branch' does not exist."
-    (( _rc != success )) || echo "  $info_em  Ruleset '$main_protection_rs_name' for branch '$default_branch' (id: $_ruleset_id):"
+    (( _rc != success )) || [[ -n "$_ruleset_id" ]]                             || with_error _rc "$failure" "Ruleset '$branch_protection_rs_name' for branch '$default_branch' does not exist."
+    (( _rc != success )) || echo "  $info_em  Ruleset '$branch_protection_rs_name' for branch '$default_branch' (id: $_ruleset_id):"
     (( _rc != success )) || compare_settings "$path_rulesets/$_ruleset_id" "$jq_ruleset_rules" true false default_ruleset _results default_ruleset_order \
                                                                                 || with_error _rc $? "Failed to compare branch protection ruleset settings."
     (( _rc == success ))                                                        || return "$_rc"
@@ -289,9 +288,9 @@ function audit_required_status_checks()
 
     local _checks
     _checks=$(execute_with_retry --query --classify gh_failure \
-                gh api --paginate "$path_main_protection_ruleset" --jq "$jq_status_checks" 2>"$noise_sink") \
+                gh api --paginate "$path_branch_protection_ruleset" --jq "$jq_status_checks" 2>"$noise_sink") \
                                                                                 ||  {
-                                                                                        with_error _rc $? "Failed to fetch data from GitHub API: $path_main_protection_ruleset."
+                                                                                        with_error _rc $? "Failed to fetch data from GitHub API: $path_branch_protection_ruleset."
                                                                                         return "$_rc"
                                                                                     }
 

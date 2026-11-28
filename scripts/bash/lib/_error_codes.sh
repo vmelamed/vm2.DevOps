@@ -36,7 +36,7 @@ declare -xri rc_less_than=255                       # akin to -1 in signed integ
 declare -xri err_invalid_arguments=2                # The arguments are invalid: the wrong number of arguments, or values that failed validation.
 declare -xri err_argument_type=3                    # An argument has the wrong type.
 declare -xri err_argument_value=4                   # An argument has an invalid value.
-declare -xri err_invalid_nameref=5                  # An argument is not a valid variable name.
+declare -xri err_invalid_nameref=5                  # An argument does not name a variable or function of the required kind.
 declare -xri err_missing_argument=6                 # A required argument is missing.
 declare -xri err_too_many_arguments=7               # There are more arguments than allowed.
 declare -xri err_unknown_argument=8                 # An argument is not recognized.
@@ -70,8 +70,6 @@ declare -xri err_invalid_branch=84                  # The repository is not on t
 declare -xri err_repo_with_no_ci=85                 # The repository has no CI configuration (.github/workflows).
 declare -xri err_dir_with_ci=86                     # The directory is not in a Git repository yet, but it has a CI configuration (.github/workflows).
 declare -xri err_dir_with_no_ci=87                  # The directory is not in a Git repository and has no CI configuration (.github/workflows).
-declare -xri err_not_repos_parent=88                # The directory is not the parent directory of the vm2 repositories.
-declare -xri err_not_current_commit=89              # The repository is not at the expected commit.
 declare -xri err_root_not_repo_name=90              # The repository's directory name is not its GitHub repository name.
 declare -xri err_repo_not_in_vm2_repos=91           # The repository is not in the vm2 repositories directory.
 declare -xri err_invalid_repo_name=92               # The specified string is not a valid repository name.
@@ -99,7 +97,7 @@ declare -rA __error_messages=(
     [$err_invalid_arguments]="The arguments are invalid: the wrong number of arguments, or values that failed validation."
     [$err_argument_type]="An argument has the wrong type."
     [$err_argument_value]="An argument has an invalid value."
-    [$err_invalid_nameref]="An argument is not a valid variable name."
+    [$err_invalid_nameref]="An argument does not name a variable or function of the required kind."
     [$err_missing_argument]="A required argument is missing."
     [$err_too_many_arguments]="There are more arguments than allowed."
     [$err_unknown_argument]="An argument is not recognized."
@@ -133,8 +131,6 @@ declare -rA __error_messages=(
     [$err_repo_with_no_ci]="The repository has no CI configuration (.github/workflows)."
     [$err_dir_with_ci]="The directory is not in a Git repository yet, but it has a CI configuration (.github/workflows)."
     [$err_dir_with_no_ci]="The directory is not in a Git repository and has no CI configuration (.github/workflows)."
-    [$err_not_repos_parent]="The directory is not the parent directory of the vm2 repositories."
-    [$err_not_current_commit]="The repository is not at the expected commit."
     [$err_root_not_repo_name]="The repository's directory name is not its GitHub repository name."
     [$err_repo_not_in_vm2_repos]="The repository is not in the vm2 repositories directory."
     [$err_invalid_repo_name]="The specified string is not a valid repository name."
@@ -193,8 +189,6 @@ declare -rA __error_names=(
     [$err_repo_with_no_ci]="\$err_repo_with_no_ci"
     [$err_dir_with_ci]="\$err_dir_with_ci"
     [$err_dir_with_no_ci]="\$err_dir_with_no_ci"
-    [$err_not_repos_parent]="\$err_not_repos_parent"
-    [$err_not_current_commit]="\$err_not_current_commit"
     [$err_root_not_repo_name]="\$err_root_not_repo_name"
     [$err_repo_not_in_vm2_repos]="\$err_repo_not_in_vm2_repos"
     [$err_invalid_repo_name]="\$err_invalid_repo_name"
@@ -341,12 +335,11 @@ declare -rA __http_status_error_codes=(
 #-----------------------------------------------------------------------------------------------
 function http_status_to_error_code()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - the HTTP status code" \
-                                                                                       "  - the name of the variable that receives the vm2 code" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || $1 =~ ^[1-5][0-9]{2}$ ]]                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an HTTP status code [100, 599] (provided '${1-<missing>}')." -ec "$err_argument_value"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a declared variable (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - the HTTP status code" \
+                                                                                                                "  - the name of the variable that receives the vm2 code"
+    [[ ! -v 1 || $1 =~ ^[1-5][0-9]{2}$ ]]                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an HTTP status code [100, 599] (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the vm2 code (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __http_error_code=$2

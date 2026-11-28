@@ -62,6 +62,72 @@ declare -gx err_argument_value
     assert_failure "$failure"
 }
 
+# --- is_mutable --------------------------------------------------------------------------
+
+@test "is_mutable: true for writable variables of every kind, with or without a value" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 declare s=1; declare unset_s; declare -i i=1; declare -x x=1; declare -l l=a; declare -u u=A
+                 declare -a a=(1); declare -a unset_a; declare -A m=([k]=v); declare -A unset_m
+                 for v in s unset_s i x l u a unset_a m unset_m; do is_mutable \$v || echo \"not mutable: \$v\"; done"
+    assert_success
+    assert_output ''
+}
+
+@test "is_mutable: false for readonly variables of every kind" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 declare -r s=1; declare -ri i=1; declare -rx x=1; declare -ra a=(1); declare -rA m=([k]=v)
+                 readonly by_command=1
+                 for v in s i x a m by_command UID; do is_mutable \$v && echo \"mutable: \$v\"; done; true"
+    assert_success
+    assert_output ''
+}
+
+@test "is_mutable: sees the caller's locals through dynamic scope" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 f() { local -r ro=1; local rw=1; is_mutable ro && echo 'ro is mutable'; is_mutable rw || echo 'rw is not mutable'; }
+                 f; true"
+    assert_success
+    assert_output ''
+}
+
+@test "is_mutable: false for an undeclared name and for an invalid name" {
+    run is_mutable definitely_not_declared_xyz
+    assert_failure "$negative"
+    run is_mutable "1bad"
+    assert_failure "$negative"
+    run is_mutable "my-var"
+    assert_failure "$negative"
+}
+
+@test "is_mutable: does not depend on, and does not change, the caller's nocasematch" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 shopt -s nocasematch
+                 declare -A m; declare -rA rm=([k]=v)
+                 is_mutable m || echo 'm is not mutable'
+                 is_mutable rm && echo 'rm is mutable'
+                 shopt -q nocasematch || echo 'nocasematch was reset'
+                 true"
+    assert_success
+    assert_output ''
+}
+
+@test "is_mutable: answers for a nameref itself, not for its target (current behavior)" {
+    # 'declare -p ref' prints 'declare -n ref="target"': the nameref has no -r, so it counts as
+    # mutable even when its target is readonly and every write through it fails. Callers in the
+    # library pair is_mutable with is_indexed_array/is_associative_array, which reject a nameref.
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
+                 declare -r target=1; declare -n ref=target
+                 is_mutable ref"
+    assert_success
+}
+
+@test "is_mutable: bug-exits with a wrong argument count" {
+    run is_mutable
+    assert_failure "$err_invalid_arguments"
+    run is_mutable a b
+    assert_failure "$err_invalid_arguments"
+}
+
 # --- is_indexed_array / is_associative_array / is_array ------------------
 
 @test "is_indexed_array: true for an indexed array" {

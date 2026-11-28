@@ -63,12 +63,12 @@ function parse_arguments()
 
         case "${_option,,}" in
             --branch|-b )
-                (( $# >= 1 ))                                                   || usage "Missing branch name after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing branch name after '$_option'."
                 new_branch="$1"; shift
                 ;;
 
             --commit-sha|-c )
-                (( $# >= 1 ))                                                   || usage "Missing commit SHA after '$_option'." -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing commit SHA after '$_option'."
                 commit_sha="$1"; shift
                 ;;
 
@@ -79,10 +79,10 @@ function parse_arguments()
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                                                                                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                   exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            * )                                                                 usage "Unknown argument '$_option'." -ec "$err_unknown_argument"
+            * )                                                                    usage "$err_unknown_argument" "Unknown argument '$_option'."
                 ;;
         esac
     done
@@ -113,7 +113,7 @@ function verify_environment()
                                                                                 || with_error _rc "$err_logic_error" "Local '$default_branch' is behind 'origin/$default_branch'. Pull first."
 
     # Verify we don't have uncommitted changes
-    (( _rc != success )) || git diff-index --quiet HEAD --                      || error "You have uncommitted changes. Commit or stash them first." -ec "$err_logic_error"
+    (( _rc != success )) || git diff-index --quiet HEAD --                      || error "$err_logic_error" "You have uncommitted changes. Commit or stash them first."
 
     return "$success"
 }
@@ -125,7 +125,7 @@ function resolve_arguments()
     # validate we have a valid branch name != default_branch
     [[ -n $new_branch ]]                                                        || with_error _rc "$err_missing_argument" "The option '--branch' is mandatory."
     (( _rc != success )) || is_valid_branch_name "$new_branch"                  || _rc=$?
-    (( _rc != success )) || [[ "$new_branch" != "$default_branch" ]]            || error "Invalid new branch name '$new_branch': it cannot be the default branch." -ec "$err_argument_value"
+    (( _rc != success )) || [[ "$new_branch" != "$default_branch" ]]            || error "$err_argument_value" "Invalid new branch name '$new_branch': it cannot be the default branch."
 
     # Verify we have a valid and existing SHA
     _rc=$success

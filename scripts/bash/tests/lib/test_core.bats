@@ -696,22 +696,28 @@ _ffp() {
     assert_line --index 2 "last"
 }
 
-@test "error: reads its message from stdin, including a last line without a trailing newline" {
-    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'first-part\nlast-part' | error 2>&1"
+@test "error: does not read stdin -- the message comes only from its arguments" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; printf 'from-stdin\n' | error 'from-args' 2>&1"
     assert_success
-    assert_output --partial "first-part"
-    assert_output --partial "last-part"
+    assert_output --partial "from-args"
+    refute_output --partial "from-stdin"
 }
 
-@test "error: reading its message from stdin ends, even when the caller has a non-empty _line of its own" {
-    # regression: the guard of the message-part loop tested '_line' instead of its own '_part', so through dynamic scope
-    # it saw a caller's '_line' and never ended. 'timeout' turns a hang into a failure instead of stalling the suite.
-    # The output is discarded: a looping guard prints empty message parts as fast as it can, and bats would then have to
-    # process all of it. Only the exit status matters here: 124 means 'timeout' had to stop it.
-    run timeout 5 bash -c "
+@test "error: inside a 'while read' loop, does not consume the loop's input" {
+    # the hazard of reading stdin in a message function: it would swallow the rest of the loop's input
+    run bash -c "
         source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
-        caller_with_a_line() { local _line='a value of the caller'; printf 'the message\n' | error; }
-        caller_with_a_line > /dev/null 2>&1
+        printf 'a\nb\nc\n' | while IFS= read -r line; do error \"Bad '\$line'.\" 2> /dev/null; echo \"seen=\$line\"; done
     "
     assert_success
+    assert_line "seen=a"
+    assert_line "seen=b"
+    assert_line "seen=c"
+}
+
+@test "error: without message parts is a bug, even when stdin is not a terminal" {
+    run bash -c "source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1; error -ns < /dev/null 2>&1; echo 'not-reached'"
+    assert_failure "$err_missing_argument"
+    assert_output --partial "requires"
+    refute_output --partial "not-reached"
 }

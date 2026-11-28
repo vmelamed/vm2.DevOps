@@ -102,11 +102,11 @@ if [[ ! -s $benchmark_exec_path ]]; then
     if ! is_dry_run; then
         warning "Test executable '$benchmark_exec_path' was not found in the artifacts directory. Rebuilding the benchmarks project..."
 
-        update_nuget_sources_with_github_vm2                                    || exit_with_error "Updating the NuGet sources with GitHub packages from vm2 failed." -ec "$err_tool_error"
-        dotnet_clean "$benchmark_project"                                       || exit_with_error "Cleaning the benchmark project failed." -ec "$err_tool_error"
-        dotnet_restore "$benchmark_project"                                     || exit_with_error "Restoring the benchmark project failed." -ec "$err_tool_error"
-        dotnet_build "$benchmark_project"                                       || exit_with_error "Building the test project failed." -ec "$err_tool_error"
-        [[ -s $benchmark_exec_path ]]                                           || exit_with_error "After rebuilding the project, the benchmarks executable '$benchmark_exec_path' was still NOT FOUND." -ec "$err_tool_error"
+        update_nuget_sources_with_github_vm2                                    || exit_with_error "$err_tool_error" "Updating the NuGet sources with GitHub packages from vm2 failed."
+        dotnet_clean "$benchmark_project"                                       || exit_with_error "$err_tool_error" "Cleaning the benchmark project failed."
+        dotnet_restore "$benchmark_project"                                     || exit_with_error "$err_tool_error" "Restoring the benchmark project failed."
+        dotnet_build "$benchmark_project"                                       || exit_with_error "$err_tool_error" "Building the test project failed."
+        [[ -s $benchmark_exec_path ]]                                           || exit_with_error "$err_tool_error" "After rebuilding the project, the benchmarks executable '$benchmark_exec_path' was still NOT FOUND."
     fi
 fi
 
@@ -134,11 +134,11 @@ else
     "$benchmark_exec_path" "${benchmark_args[@]}" || rc=$?
 fi
 
-(( rc == 0 ))                                                                   || exit_with_error "Tests failed in project '$benchmark_project' with exit code $rc." -ec "$err_tool_error"
+(( rc == 0 ))                                                                   || exit_with_error "$err_tool_error" "Tests failed in project '$benchmark_project' with exit code $rc."
 
 # Verify JSON results were created
 json_files=("$results_dir"/*-report-full-compressed.json)
-[[ -f "${json_files[0]}" ]]                                                     || exit_with_error "Failed to find JSON benchmark reports in '$results_dir'." -ec "$err_tool_error"
+[[ -f "${json_files[0]}" ]]                                                     || exit_with_error "$err_tool_error" "Failed to find JSON benchmark reports in '$results_dir'."
 
 trace "Benchmark tests completed successfully. Found JSON benchmark results."
 {

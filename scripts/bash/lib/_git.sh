@@ -3,6 +3,8 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+# length-review: keep together -- Git-focussed functions
+
 #===============================================================================================
 # This script defines functions for working with Git repositories.
 #===============================================================================================
@@ -38,9 +40,9 @@ declare -x semverTagReleaseRegex
 declare -x hex_digits_set
 
 #   Git popular namespaces
-declare -xr git_tags_ns='refs/tags/'                                    # The namespace of the tag refs: 'refs/tags/v1.2.3' is the full ref of the tag 'v1.2.3'
+declare -xr git_tags_ns='refs/tags/'                                            # The namespace of the tag refs: 'refs/tags/v1.2.3' is the full ref of the tag 'v1.2.3'
 declare -xr git_heads_ns='refs/heads/'
-declare -xr git_remotes_ns='refs/remotes/'                              # usage: "$git_remotes_ns$remote/$branch"
+declare -xr git_remotes_ns='refs/remotes/'                                      # usage: "$git_remotes_ns$remote/$branch"
 
 # vm2 core lib variables
 declare -x noise_sink
@@ -58,7 +60,7 @@ declare -x noise_sink
 #-----------------------------------------------------------------------------------------------
 function is_branch_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a branch name." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): a branch name."
                                                                                 exit_if_has_bugs
 
     local _branch=${1#"$git_heads_ns"}
@@ -81,7 +83,7 @@ function is_branch_name()
 #-----------------------------------------------------------------------------------------------
 function is_tag_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a tag name." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): a tag name."
                                                                                 exit_if_has_bugs
 
     local _tag=$1
@@ -105,7 +107,7 @@ function is_tag_name()
 #-----------------------------------------------------------------------------------------------
 function is_valid_tag_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a tag name." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): a tag name."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -135,7 +137,7 @@ declare -r __commit_sha_regex="^[${hex_digits_set}]{4,64}$"
 #-----------------------------------------------------------------------------------------------
 function is_valid_commit_sha()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a SHA string." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): a SHA string."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success
@@ -165,7 +167,7 @@ function is_valid_commit_sha()
 #-----------------------------------------------------------------------------------------------
 function is_valid_branch_name()
 {
-    (( $# == 1 ))                                                               || bug "${FUNCNAME[0]}() requires 1 argument (provided $#): a branch name." -ec "$err_invalid_arguments"
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): a branch name."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -188,8 +190,8 @@ function is_valid_branch_name()
 #-----------------------------------------------------------------------------------------------
 function is_inside_work_tree()
 {
-    (( $# == 0 || $# == 1 ))                                                    || bug "${FUNCNAME[0]}() requires 0 or 1 arguments (provided $#): path to a directory." -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires optional argument 1 to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
+    (( $# == 0 || $# == 1 ))                                                    || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 0 or 1 arguments (provided $#): path to a directory."
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_not_directory" "${FUNCNAME[0]}() requires optional argument 1 to be an existing directory (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _path="${1:-$initial_cwd}"
@@ -217,12 +219,11 @@ function is_inside_work_tree()
 #-----------------------------------------------------------------------------------------------
 function root_working_tree()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - a directory inside a Git working tree" \
-                                                                                       "  - the name of the variable to store the absolute path of the root of the Git working tree containing the found directory" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "${FUNCNAME[0]}() requires argument 2 to be the name of a variable to receive the absolute path of the root of the Git working tree (provided '${2-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - a directory inside a Git working tree" \
+                                                                                                                "  - the name of the variable to store the absolute path of the root of the Git working tree containing the found directory"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the root of the Git working tree (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs # gate here: $2 must be validated before creating a nameref from it below
 
     local _path=$1
@@ -261,12 +262,11 @@ function should_fetch_for_latest_stable_tag()
 {
     local -i _rc="$success"
 
-    (( $# <= 2 ))                                                               || bug "${FUNCNAME[0]}() requires at most 2 arguments (provided $#):" \
-                                                                                       "  - path to an existing directory (Git repository) (optional if the remaining parameters are not provided, default: current working directory)" \
-                                                                                       "  - the branch name to compare against (optional, default: main)" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires optional argument 1 to be an existing Git repository directory (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_branch_name "$2"                                         || bug "${FUNCNAME[0]}() requires optional argument 2 to be a valid Git branch name (provided '${2-<missing>}')." -ec "$err_argument_value"
+    (( $# <= 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at most 2 arguments (provided $#):" \
+                                                                                                                "  - path to an existing directory (Git repository) (optional if the remaining parameters are not provided, default: current working directory)" \
+                                                                                                                "  - the branch name to compare against (optional, default: main)"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_not_directory" "${FUNCNAME[0]}() requires optional argument 1 to be an existing Git repository directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_branch_name "$2"                                         || bug "$err_argument_value" "${FUNCNAME[0]}() requires optional argument 2 to be a valid Git branch name (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _dir=${1:-$initial_cwd}
@@ -372,14 +372,13 @@ function ensure_fresh_git_state()
 #-----------------------------------------------------------------------------------------------
 function get_latest_stable_tag_hash()
 {
-    (( $# == 3 ))                                                               || bug "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
-                                                                                       "  - a directory" \
-                                                                                       "  - flag whether to fetch the latest changes in main from remote" \
-                                                                                       "  - the name of a variable to receive the hash at the tag of the latest stable release" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "${FUNCNAME[0]}() requires argument 3 to be the name of a variable to receive the hash at the tag of the latest stable release (provided '${3-<missing>}')." -ec "$err_invalid_nameref"
+    (( $# == 3 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 3 arguments (provided $#):" \
+                                                                                                                "  - a directory" \
+                                                                                                                "  - flag whether to fetch the latest changes in main from remote" \
+                                                                                                                "  - the name of a variable to receive the hash at the tag of the latest stable release"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || { is_variable "$3" && is_mutable "$3"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable variable for the hash of the tag of the latest stable release (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _dir=$1
@@ -401,7 +400,7 @@ function get_latest_stable_tag_hash()
         sort -V |
         tail -n1
     )                                                                           ||  {
-                                                                                        error "Failed to get tags from Git." -ec "$err_tool_error"
+                                                                                        error "$err_tool_error" "Failed to get tags from Git."
                                                                                         return "$err_tool_error"
                                                                                     }
     [[ -n $_latest_stable_tag ]]                                                || with_error _rc "$err_no_stable_tag" "The repository in '$_dir' has no tag that marks a stable release."
@@ -434,12 +433,11 @@ function get_latest_stable_tag_hash()
 #-----------------------------------------------------------------------------------------------
 function verify_after_latest_stable_tag()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - a directory" \
-                                                                                       "  - flag whether to fetch the latest changes in main from remote" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - a directory" \
+                                                                                                                "  - flag whether to fetch the latest changes in main from remote"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _latest_stable_hash
@@ -452,11 +450,11 @@ function verify_after_latest_stable_tag()
     # How many commits since the latest stable tag
     _commits_after_latest_stable=$(git -C "$1" rev-list "$_latest_stable_hash..HEAD" --count 2>"$noise_sink") \
                                                                                 ||  {
-                                                                                        error "Could not get the list of commits from Git." -ec "$err_tool_error"
+                                                                                        error "$err_tool_error" "Could not get the list of commits from Git."
                                                                                         return "$err_tool_error"
                                                                                     }
     (( _commits_after_latest_stable > 0 ))                                      ||  {
-                                                                                        error "The current branch of the repository in '$1' is not after the tag of the latest stable release." -ec "$err_not_after_latest_stable_tag"
+                                                                                        error "$err_not_after_latest_stable_tag" "The current branch of the repository in '$1' is not after the tag of the latest stable release."
                                                                                         return "$err_not_after_latest_stable_tag"
                                                                                     }
 }
@@ -480,12 +478,11 @@ function verify_after_latest_stable_tag()
 #-----------------------------------------------------------------------------------------------
 function verify_on_or_after_latest_stable_tag()
 {
-    (( $# == 2 ))                                                               || bug "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
-                                                                                       "  - a directory" \
-                                                                                       "  - flag whether to fetch the latest changes in main from remote" \
-                                                                                       -ec "$err_invalid_arguments"
-    [[ ! -v 1 || -d $1 ]]                                                       || bug "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')." -ec "$err_not_directory"
-    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')." -ec "$err_argument_type"
+    (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
+                                                                                                                "  - a directory" \
+                                                                                                                "  - flag whether to fetch the latest changes in main from remote"
+    [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')."
+    [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc=$success

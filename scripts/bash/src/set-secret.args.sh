@@ -47,30 +47,30 @@ function parse_arguments()
 
         case "${_option,,}" in
             -o|--repo-owner )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 repo_owner="$1"; shift
                 ;;
 
             -a|--app )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 app="$1"; shift
                 ;;
 
             -n|--secret-name )
-                (( $# >= 1 ))                                                   || usage "Missing value for $_option" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for $_option"
                 secret_name="$1"; shift
                 ;;
 
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                                                                                   exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                                                                                   exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            -*)                                                                    usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            -*)                                                                    usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
 
-            * ) ! $_option_set                                                  || usage "Too many positional arguments (secret name): $_option" -ec "$err_too_many_arguments"
+            * ) ! $_option_set                                                  || usage "$err_too_many_arguments" "Too many positional arguments (secret name): $_option"
                 secret_name="$_option"
                 _option_set=true
                 ;;
@@ -94,7 +94,7 @@ function resolve_arguments()
     repo_owner=${repo_owner:-$default_repo_owner}
 
     is_valid_gh_repo_owner "$repo_owner"                                        || true
-    is_in_i "$app" "${gh_apps_with_secrets[@]}"                                 || error "Invalid app '$app': use one of: ${gh_apps_with_secrets[*]}." -ec "$err_argument_value"
+    is_in_i "$app" "${gh_apps_with_secrets[@]}"                                 || error "$err_argument_value" "Invalid app '$app': use one of: ${gh_apps_with_secrets[*]}."
     is_valid_gh_secret_name "$secret_name"                                      || true
 
     readonly repo_owner

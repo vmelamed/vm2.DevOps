@@ -54,27 +54,27 @@ function parse_arguments()
 
         case "${_option,,}" in
             --owner|-o )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 owner="$1"; shift
                 ;;
 
             --repeat|-n )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 repeat="$1"; shift
                 ;;
 
             --workflow|-w )
-                (( $# >= 1 ))                                                   || usage "Missing value for ${_option,,}" -ec "$err_missing_argument"
+                (( $# >= 1 ))                                                   || usage "$err_missing_argument" "Missing value for ${_option,,}"
                 workflow="$1"; shift
                 ;;
 
             # reserved: the options get_common_arg consumes before this case. This arm never runs: it lets ShellCheck
             # (SC2221/SC2222) flag any script-specific arm that reuses one of them, and it bugs out if the lists drift apart.
             -h|-\?|-v|-q|-x|-y|-gr|-md|--help|--verbose|--quiet|--trace|--dry-run|--graphical|--markdown )
-                exit_with_bug "'$_option' should have been consumed by get_common_arg." -ec "$err_logic_error"
+                exit_with_bug "'$_option' should have been consumed by get_common_arg." "'$_option' should have been consumed by get_common_arg."
                 ;;
 
-            *)  usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+            *)  usage "$err_unknown_argument" "Unknown argument: $_option"
                 ;;
         esac
     done
@@ -112,8 +112,8 @@ function resolve_arguments()
         fi
     fi
 
-    is_positive "$repeat"                                                       || error "repeat must be a positive integer (got '$repeat')." -ec "$err_argument_value"
-    [[ -n "$owner" ]]                                                           || error "Failed to determine the GitHub owner." "Use '--owner <owner>', or set \$GITHUB_REPOSITORY_OWNER." -ec "$err_argument_value"
+    is_positive "$repeat"                                                       || error "$err_argument_value" "repeat must be a positive integer (got '$repeat')."
+    [[ -n "$owner" ]]                                                           || error "$err_argument_value" "Failed to determine the GitHub owner." "Use '--owner <owner>', or set \$GITHUB_REPOSITORY_OWNER."
 
     readonly owner
     readonly repeat

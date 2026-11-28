@@ -44,9 +44,9 @@ function parse_arguments()
             continue
         }
 
-        [[ "$_option" != -* ]]                                                  || usage "Unknown argument: $_option" -ec "$err_unknown_argument"
+        [[ "$_option" != -* ]]                                                  || usage "$err_unknown_argument" "Unknown argument: $_option"
 
-        ! $_positional_arg_set                                                  || usage "Multiple benchmark projects specified: $_option" -ec "$err_too_many_arguments"
+        ! $_positional_arg_set                                                  || usage "$err_too_many_arguments" "Multiple benchmark projects specified: $_option"
         benchmark_project="$_option"
         _positional_arg_set=true
     done
@@ -64,7 +64,7 @@ function verify_environment
 function resolve_arguments()
 {
     is_safe_existing_path "$benchmark_project"                                  || true
-    [[ $benchmark_project == *.csproj ]]                                        || error "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)." -ec "$err_argument_value"
+    [[ $benchmark_project == *.csproj ]]                                        || error "$err_argument_value" "The script '${script_name}' accepts only project files (*.csproj) - not solutions (*.sln or *.slnx)."
     sanitize_common_dotnet_args "$benchmark_project"
 
     readonly benchmark_project
