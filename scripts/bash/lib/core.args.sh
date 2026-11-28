@@ -123,7 +123,7 @@ function usage_if_requested()
 #   first `--error-code`/`-ec`, or 1 (see @exitcode below).
 # @arg $@ strings Additional error message parts to display at the top of the output.
 #   Optional, if omitted, no message is shown. Supports the same named parameters as
-#    `message`/`error`:
+#    `__message`/`error`:
 #     - `--error-code`/`-ec` followed by a positive error code less than 256 -- translated to
 #       a message, if defined in `_error_codes.sh`, and included in the output. May occur
 #       multiple times; each occurrence is translated independently.

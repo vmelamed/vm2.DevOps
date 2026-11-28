@@ -38,6 +38,7 @@ _sr() {
         source '$lib_dir/core.sh' --no-trap > /dev/null 2>&1
         source '$_src_dir/setup-repo.defaults.sh'
         source '$_src_dir/setup-repo.functions.sh'
+        source '$_src_dir/setup-repo.configure.sh'
         $1
     "
 }
@@ -73,16 +74,16 @@ EOF
 # initialize_gh_paths()
 # =====================================================================================
 
-@test "initialize_gh_paths: bug-exits (accumulating both) when repo and main_protection_rs_name are unset" {
+@test "initialize_gh_paths: bug-exits (accumulating both) when repo and branch_protection_rs_name are unset" {
     run _sr "initialize_gh_paths"
     assert_failure "$err_logic_error"
     assert_output --partial "requires the variable 'repo' to be set"
-    assert_output --partial "requires the variable 'main_protection_rs_name' to be set"
+    assert_output --partial "requires the variable 'branch_protection_rs_name' to be set"
 }
 
 @test "initialize_gh_paths: derives and freezes all path_* variables from repo" {
     run _sr "repo='acme/myrepo'
-             main_protection_rs_name='main protection'
+             branch_protection_rs_name='main protection'
              initialize_gh_paths
              declare -p path_repo path_permissions path_rulesets path_actions_secrets path_dependabot_secrets path_vars"
     assert_success
@@ -98,20 +99,20 @@ EOF
 # initialize_jq_queries()
 # =====================================================================================
 
-@test "initialize_jq_queries: bug-exits when main_protection_rs_name is unset" {
+@test "initialize_jq_queries: bug-exits when branch_protection_rs_name is unset" {
     run _sr "initialize_jq_queries"
     assert_failure "$err_logic_error"
-    assert_output --partial "requires the variable 'main_protection_rs_name' to be set"
+    assert_output --partial "requires the variable 'branch_protection_rs_name' to be set"
 }
 
 @test "initialize_jq_queries: bug-exits when actions_app_id is not positive" {
-    run _sr "main_protection_rs_name='x'; actions_app_id=0; initialize_jq_queries"
+    run _sr "branch_protection_rs_name='x'; actions_app_id=0; initialize_jq_queries"
     assert_failure "$err_logic_error"
     assert_output --partial "requires the variable 'actions_app_id' to be set to a valid ID"
 }
 
 @test "initialize_jq_queries: embeds the ruleset name and app IDs into the generated jq query strings" {
-    run _sr "main_protection_rs_name='main protection'
+    run _sr "branch_protection_rs_name='main protection'
              actions_app_id=15368
              initialize_jq_queries
              declare -p jq_ruleset_id jq_status_checks"
@@ -252,48 +253,48 @@ EOF
 }
 
 # =====================================================================================
-# initialize_main_protection_rs_id()
+# initialize_branch_protection_rs_id()
 # =====================================================================================
 
-@test "initialize_main_protection_rs_id: bug-exits when preconditions (name, path_rulesets) are unset" {
-    run _sr "initialize_main_protection_rs_id"
+@test "initialize_branch_protection_rs_id: bug-exits when preconditions (name, path_rulesets) are unset" {
+    run _sr "initialize_branch_protection_rs_id"
     assert_failure "$err_logic_error"
 }
 
-@test "initialize_main_protection_rs_id: resolves and freezes the ruleset ID and derived path when found" {
+@test "initialize_branch_protection_rs_id: resolves and freezes the ruleset ID and derived path when found" {
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     printf '#!/usr/bin/env bash\necho 42\n' > "$BATS_TEST_TMPDIR/bin/gh"
     chmod +x "$BATS_TEST_TMPDIR/bin/gh"
-    run _sr "main_protection_rs_name='main protection'
+    run _sr "branch_protection_rs_name='main protection'
              path_rulesets='repos/a/b/rulesets'
              jq_ruleset_id='.id'
-             initialize_main_protection_rs_id
+             initialize_branch_protection_rs_id
              echo \"RC=\$?\"
-             declare -p main_protection_rs_id path_main_protection_ruleset" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
+             declare -p branch_protection_rs_id path_branch_protection_ruleset" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial "RC=0"
-    assert_output --partial 'main_protection_rs_id="42"'
-    assert_output --partial 'path_main_protection_ruleset="repos/a/b/rulesets/42"'
+    assert_output --partial 'branch_protection_rs_id="42"'
+    assert_output --partial 'path_branch_protection_ruleset="repos/a/b/rulesets/42"'
 }
 
-@test "initialize_main_protection_rs_id: returns failure without re-querying when already initialized" {
-    run _sr "main_protection_rs_name='main protection'
+@test "initialize_branch_protection_rs_id: returns failure without re-querying when already initialized" {
+    run _sr "branch_protection_rs_name='main protection'
              path_rulesets='repos/a/b/rulesets'
-             main_protection_rs_id=42
-             initialize_main_protection_rs_id
+             branch_protection_rs_id=42
+             initialize_branch_protection_rs_id
              echo \"RC=\$?\""
     assert_success
     assert_output --partial "RC=0"
 }
 
-@test "initialize_main_protection_rs_id: returns failure (sentinel, not err_logic_error) when the ruleset does not exist yet" {
+@test "initialize_branch_protection_rs_id: returns failure (sentinel, not err_logic_error) when the ruleset does not exist yet" {
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     printf '#!/usr/bin/env bash\nexit 0\n' > "$BATS_TEST_TMPDIR/bin/gh"
     chmod +x "$BATS_TEST_TMPDIR/bin/gh"
-    run _sr "main_protection_rs_name='main protection'
+    run _sr "branch_protection_rs_name='main protection'
              path_rulesets='repos/a/b/rulesets'
              jq_ruleset_id='.id'
-             initialize_main_protection_rs_id
+             initialize_branch_protection_rs_id
              echo \"RC=\$?\"" "$BATS_TEST_TMPDIR/bin:/usr/local/bin:/usr/bin:/bin"
     assert_success
     assert_output --partial "RC=1"
@@ -566,7 +567,7 @@ EOF
 # =====================================================================================
 
 @test "configure_branch_protection: POSTs a new ruleset when none exists yet" {
-    # configure_branch_protection() re-runs initialize_main_protection_rs_id() at the end to
+    # configure_branch_protection() re-runs initialize_branch_protection_rs_id() at the end to
     # pick up the ID of the ruleset it just created, so the fake gh must start answering the
     # id lookup once the POST has actually happened -- otherwise the function's own final
     # return code (unrelated to what this test checks: the POST call itself) is a failure.
@@ -585,7 +586,7 @@ fi
 exit 0
 EOF
     chmod +x "$BATS_TEST_TMPDIR/bin/gh"
-    run _sr "main_protection_rs_name='main protection'
+    run _sr "branch_protection_rs_name='main protection'
              path_rulesets='repos/acme/myrepo/rulesets'
              jq_ruleset_id='.id'
              default_branch='main'
@@ -612,7 +613,7 @@ if [[ "$*" == *"-q .id"* ]]; then echo 99; fi
 exit 0
 EOF
     chmod +x "$BATS_TEST_TMPDIR/bin/gh"
-    run _sr "main_protection_rs_name='main protection'
+    run _sr "branch_protection_rs_name='main protection'
              path_rulesets='repos/acme/myrepo/rulesets'
              jq_ruleset_id='.id'
              default_branch='main'
@@ -666,4 +667,3 @@ GH
     assert_output --partial "Failed to read the variable 'NUGET_SERVER' of the repository 'acme/myrepo'."
     assert_output --partial "RC=$err_access_denied"
 }
-

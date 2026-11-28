@@ -125,7 +125,7 @@ function get_msbuild_property()
                                                                                                                 "  - nameref to a variable to receive the value of the property"
     [[ ! -v 1 ]] || [[ $1 == *.csproj && -s $1 ]]                               || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be the path to an existing project file (provided '${1-<missing>}')."
     [[ ! -v 2 ]] || is_variable_name "$2"                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the name of the property whose value should be retrieved, to be a valid property name (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3, the name of a variable to receive the value of the property, to be a defined variable (provided '${3-<missing>}')."
+    [[ ! -v 3 ]] || { is_variable "$3" && is_mutable "$3"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable variable for the value of the property (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -183,7 +183,7 @@ function get_msbuild_properties()
                                                                                                                 "  - nameref to an associative-array variable to receive the property name/value pairs" \
                                                                                                                 "  - names of two or more properties whose values should be retrieved"
     [[ ! -v 1 ]] || [[ $1 == *.csproj && -s $1 ]]                               || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be the path to an existing project file (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be the name of an associative array variable to receive the property names and values (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_associative_array "$2" && is_mutable "$2"; }           || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable associative array for the property names and values (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -259,7 +259,7 @@ function get_target_path()
     (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                                                 "  - path to a .csproj file" \
                                                                                                                 "  - nameref to a variable to receive the full path to the assembly that was or would be produced"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2, the variable name to receive the full path to the assembly, to be a defined variable (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the full path to the assembly (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     get_msbuild_property "$1" "$key_target_path" "$2"
@@ -296,7 +296,7 @@ function get_artifacts_path()
     (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#):" \
                                                                                                                 "  - path to a .csproj, .sln, or .slnx file" \
                                                                                                                 "  - nameref to a variable to receive the full path to the assembly that was or would be produced"
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2, the variable name to receive the full path to the assembly, to be a defined variable (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the full path to the 'ArtifactsPath' (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __artifacts=$2
@@ -338,7 +338,7 @@ function convert_dotnet_args_to_msbuild_args()
     (( $# > 1 ))                                                                || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires at least 2 arguments (provided $#):" \
                                                                                                                 "  - the name of the array variable to receive the MSBuild arguments" \
                                                                                                                 "  - the 'dotnet <command>' arguments to be converted"
-    [[ ! -v 1 ]] || is_indexed_array "$1"                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed array variable to which the build arguments will be added (provided '${1-<missing>}')."
+    [[ ! -v 1 ]] || { is_indexed_array "$1" && is_mutable "$1"; }               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable indexed array to add the MSBuild arguments to (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __msb_args=$1
@@ -445,7 +445,7 @@ function extract_dotnet_build_info()
                                                                                                                 "  - the name of an associative array variable to receive the build information"
     [[ ! -v 1 ]] || [[ $1 == *.@(slnx|sln|csproj) && -s $1 ]]                   || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be the path to an existing project or solution file (provided '${1-<missing>}')."
     [[ ! -v 2 ]] || is_non_negative "$2"                                        || bug "$err_argument_type" "${FUNCNAME[0]}() requires argument 2 to be an exit code - non-negative number (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_associative_array "$3"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name an associative array that will receive build information (provided '${3-<missing>}')."
+    [[ ! -v 3 ]] || { is_associative_array "$3" && is_mutable "$3"; }           || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable associative array for the build information (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -520,7 +520,7 @@ function extract_dotnet_build_info()
 function display_dotnet_build_summary()
 {
     (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an associative array variable containing the build information"
-    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array containing build information (provided '${1-<missing>}')."
+    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an associative array that holds the build information (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __build_info=$1

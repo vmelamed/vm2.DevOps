@@ -100,8 +100,8 @@ function resolve_target()
                                                                                                                 "  - the name of the variable to store the absolute path of the target repository directory"
     [[ ! -v 1 || -n $1 && -d $1 ]]                                              || bug "$err_not_directory" "${FUNCNAME[0]}() requires argument 1, the directory of the vm2 repositories, to be an existing directory (provided '${1-<missing>}')."
     [[ ! -v 2 || -n $2 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the directory name of the target repository, to be an existing directory (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a variable to receive the absolute path of the target repository's working tree root (provided '${3-<missing>}')."
-    [[ ! -v 4 ]] || is_variable "$4"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4 to be the name of a variable to receive the absolute path of the target repository directory (provided '${4-<missing>}')."
+    [[ ! -v 3 ]] || { is_variable "$3" && is_mutable "$3"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable variable for the root of the target repository's working tree (provided '${3-<missing>}')."
+    [[ ! -v 4 ]] || { is_variable "$4" && is_mutable "$4"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4 to name a writable variable for the path of the target repository directory (provided '${4-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _repos="$1"
@@ -154,8 +154,8 @@ function __find_shared_markers()
                                                                                                                 "  - the name of the variable to receive the begin marker's line number" \
                                                                                                                 "  - the name of the variable to receive the end marker's line number"
     [[ ! -v 1 || -f $1 ]]                                                       || bug "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the file to scan, to be an existing file (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a defined variable (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a defined variable (provided '${3-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the line number of the begin marker (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || { is_variable "$3" && is_mutable "$3"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable variable for the line number of the end marker (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __begin_line_out="$2"
@@ -198,7 +198,7 @@ function get_shared_block()
                                                                                                                 "  - the file to scan for a shared-content marker pair" \
                                                                                                                 "  - the name of the variable to receive the extracted shared content"
     [[ ! -v 1 || -f $1 ]]                                                       || bug "$err_not_file" "${FUNCNAME[0]}() requires argument 1, the file to scan, to be an existing file (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a defined variable (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the shared content (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __shared_content_out="$2"

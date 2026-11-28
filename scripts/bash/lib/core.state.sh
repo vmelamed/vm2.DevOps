@@ -434,7 +434,7 @@ declare __table_format=${DUMP_FORMAT:-$default_table_format}
 function get_table_format()
 {
     (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to store the current table format in."
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a declared variable (provided '${1-<missing>}')."
+    [[ ! -v 1 ]] || { is_variable "$1" && is_mutable "$1"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable variable for the table format (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __ret_format=$1
@@ -520,7 +520,7 @@ declare -xri state_length=10
 function save_state()
 {
     (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of an array variable that will store the saved state."
-    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of an array variable that will store the saved state (provided '${1-<missing>}')."
+    [[ ! -v 1 ]] || { is_associative_array "$1" && is_mutable "$1"; }           || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable associative array for the saved state (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __state="$1"
@@ -575,7 +575,7 @@ function restore_state()
     (( $# == 1 || $# == 2 ))                                                    || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 or 2 arguments (provided $#):" \
                                                                                                                 "  - the name of an array variable that will store the saved state" \
                                                                                                                 "  - an optional flag whether to preserve/restore the number of errors"
-    [[ ! -v 1 ]] || is_associative_array "$1"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of an associative array variable where 'save_state' has stored the global state (provided '${1-<missing>}')."
+    [[ ! -v 1 ]] || { is_associative_array "$1" && is_mutable "$1"; }           || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable associative array that holds the state saved by 'save_state' (provided '${1-<missing>}')."
     [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be a boolean indicating whether to preserve or restore the number of errors (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 

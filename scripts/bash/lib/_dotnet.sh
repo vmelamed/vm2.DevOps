@@ -198,7 +198,7 @@ function dotnet_build()
                                                                                                                 "  - name of an associative array to receive the build information (optional if this is the last argument)" \
                                                                                                                 "  - additional arguments to pass to 'dotnet build' (optional, if any are present - requires argument 2)"
     [[ ! -v 1 ]] || [[ -s $1 && $1 == *.@(csproj|slnx|sln) ]]                   || bug "$err_not_file" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project or solution file (provided '${1-<missing>}')."
-    [[ ! -v 2 || -z $2 ]] || is_associative_array "$2"                          || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires optional argument 2 to name an associative array that will receive the build information (provided '${2-<missing>}')."
+    [[ ! -v 2 || -z $2 ]] || { is_associative_array "$2" && is_mutable "$2"; }  || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires optional argument 2 to name a writable associative array for the build information (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -307,7 +307,7 @@ function dotnet_pack()
                                                                                                                 "  - package release notes (can be empty string)" \
                                                                                                                 "  - nameref to an associative array variable that will store the properties of the produced packages"
     [[ ! -v 1 ]] || [[ -s $1 && $1 == *.csproj ]]                               || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing project file (provided '${1-<missing>}')."
-    [[ ! -v 3 || -z $3 ]] || is_associative_array "$3"                          || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array (provided '${3-<missing>}')."
+    [[ ! -v 3 || -z $3 ]] || { is_associative_array "$3" && is_mutable "$3"; }  || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires optional argument 3 to name a writable associative array for the properties of the package (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -432,7 +432,7 @@ function list_solution_projects()
                                                                                                                 "  - path to a solution file (*.sln or *.slnx)" \
                                                                                                                 "  - name of an indexed array variable to receive the list of project paths"
     [[ ! -v 1 ]] || [[ -s $1 && $1 == *.@(slnx|sln) ]]                          || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing solution file (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a declared indexed-array variable (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_indexed_array "$2" && is_mutable "$2"; }               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable indexed array for the projects of the solution (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -i _rc="$success"
@@ -501,7 +501,7 @@ function list_solution_projects()
 function expand_solution_projects()
 {
     (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of a variable containing a JSON array of project/solution paths."
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a declared variable (provided '${1-<missing>}')."
+    [[ ! -v 1 ]] || { is_variable "$1" && is_mutable "$1"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable variable that holds the JSON array of project and solution paths (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __projects=$1

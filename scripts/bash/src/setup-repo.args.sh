@@ -37,7 +37,7 @@ declare -x repo=''
 declare -x ci_yaml=''
 declare -x default_branch=$default_default_branch
 declare -x visibility=$default_visibility
-declare -x main_protection_rs_name=''
+declare -x branch_protection_rs_name=''
 declare -x description=''
 declare -x use_ssh=true
 declare -x use_https=false
@@ -57,7 +57,7 @@ declare -xra arguments=(
     repo_name
     default_branch
     visibility
-    main_protection_rs_name
+    branch_protection_rs_name
     description
     use_ssh
     use_https
@@ -144,7 +144,7 @@ function parse_arguments()
 
             --ruleset-name|-rs )
                 (( $# >= 1 ))                                                   || usage "Missing the name of the ruleset for protecting the default branch after '$_option'." -ec "$err_missing_argument"
-                main_protection_rs_name="$1"; shift
+                branch_protection_rs_name="$1"; shift
                 ;;
 
             --description )
@@ -251,7 +251,7 @@ function verify_environment()
 #   - Two circuit breakers exit the process at once, because nothing after them can be checked meaningfully: an
 #     unresolvable `vm2_repos`, and a target directory that cannot be resolved to a repository root (or to a directory
 #     with a CI configuration that can become one).
-#   - `repo_owner`, `repo_path`, `repo_name`, `description`, `default_branch`, `main_protection_rs_name`, `use_ssh`,
+#   - `repo_owner`, `repo_path`, `repo_name`, `description`, `default_branch`, `branch_protection_rs_name`, `use_ssh`,
 #     and `use_https` stay writable: `setup-repo.sh` adjusts them to what Git and GitHub report, or asks the user.
 #
 # @exitcode success=0: Always, unless a circuit breaker exits the process: every other failure is reported with
@@ -323,7 +323,7 @@ function resolve_arguments()
     # readonly repo_name
     # readonly description
     # readonly default_branch
-    # readonly main_protection_rs_name
+    # readonly branch_protection_rs_name
     # readonly use_ssh
     # readonly use_https
 

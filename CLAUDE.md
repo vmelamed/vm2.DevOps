@@ -187,31 +187,32 @@ function get_arguments()
 
 All core library files live in `scripts/bash/lib/` and are sourced by scripts that need them:
 
-| File                    | Purpose                                                           |
-|-------------------------|-------------------------------------------------------------------|
-| `gh_core.sh`            | GitHub Actions environment integration (sources core.sh)          |
-| `core.sh`               | Initialization, trap handlers                                     |
-| `_constants.sh`         | ANSI color codes and a few other constants                        |
-| `core.state.sh`         | Common state variables (quiet, verbose, dry-run, trace modes)     |
-| `_error_codes.sh`       | Error code constants                                              |
-| `_predicates.sh`        | Boolean checks (`is_array`, `is_positive`, etc.)                  |
-| `_predicates.tools.sh`  | Tool presence checks (`is_tool_present`, `verify_git`, etc.)      |
-| `_predicates.json.sh`   | JSON checks (`is_json`, `validate_json_array`, etc.)              |
-| `_diagnostics.sh`       | Logging (`tee_stdout`, `error`, `warning`, `trace`, etc.)         |
-| `core.args.sh`          | Common argument parsing to initialize core state                  |
-| `_semver.sh`            | Semantic versioning utilities                                     |
-| `_sanitize.sh`          | Input validation (`is_safe_path`, `is_valid_gh_reason`, etc.)     |
-| `_dump_vars.sh`         | Dumps the values of bash variables in a tabular format            |
-| `_user.sh`              | User interface primitives                                         |
-| `_git.sh`               | Git operations (plain git, no hosting service)                    |
-| `_git.gh.sh`            | GitHub: naming rules, repo state, `gh` transient predicate        |
-| `_git.vm2.sh`           | Git operations with focus on vm2 repos                            |
-| `_xml.sh`               | Generic XML value reading via `yq`                                |
-| `_dotnet.constants.sh`  | `dotnet` exit codes, build-information keys, values in use        |
-| `_dotnet.predicates.sh` | Validation of configuration, TFM, RID, MinVer, NuGet server, etc. |
-| `_dotnet.args.sh`       | Common `dotnet` argument parsing and validation                   |
-| `_dotnet.msbuild.sh`    | MSBuild properties, argument conversion, build information        |
-| `_dotnet.sh`            | Clean, restore, build, pack, and solution helpers                 |
+| File                       | Purpose                                                           |
+|----------------------------|-------------------------------------------------------------------|
+| `gh_core.sh`               | GitHub Actions environment integration (sources core.sh)          |
+| `core.sh`                  | Initialization, trap handlers                                     |
+| `_constants.sh`            | ANSI color codes and a few other constants                        |
+| `core.state.sh`            | Common state variables (quiet, verbose, dry-run, trace modes)     |
+| `_error_codes.sh`          | Error code constants                                              |
+| `_predicates.sh`           | Boolean checks (`is_array`, `is_positive`, etc.)                  |
+| `_predicates.tools.sh`     | Tool presence checks (`is_tool_present`, `verify_git`, etc.)      |
+| `_predicates.json.sh`      | JSON checks (`is_json`, `validate_json_array`, etc.)              |
+| `_diagnostics.sh`          | Output streams (`tee_stdout`, `to_summary`), error/bug counters   |
+| `_diagnostics.messages.sh` | Logging (`error`, `with_error`, `bug`, `warning`, `trace`, etc.)  |
+| `core.args.sh`             | Common argument parsing to initialize core state                  |
+| `_semver.sh`               | Semantic versioning utilities                                     |
+| `_sanitize.sh`             | Input validation (`is_safe_path`, `is_valid_gh_reason`, etc.)     |
+| `_dump_vars.sh`            | Dumps the values of bash variables in a tabular format            |
+| `_user.sh`                 | User interface primitives                                         |
+| `_git.sh`                  | Git operations (plain git, no hosting service)                    |
+| `_git.gh.sh`               | GitHub: naming rules, repo state, `gh` transient predicate        |
+| `_git.vm2.sh`              | Git operations with focus on vm2 repos                            |
+| `_xml.sh`                  | Generic XML value reading via `yq`                                |
+| `_dotnet.constants.sh`     | `dotnet` exit codes, build-information keys, values in use        |
+| `_dotnet.predicates.sh`    | Validation of configuration, TFM, RID, MinVer, NuGet server, etc. |
+| `_dotnet.args.sh`          | Common `dotnet` argument parsing and validation                   |
+| `_dotnet.msbuild.sh`       | MSBuild properties, argument conversion, build information        |
+| `_dotnet.sh`               | Clean, restore, build, pack, and solution helpers                 |
 
 See `scripts/bash/lib/FUNCTIONS_REFERENCE.md` for the full function inventory.
 
@@ -333,7 +334,7 @@ happened.
 ##### Chaining Fallible Steps with `with_error`
 
 A sequence of steps where each one runs only if all previous ones succeeded is railway-oriented programming (ROP) done by
-hand: a failure switches to the error track, and every later step stays on it. `with_error` (`_diagnostics.sh`) is the
+hand: a failure switches to the error track, and every later step stays on it. `with_error` (`_diagnostics.messages.sh`) is the
 "switch tracks" operation. It records a vm2 `$err_*` code in the caller's variable, reports the failure with `error`, and
 returns `$success`, so `cmd || with_error …` never trips `errexit`:
 
@@ -389,10 +390,10 @@ buffering, and error-propagation behavior, especially when command substitution 
   piping mechanism like command substitution, e.g., `output_value="$(my_function)"`. Use this method when your function does
   not have side effects that modify the state of the calling script, like global variables.
 
-  For example, the function `error` in `_diagnostics.sh` increments the global error counter `__errors`, which is tested by
-  `exit_if_has_errors`. However, `$(...)` is executed in a subshell, so **no** changes to global variables within the command
-  substitution will affect the caller's environment, e.g., in this case the global counter `__errors` would not be updated at
-  all. Therefore, this code will **not** have the desired effect:
+  For example, the function `error` in `_diagnostics.messages.sh` increments the global error counter `__errors`, which is
+  tested by `exit_if_has_errors`. However, `$(...)` is executed in a subshell, so **no** changes to global variables within the
+  command substitution will affect the caller's environment, e.g., in this case the global counter `__errors` would not be
+  updated at all. Therefore, this code will **not** have the desired effect:
 
   ```bash
   # (( __errors == 0 )) == true

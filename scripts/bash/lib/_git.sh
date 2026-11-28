@@ -3,6 +3,8 @@
 
 # shellcheck disable=SC2148 # This script is intended to be sourced, not executed directly.
 
+# length-review: keep together -- Git-focussed functions
+
 #===============================================================================================
 # This script defines functions for working with Git repositories.
 #===============================================================================================
@@ -221,7 +223,7 @@ function root_working_tree()
                                                                                                                 "  - a directory inside a Git working tree" \
                                                                                                                 "  - the name of the variable to store the absolute path of the root of the Git working tree containing the found directory"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing directory (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a variable to receive the absolute path of the root of the Git working tree (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the root of the Git working tree (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs # gate here: $2 must be validated before creating a nameref from it below
 
     local _path=$1
@@ -376,7 +378,7 @@ function get_latest_stable_tag_hash()
                                                                                                                 "  - the name of a variable to receive the hash at the tag of the latest stable release"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_not_directory" "${FUNCNAME[0]}() requires argument 1 to be an existing Git repository directory (provided '${1-<missing>}')."
     [[ ! -v 2 ]] || is_boolean "$2"                                             || bug "$err_argument_type" "${FUNCNAME[0]}() requires argument 2, the fetch flag, to be 'true' or 'false' (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a variable to receive the hash at the tag of the latest stable release (provided '${3-<missing>}')."
+    [[ ! -v 3 ]] || { is_variable "$3" && is_mutable "$3"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable variable for the hash of the tag of the latest stable release (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _dir=$1

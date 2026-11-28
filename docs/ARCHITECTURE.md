@@ -65,7 +65,7 @@ vm2.DevOps provides CI/CD automation framework for .NET NuGet packages through a
 │  compute-release-version · download-artifact            │
 ├─────────────────────────────────────────────────────────┤
 │  Bash Library  (vm2.DevOps/scripts/bash/lib/)           │
-│  core.sh · gh_core.sh · 21 component modules            │
+│  core.sh · gh_core.sh · 22 component modules            │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -341,31 +341,32 @@ invokes this action, making all scripts and library functions available for the 
 
 A shared function library sourced by scripts at startup.
 
-| Module                  | Role                                                                                                                                  |
-|:------------------------|:--------------------------------------------------------------------------------------------------------------------------------------|
-| `core.sh`               | General-purpose functions (logging, paths, variables) — sources every `_*.sh` module below directly                                   |
-| `gh_core.sh`            | GitHub Actions helpers — sources only `core.sh`; overrides `tee_*` to write to the GitHub files; `gh_escape`, `args_to_github_output` |
-| `core.args.sh`          | Argument parsing utilities                                                                                                            |
-| `_constants.sh`         | Shared constants                                                                                                                      |
-| `core.state.sh`         | Common state variables (quiet, verbose, dry-run, trace modes)                                                                         |
-| `_diagnostics.sh`       | Debug and diagnostic output                                                                                                           |
-| `_dotnet.sh`            | .NET SDK helpers: clean, restore, build, pack, solution projects                                                                      |
-| `_dotnet.constants.sh`  | `dotnet` exit codes, build-information keys, the configurations/TFMs/RIDs in use                                                      |
-| `_dotnet.predicates.sh` | Validation of the build configuration, TFM, RID, preprocessor symbols, percentages, MinVer prefix/prerelease identifier, NuGet server |
-| `_dotnet.msbuild.sh`    | MSBuild properties, `dotnet` to `dotnet msbuild` argument conversion, build information                                               |
-| `_dotnet.args.sh`       | Shared dotnet CLI argument parsing/defaults                                                                                           |
-| `_dump_vars.sh`         | Variable dump for debugging                                                                                                           |
-| `_error_codes.sh`       | Standardized error codes for CI scripts                                                                                               |
-| `_git.vm2.sh`           | Git repository helpers specific to vm2 repos                                                                                          |
-| `_git.sh`               | Git repository helpers (plain git, no hosting service)                                                                                |
-| `_git.gh.sh`            | GitHub helpers: naming rules, the repo state (`get_repo_state`), the `gh` transient-failure predicate                                 |
-| `_predicates.sh`        | Boolean test functions                                                                                                                |
-| `_predicates.tools.sh`  | Tool presence and version checks (`is_tool_present`, `verify_git`, `verify_gh`, ...)                                                  |
-| `_predicates.json.sh`   | JSON checks via `jq` and `check-jsonschema`                                                                                           |
-| `_sanitize.sh`          | Input sanitization                                                                                                                    |
-| `_semver.sh`            | Semantic versioning utilities                                                                                                         |
-| `_user.sh`              | User/identity helpers                                                                                                                 |
-| `_xml.sh`               | Generic XML value reading via `yq` (knows nothing about dotnet/MSBuild)                                                               |
+| Module                     | Role                                                                                                                                  |
+|:---------------------------|:--------------------------------------------------------------------------------------------------------------------------------------|
+| `core.sh`                  | General-purpose functions (logging, paths, variables) — sources every `_*.sh` module below directly                                   |
+| `gh_core.sh`               | GitHub Actions helpers — sources only `core.sh`; overrides `tee_*` to write to the GitHub files; `gh_escape`, `args_to_github_output` |
+| `core.args.sh`             | Argument parsing utilities                                                                                                            |
+| `_constants.sh`            | Shared constants                                                                                                                      |
+| `core.state.sh`            | Common state variables (quiet, verbose, dry-run, trace modes)                                                                         |
+| `_diagnostics.sh`          | Output streams (`tee_*`, `to_summary`), the error/bug counters, and the `exit_if_has_*` gates                                         |
+| `_diagnostics.messages.sh` | Logging: `error`, `with_error`, `bug`, `warning`, `info`, `trace`, and their `exit_*` forms                                           |
+| `_dotnet.sh`               | .NET SDK helpers: clean, restore, build, pack, solution projects                                                                      |
+| `_dotnet.constants.sh`     | `dotnet` exit codes, build-information keys, the configurations/TFMs/RIDs in use                                                      |
+| `_dotnet.predicates.sh`    | Validation of the build configuration, TFM, RID, preprocessor symbols, percentages, MinVer prefix/prerelease identifier, NuGet server |
+| `_dotnet.msbuild.sh`       | MSBuild properties, `dotnet` to `dotnet msbuild` argument conversion, build information                                               |
+| `_dotnet.args.sh`          | Shared dotnet CLI argument parsing/defaults                                                                                           |
+| `_dump_vars.sh`            | Variable dump for debugging                                                                                                           |
+| `_error_codes.sh`          | Standardized error codes for CI scripts                                                                                               |
+| `_git.vm2.sh`              | Git repository helpers specific to vm2 repos                                                                                          |
+| `_git.sh`                  | Git repository helpers (plain git, no hosting service)                                                                                |
+| `_git.gh.sh`               | GitHub helpers: naming rules, the repo state (`get_repo_state`), the `gh` transient-failure predicate                                 |
+| `_predicates.sh`           | Boolean test functions                                                                                                                |
+| `_predicates.tools.sh`     | Tool presence and version checks (`is_tool_present`, `verify_git`, `verify_gh`, ...)                                                  |
+| `_predicates.json.sh`      | JSON checks via `jq` and `check-jsonschema`                                                                                           |
+| `_sanitize.sh`             | Input sanitization                                                                                                                    |
+| `_semver.sh`               | Semantic versioning utilities                                                                                                         |
+| `_user.sh`                 | User/identity helpers                                                                                                                 |
+| `_xml.sh`                  | Generic XML value reading via `yq` (knows nothing about dotnet/MSBuild)                                                               |
 
 Scripts source `gh_core.sh` for the GitHub Actions environment, or `core.sh` directly for standalone scripts; either
 one pulls in every `_*.sh` module, so there is no need to source additional modules individually.

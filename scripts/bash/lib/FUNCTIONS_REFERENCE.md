@@ -85,6 +85,10 @@
     - [exit\_if\_has\_bugs()](#exit_if_has_bugs)
     - [usage()](#usage)
     - [exit\_if\_has\_errors()](#exit_if_has_errors)
+    - [show\_stack()](#show_stack)
+    - [to\_summary()](#to_summary)
+    - [now\_us()](#now_us)
+  - [\_diagnostics.messages.sh](#_diagnosticsmessagessh)
     - [\_\_message()](#__message)
     - [error()](#error)
     - [exit\_with\_error()](#exit_with_error)
@@ -96,15 +100,12 @@
     - [info()](#info)
     - [trace()](#trace)
     - [warning\_var()](#warning_var)
-    - [show\_stack()](#show_stack)
-    - [to\_summary()](#to_summary)
-    - [now\_us()](#now_us)
   - [core.args.sh](#coreargssh)
     - [get\_common\_arg()](#get_common_arg)
     - [usage\_if\_requested()](#usage_if_requested)
     - [usage()](#usage-1)
     - [usage\_text()](#usage_text)
-    - [verify\_usage\_text\_args()](#assert_usage_text_args)
+    - [assert\_usage\_text\_args()](#assert_usage_text_args)
   - [\_semver.sh](#_semversh)
     - [print\_semver\_regexes()](#print_semver_regexes)
     - [is\_valid\_minver\_settings()](#is_valid_minver_settings)
@@ -554,8 +555,9 @@ validating each item with a caller-supplied function.
 
 ## _diagnostics.sh
 
-Logging functions (`error`, `warning`, `info`, `trace`, `bug`), the global error/bug counters, and the
-`exit_if_has_errors`/`exit_if_has_bugs` gates.
+The output streams (`tee_*`, `to_summary`), the global error/bug counters, the `exit_if_has_errors`/`exit_if_has_bugs`
+gates, and the `usage` placeholder. The logging functions themselves are in
+[`_diagnostics.messages.sh`](#_diagnosticsmessagessh).
 
 ### tee_stdout() / tee_stderr() / tee_output()
 
@@ -599,6 +601,26 @@ overridden.
 ### exit_if_has_errors()
 
 Exits the script (via `usage`, or directly) if any errors were recorded.
+
+### show_stack()
+
+Prints the current call stack, one line per frame.
+
+### to_summary()
+
+Logs one or more lines under a `## Summary` markdown heading, via `$__summary_output` (glow, if available and not in CI;
+otherwise `tee_stdout`).
+
+### now_us()
+
+Prints the current time in microseconds since the epoch (from `$EPOCHREALTIME`; Bash 5.0+), for measuring elapsed time.
+
+---
+
+## _diagnostics.messages.sh
+
+The logging functions (`error`, `with_error`, `bug`, `warning`, `info`, `trace`), their `exit_*` forms, and `fatal_exit`,
+all built on the internal `__message`.
 
 ### __message()
 
@@ -646,19 +668,6 @@ Logs a trace message to stderr, only when verbose mode is enabled.
 ### warning_var()
 
 Displays a warning about a variable's value and sets that variable to a given default.
-
-### show_stack()
-
-Prints the current call stack, one line per frame.
-
-### to_summary()
-
-Logs one or more lines under a `## Summary` markdown heading, via `$__summary_output` (glow, if available and not in CI;
-otherwise `tee_stdout`).
-
-### now_us()
-
-Prints the current time in microseconds since the epoch (from `$EPOCHREALTIME`; Bash 5.0+), for measuring elapsed time.
 
 ---
 
@@ -1184,30 +1193,31 @@ Outputs a `key=value` pair (kebab-case key) for each named variable to `$GITHUB_
 
 ### Total Functions: 220
 
-| File                  | Functions |
-|-----------------------|----------:|
-| core.sh               |         8 |
-| core.state.sh         |        23 |
-| _error_codes.sh       |         3 |
-| _predicates.sh        |        28 |
-| _predicates.tools.sh  |         7 |
-| _predicates.json.sh   |         4 |
-| _diagnostics.sh       |        26 |
-| core.args.sh          |         4 |
-| _semver.sh            |        19 |
-| _sanitize.sh          |        15 |
-| _dump_vars.sh         |         3 |
-| _user.sh              |         5 |
-| _git.sh               |        12 |
-| _git.gh.sh            |        23 |
-| _git.vm2.sh           |         6 |
-| _xml.sh               |         1 |
-| _dotnet.constants.sh  |         1 |
-| _dotnet.predicates.sh |        11 |
-| _dotnet.args.sh       |         2 |
-| _dotnet.msbuild.sh    |         7 |
-| _dotnet.sh            |         7 |
-| gh_core.sh            |         5 |
+| File                     | Functions |
+|--------------------------|----------:|
+| core.sh                  |         8 |
+| core.state.sh            |        23 |
+| _error_codes.sh          |         3 |
+| _predicates.sh           |        28 |
+| _predicates.tools.sh     |         7 |
+| _predicates.json.sh      |         4 |
+| _diagnostics.sh          |        15 |
+| _diagnostics.messages.sh |        11 |
+| core.args.sh             |         4 |
+| _semver.sh               |        19 |
+| _sanitize.sh             |        15 |
+| _dump_vars.sh            |         3 |
+| _user.sh                 |         5 |
+| _git.sh                  |        12 |
+| _git.gh.sh               |        23 |
+| _git.vm2.sh              |         6 |
+| _xml.sh                  |         1 |
+| _dotnet.constants.sh     |         1 |
+| _dotnet.predicates.sh    |        11 |
+| _dotnet.args.sh          |         2 |
+| _dotnet.msbuild.sh       |         7 |
+| _dotnet.sh               |         7 |
+| gh_core.sh               |         5 |
 
 Counts include internal (`__`-prefixed) helper functions that are not part of the public library surface but are still documented
 in their source files. The `gh_core.sh` overrides of `tee_stdout`/`tee_stderr`/`tee_output` and the `core.args.sh` override of

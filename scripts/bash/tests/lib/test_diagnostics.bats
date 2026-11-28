@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025-2026 Val Melamed
 
-# Characterization tests for scripts/bash/lib/_diagnostics.sh, as it behaves TODAY -- written
+# Characterization tests for scripts/bash/lib/_diagnostics.sh and _diagnostics.messages.sh, as they behave TODAY -- written
 # before the tier-4 predicate/validator convention refactor so the refactor has a safety net.
 
 bats_require_minimum_version 1.5.0

@@ -36,7 +36,7 @@ declare -xri rc_less_than=255                       # akin to -1 in signed integ
 declare -xri err_invalid_arguments=2                # The arguments are invalid: the wrong number of arguments, or values that failed validation.
 declare -xri err_argument_type=3                    # An argument has the wrong type.
 declare -xri err_argument_value=4                   # An argument has an invalid value.
-declare -xri err_invalid_nameref=5                  # An argument is not a valid variable name.
+declare -xri err_invalid_nameref=5                  # An argument does not name a variable or function of the required kind.
 declare -xri err_missing_argument=6                 # A required argument is missing.
 declare -xri err_too_many_arguments=7               # There are more arguments than allowed.
 declare -xri err_unknown_argument=8                 # An argument is not recognized.
@@ -97,7 +97,7 @@ declare -rA __error_messages=(
     [$err_invalid_arguments]="The arguments are invalid: the wrong number of arguments, or values that failed validation."
     [$err_argument_type]="An argument has the wrong type."
     [$err_argument_value]="An argument has an invalid value."
-    [$err_invalid_nameref]="An argument is not a valid variable name."
+    [$err_invalid_nameref]="An argument does not name a variable or function of the required kind."
     [$err_missing_argument]="A required argument is missing."
     [$err_too_many_arguments]="There are more arguments than allowed."
     [$err_unknown_argument]="An argument is not recognized."
@@ -339,7 +339,7 @@ function http_status_to_error_code()
                                                                                                                 "  - the HTTP status code" \
                                                                                                                 "  - the name of the variable that receives the vm2 code"
     [[ ! -v 1 || $1 =~ ^[1-5][0-9]{2}$ ]]                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be an HTTP status code [100, 599] (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a declared variable (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the vm2 code (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __http_error_code=$2

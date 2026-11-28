@@ -138,8 +138,8 @@ function validate_json_array()
                                                                                                                 "  - the name of a variable containing the JSON array" \
                                                                                                                 "  - the default value to use if the variable is unbound or empty, optional" \
                                                                                                                 "  - the name of the function to validate each item in the array, optional"
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a declared variable containing the JSON input (provided '${1-<missing>}')."
-    [[ ! -v 3 ]] || is_function "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a defined item-validation function (provided '${3-<missing>}')."
+    [[ ! -v 1 ]] || { is_variable "$1" && is_mutable "$1"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable variable that holds the JSON input (provided '${1-<missing>}')."
+    [[ ! -v 3 ]] || is_function "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a function that validates each item (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __input=$1

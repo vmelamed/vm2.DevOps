@@ -176,7 +176,7 @@ declare -xA actions_vars_defaults=(
     ["ACTIONS_STEP_DEBUG"]=false
 )
 
-declare -xra actions_vars_order=(
+declare -xa actions_vars_order=(
     "--Build and Pack:"
     "MINVERTAGPREFIX"
     "MINVERDEFAULTPRERELEASEIDENTIFIERS"
@@ -333,9 +333,9 @@ function get_vars_defaults()
                                                                                                                 "  - the name of the indexed array that will receive the variables display order" \
                                                                                                                 "  - the name of the associative array that will receive the names of the variables' validation functions (optional)"
     [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_vars[@]}"                        || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid application name - one of $gh_apps_with_vars_str (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the variables names and their default values (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_indexed_array "$3"                                       || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the variables display order (provided '${3-<missing>}')."
-    [[ ! -v 4 ]] || is_associative_array "$4"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the variables' validation functions (provided '${4-<missing>}')."
+    [[ ! -v 2 ]] || { is_associative_array "$2" && is_mutable "$2"; }           || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable associative array for the default values of the variables (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || { is_indexed_array "$3" && is_mutable "$3"; }               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable indexed array for the display order of the variables (provided '${3-<missing>}')."
+    [[ ! -v 4 ]] || { is_associative_array "$4" && is_mutable "$4"; }           || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4 to name a writable associative array for the names of the variables' validation functions (provided '${4-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -r _app=$1
@@ -500,9 +500,9 @@ function get_secrets_defaults()
                                                                                                                 "  - the name of the indexed array that will receive the secrets display order" \
                                                                                                                 "  - the name of the associative array that will receive the names of the secrets' validation functions (optional)"
     [[ ! -v 1 ]] || is_in "$1" "${gh_apps_with_secrets[@]}"                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid application name as the first argument (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_associative_array "$2"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be a valid associative array name to receive the secrets names and their default values (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_indexed_array "$3"                                       || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be a valid indexed array name to receive the secrets display order (provided '${3-<missing>}')."
-    [[ ! -v 4 ]] || is_associative_array "$4"                                   || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4 to be a valid associative array name to receive the names of the secrets' validation functions (provided '${4-<missing>}')."
+    [[ ! -v 2 ]] || { is_associative_array "$2" && is_mutable "$2"; }           || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable associative array for the default values of the secrets (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || { is_indexed_array "$3" && is_mutable "$3"; }               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable indexed array for the display order of the secrets (provided '${3-<missing>}')."
+    [[ ! -v 4 ]] || { is_associative_array "$4" && is_mutable "$4"; }           || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4 to name a writable associative array for the names of the secrets' validation functions (provided '${4-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -r _app=$1

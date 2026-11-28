@@ -132,9 +132,9 @@ function enter_value()
                                                                                                                 "  - boolean to suppress the echo of the input to the terminal (optional if the rest are not specified, default: false)" \
                                                                                                                 "  - the name of a validation function (optional, default: true)"
     [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the entered value, to be defined (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the entered value (provided '${2-<missing>}')."
     [[ ! -v 4 ]] || is_boolean "$4"                                             || bug "$err_argument_type" "${FUNCNAME[0]}() requires optional argument 4, the secret-input flag, to be 'true' or 'false' (provided '${4-<missing>}')."
-    [[ ! -v 5 ]] || is_function "$5" || is_boolean "$5"                         || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires optional argument 5 to name a defined value validation function (provided '${5-<missing>}')."
+    [[ ! -v 5 ]] || is_function "$5" || [[ $5 == true ]]                        || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires optional argument 5 to name a function that validates the value, or to be 'true' (provided '${5-<missing>}')."
 
     local _default=${3:-}
     local _validate_fn=${5:-true}
@@ -212,7 +212,7 @@ function choose()
                                                                                                                 "  - the name of a variable to store the user's choice" \
                                                                                                                 "  - at least two choices (the first one is the default)"
     [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the prompt, to be non-empty (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2, the name of the variable to store the user's choice, to be defined (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the user's choice (provided '${2-<missing>}')."
 
     local -i _i
     for (( _i=3; _i<=$#; _i++ )); do

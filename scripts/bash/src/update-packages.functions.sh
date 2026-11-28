@@ -85,7 +85,7 @@ function select_upgrade_version()
                                                                                                                 "  - the name of the variable that receives the chosen version" \
                                                                                                                 "  - zero or more candidate versions"
     [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the current version, to be non-empty."
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the chosen version (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _current=$1
@@ -138,7 +138,7 @@ function _props_line_in_section()
                                                                                                                 "  - the line of the file to test" \
                                                                                                                 "  - the name of the variable that tracks whether the current line is inside the shared block"
     [[ ! -v 1 || $1 == shared || $1 == repo ]]                                  || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the section to match, to be 'shared' or 'repo' (provided '${1-<missing>}')."
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a variable that tracks whether the current line is inside the shared block (provided '${3-<missing>}')."
+    [[ ! -v 3 ]] || { is_variable "$3" && is_mutable "$3"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable variable that tracks whether the line is inside the shared block (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     [[ -z ${2-} ]] && return "$negative" # shortcut for empty XML lines
@@ -180,7 +180,7 @@ function read_package_versions()
                                                                                                                 "  - the name of the variable that receives the versions"
     [[ ! -v 1 || -f $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to an existing file (provided '${1-<missing>}')."
     [[ ! -v 2 || $2 == shared || $2 == repo ]]                                  || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be either 'shared' or 'repo' (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_associative_array "$3"                                   || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 3 to be the name of an associative array variable (provided '${3-<missing>}')."
+    [[ ! -v 3 ]] || { is_associative_array "$3" && is_mutable "$3"; }           || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable associative array for the package versions (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _file=$1
@@ -267,7 +267,7 @@ function query_package_versions()
 {
     (( $# == 2 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 2 arguments (provided $#): the package ID and the name of the variable that receives the versions."
     [[ ! -v 1 || -n $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the package ID, to be non-empty."
-    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be the name of a variable (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_indexed_array "$2" && is_mutable "$2"; }               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable indexed array for the versions (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _rc=$success

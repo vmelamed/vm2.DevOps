@@ -58,15 +58,15 @@ declare -xi rc="$success"
 source "$script_dir/setup-repo.args.sh"
 source "$script_dir/setup-repo.usage.sh"
 
-get_arguments "$@"
 # script arguments:
+get_arguments "$@"
 declare -x vm2_repos
 declare -x repo_owner
 declare -x repo_name
 declare -x repo_path
 declare -x default_branch
 declare -x visibility
-declare -x main_protection_rs_name
+declare -x branch_protection_rs_name
 declare -x description
 declare -x use_ssh
 declare -x use_https
@@ -79,6 +79,7 @@ declare -x configure_local
 
 source "$script_dir/setup-repo.defaults.sh"
 source "$script_dir/setup-repo.functions.sh"
+source "$script_dir/setup-repo.configure.sh"
 source "$script_dir/setup-repo.audit.sh"
 
 # script constants
@@ -151,7 +152,7 @@ if has_local_repo repo_state; then
                                                                                     }
             readonly default_branch
 
-            main_protection_rs_name="${main_protection_rs_name:-"$default_branch protection"}"
+            branch_protection_rs_name="${branch_protection_rs_name:-"$default_branch protection"}"
 
             repo_id="${repo_state[$key_gh_repo_id]}"
 
@@ -196,7 +197,7 @@ if $audit; then
 
     initialize_jq_queries
     initialize_gh_paths
-    initialize_main_protection_rs_id || true
+    initialize_branch_protection_rs_id || true
 
     audit_repo
 
@@ -321,7 +322,7 @@ if ! has_remote_repo repo_state; then
     repo_url="${repo_state[$key_git_url]}"
     repo_id="${repo_state[$key_gh_repo_id]}"
     default_branch="${repo_state[$key_default_branch]}"
-    main_protection_rs_name="${main_protection_rs_name:-$default_branch protection}"
+    branch_protection_rs_name="${branch_protection_rs_name:-$default_branch protection}"
 
     info "Repository URL                 => $repo_url"
     info "Repository Id                  => $repo_id"
@@ -375,7 +376,7 @@ fi
 initialize_jq_queries
 initialize_gh_paths
 rc=$success
-initialize_main_protection_rs_id || rc=$?
+initialize_branch_protection_rs_id || rc=$?
 # continue on success or failure (e.g. not found), otherwise exit (e.g. not authorized)
 (( rc == success || rc == failure ))                                            || exit_if_has_errors
 

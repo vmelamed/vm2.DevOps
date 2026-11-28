@@ -117,23 +117,23 @@ _make_vm2_repos() {
 
 @test "parse_arguments: --vm2-repos, --owner, --branch, --visibility, --ruleset-name, and --description set their variables" {
     run _sr "parse_arguments --vm2-repos /some/path --owner acme --branch dev --visibility private --ruleset-name 'main protection' --description 'a repo'
-             declare -p vm2_repos repo_owner default_branch visibility main_protection_rs_name description"
+             declare -p vm2_repos repo_owner default_branch visibility branch_protection_rs_name description"
     assert_success
     assert_output --partial 'vm2_repos="/some/path"'
     assert_output --partial 'repo_owner="acme"'
     assert_output --partial 'default_branch="dev"'
     assert_output --partial 'visibility="private"'
-    assert_output --partial 'main_protection_rs_name="main protection"'
+    assert_output --partial 'branch_protection_rs_name="main protection"'
     assert_output --partial 'description="a repo"'
 }
 
 @test "parse_arguments: -o, -b, and -rs are the short forms of the same options" {
     run _sr "parse_arguments -o acme -b dev -rs 'main protection'
-             declare -p repo_owner default_branch main_protection_rs_name"
+             declare -p repo_owner default_branch branch_protection_rs_name"
     assert_success
     assert_output --partial 'repo_owner="acme"'
     assert_output --partial 'default_branch="dev"'
-    assert_output --partial 'main_protection_rs_name="main protection"'
+    assert_output --partial 'branch_protection_rs_name="main protection"'
 }
 
 @test "parse_arguments: is pure: a non-existent --vm2-repos or project directory is not an error at this stage" {

@@ -39,6 +39,7 @@ source "$lib_dir/_predicates.sh"
 source "$lib_dir/_predicates.tools.sh"
 source "$lib_dir/_predicates.json.sh"
 source "$lib_dir/_diagnostics.sh"
+source "$lib_dir/_diagnostics.messages.sh"
 source "$lib_dir/core.args.sh"
 source "$lib_dir/_semver.sh"
 source "$lib_dir/_sanitize.sh"
@@ -47,6 +48,7 @@ source "$lib_dir/_user.sh"
 source "$lib_dir/_git.sh"
 source "$lib_dir/_git.gh.sh"
 source "$lib_dir/_git.vm2.sh"
+source "$lib_dir/_git.state.sh"
 source "$lib_dir/_xml.sh"
 source "$lib_dir/_dotnet.constants.sh"
 source "$lib_dir/_dotnet.predicates.sh"
@@ -573,7 +575,7 @@ function find_files_by_precedence()
                                                                                                                 "  - name of the array variable to store the found file names" \
                                                                                                                 "  - the file name patterns to search for, in order of precedence"
     [[ ! -v 1 || -d "$1" ]]                                                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a path to a directory, usually the root of a Git working tree (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be the name of an indexed array variable to receive the found file names (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_indexed_array "$2" && is_mutable "$2"; }               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable indexed array for the found file names (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _dir=$1

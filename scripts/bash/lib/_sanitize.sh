@@ -70,7 +70,7 @@ function ltrim()
 function ltrim_var()
 {
     (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to trim the leading spaces of."
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a variable (provided '${1-<missing>}')."
+    [[ ! -v 1 ]] || { is_variable "$1" && is_mutable "$1"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable variable to trim (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __var="$1"
@@ -114,7 +114,7 @@ function rtrim()
 function rtrim_var()
 {
     (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to trim the trailing spaces of."
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a variable (provided '${1-<missing>}')."
+    [[ ! -v 1 ]] || { is_variable "$1" && is_mutable "$1"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable variable to trim (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __var="$1"
@@ -163,7 +163,7 @@ function trim()
 function trim_var()
 {
     (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the variable to trim the leading and trailing spaces of."
-    [[ ! -v 1 ]] || is_variable "$1"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of a variable (provided '${1-<missing>}')."
+    [[ ! -v 1 ]] || { is_variable "$1" && is_mutable "$1"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name a writable variable to trim (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __var="$1"

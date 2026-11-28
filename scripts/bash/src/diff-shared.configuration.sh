@@ -347,7 +347,7 @@ function configure_target_files()
                                                                                                                 "  - the path to the target repository's working tree root directory" \
                                                                                                                 "  - the name of an indexed array that will store the expanded target file paths"
     [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the target repository's working tree root directory, to be an existing directory (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_indexed_array "$2"                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2 to be the name of an indexed array variable (provided '${2-<missing>}')."
+    [[ ! -v 2 ]] || { is_indexed_array "$2" && is_mutable "$2"; }               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable indexed array for the expanded target file paths (provided '${2-<missing>}')."
                                                                                 exit_if_has_bugs
 
     # the name "target_repo_path" is used as a macro variable in the target file paths in the json configuration - do not rename!

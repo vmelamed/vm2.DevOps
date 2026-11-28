@@ -37,10 +37,6 @@ if [[ ! -v lib_dir || -z "$lib_dir" ]]; then
     lib_dir=$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")
 fi
 
-if ! declare -pF "error" > "$noise_sink"; then
-    source "$lib_dir/_diagnostics.sh"
-fi
-
 # Regular expressions that test if a string contains a semantic version:
 declare -x u_letters_set
 declare -x l_letters_set

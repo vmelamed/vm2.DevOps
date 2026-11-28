@@ -75,32 +75,33 @@ Located in **`scripts/bash/lib/`**. The foundation layer sourced by all scripts.
 
     core.sh
      ├── _constants.sh
-     ├── core.state.sh           (quiet/verbose/dry-run/trace state, $ci_system)
-     ├── _error_codes.sh         (error code constants)
-     ├── _predicates.sh          (boolean test functions)
-     ├── _predicates.tools.sh    (tool presence and version checks)
-     ├── _predicates.json.sh     (JSON checks)
-     ├── _diagnostics.sh         (info, warning, error, trace)
-     ├── core.args.sh            (argument parsing, common switches, get_common_arg)
-     ├── _semver.sh              (semver parsing, comparison, tag validation)
-     ├── _sanitize.sh            (input sanitization: is_safe_gh_reason, etc.)
-     ├── _dump_vars.sh           (dump_vars for debugging)
-     ├── _user.sh                (user/identity helpers)
-     ├── _git.sh                 (Git repository helpers)
-     ├── _git.gh.sh              (GitHub helpers: naming rules, repo state, gh retry)
-     ├── _git.vm2.sh             (Git helpers specific to vm2 repos)
-     ├── _xml.sh                 (XML value reading via yq)
-     ├── _dotnet.constants.sh    (dotnet exit codes, build-information keys, values in use)
-     ├── _dotnet.predicates.sh   (configuration, TFM, RID, MinVer, NuGet server validation)
-     ├── _dotnet.args.sh         (shared dotnet CLI argument parsing/defaults)
-     ├── _dotnet.msbuild.sh      (MSBuild properties, build information)
-     └── _dotnet.sh              (.NET SDK helpers)
+     ├── core.state.sh            (quiet/verbose/dry-run/trace state, $ci_system)
+     ├── _error_codes.sh          (error code constants)
+     ├── _predicates.sh           (boolean test functions)
+     ├── _predicates.tools.sh     (tool presence and version checks)
+     ├── _predicates.json.sh      (JSON checks)
+     ├── _diagnostics.sh          (output streams, error/bug counters, exit_if_has_* gates)
+     ├── _diagnostics.messages.sh (info, warning, error, with_error, bug, trace)
+     ├── core.args.sh             (argument parsing, common switches, get_common_arg)
+     ├── _semver.sh               (semver parsing, comparison, tag validation)
+     ├── _sanitize.sh             (input sanitization: is_safe_gh_reason, etc.)
+     ├── _dump_vars.sh            (dump_vars for debugging)
+     ├── _user.sh                 (user/identity helpers)
+     ├── _git.sh                  (Git repository helpers)
+     ├── _git.gh.sh               (GitHub helpers: naming rules, repo state, gh retry)
+     ├── _git.vm2.sh              (Git helpers specific to vm2 repos)
+     ├── _xml.sh                  (XML value reading via yq)
+     ├── _dotnet.constants.sh     (dotnet exit codes, build-information keys, values in use)
+     ├── _dotnet.predicates.sh    (configuration, TFM, RID, MinVer, NuGet server validation)
+     ├── _dotnet.args.sh          (shared dotnet CLI argument parsing/defaults)
+     ├── _dotnet.msbuild.sh       (MSBuild properties, build information)
+     └── _dotnet.sh               (.NET SDK helpers)
 
 `gh_core.sh` only sources `core.sh` on top of that — it no longer adds any extra component modules — and then layers
 a handful of GitHub Actions–specific functions:
 
     gh_core.sh
-     └── core.sh            (everything above)
+     └── core.sh                  (everything above)
 
 See [FUNCTIONS_REFERENCE.md](../scripts/bash/lib/FUNCTIONS_REFERENCE.md) for the full list of library functions (the
 library has grown past the `.gitmessage`/CLAUDE.md-era count of 67; see that document for the current total).

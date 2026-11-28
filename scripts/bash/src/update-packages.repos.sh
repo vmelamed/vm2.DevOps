@@ -45,8 +45,8 @@ function classify_repo()
                                                                                                                 "  - the mode" \
                                                                                                                 "  - the reason"
     [[ ! -v 1 || -d "$1" ]]                                                     || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')."
-    [[ ! -v 2 ]] || is_variable "$2"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to be a valid variable name (provided '${2-<missing>}')."
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be a valid variable name (provided '${3-<missing>}')."
+    [[ ! -v 2 ]] || { is_variable "$2" && is_mutable "$2"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 2 to name a writable variable for the update mode (provided '${2-<missing>}')."
+    [[ ! -v 3 ]] || { is_variable "$3" && is_mutable "$3"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable variable for the reason for the mode (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _repo=$1
@@ -180,7 +180,7 @@ function update_section_versions()
     [[ ! -v 1 || -f $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1, the path of the file to be updated, to be a path to an existing file (provided '${1-<missing>}')."
     [[ ! -v 2 || $2 == shared || $2 == repo ]]                                  || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the section of the file to update, to be 'shared' or 'repo' (provided '${2-<missing>}')."
     [[ ! -v 3 || -n $3 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 3, the label, to be non-empty."
-    [[ ! -v 4 ]] || is_indexed_array "$4"                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 4 to be the name of an indexed array variable (provided '${4-<missing>}')."
+    [[ ! -v 4 ]] || { is_indexed_array "$4" && is_mutable "$4"; }               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 4 to name a writable indexed array for the summary rows (provided '${4-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _file=$1
@@ -308,7 +308,7 @@ function open_pull_request()
                                                                                                                 "  - the URL output."
     [[ ! -v 1 || -d $1 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 1 to be a valid repository path (provided '${1-<missing>}')."
     [[ ! -v 2 || -n $2 ]]                                                       || bug "$err_argument_value" "${FUNCNAME[0]}() requires argument 2, the branch name, to be non-empty."
-    [[ ! -v 3 ]] || is_variable "$3"                                            || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to be the name of a variable (provided '${3-<missing>}')."
+    [[ ! -v 3 ]] || { is_variable "$3" && is_mutable "$3"; }                    || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 3 to name a writable variable for the URL of the pull request (provided '${3-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local _repo=$1 _branch=$2

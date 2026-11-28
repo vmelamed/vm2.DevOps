@@ -10,7 +10,6 @@
 # values, e.g. array.
 #-----------------------------------------------------------------------------------------------
 
-# Circular include guard
 (( ${__VM2_LIB_PREDICATES_SH_LOADED:-0} == 1 )) && return 0
 declare -ri __VM2_LIB_PREDICATES_SH_LOADED=1
 
@@ -126,6 +125,38 @@ function is_variable()
 }
 
 #-----------------------------------------------------------------------------------------------
+# @description Tests if the specified variable is mutable.
+#
+# @arg $1 string variable_name - name of the variable to test
+#
+# @exitcode positive=0: the variable is mutable (is writable)
+# @exitcode negative=1: the variable is readonly
+#
+# @example
+#   if is_mutable MY_VAR; then MY_VAR=42; fi
+#-----------------------------------------------------------------------------------------------
+function is_mutable()
+{
+    (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires argument 1 to be the name of the variable to test (provided $#)."
+                                                                                exit_if_has_bugs
+
+    is_variable_name "$1"                                                       || return "$negative"
+
+    local -i _rc=$negative
+    local _decl
+
+    begin_scope
+    set_case_sensitive
+
+    _decl=$(declare -p "$1" 2>"$noise_sink") &&
+    [[ $_decl =~ ^declare\ -[-aAilntux]+\ .*$ ]] && _rc="$positive" || _rc="$negative"
+
+    end_scope
+
+    return "$_rc"
+}
+
+#-----------------------------------------------------------------------------------------------
 # @description Tests if a variable is defined and if it is an indexed array.
 #
 # @arg $1 string variable_name - name of the array variable to test
@@ -135,7 +166,7 @@ function is_variable()
 #
 # @example
 #   declare -a MY_ARRAY=(aaa bbb ccc)
-#   if is_indexed_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
+#   if is_indexed_array MY_ARRAY; then echo "MY_ARRAY is defined indexed array"; fi
 #-----------------------------------------------------------------------------------------------
 function is_indexed_array()
 {
@@ -150,7 +181,8 @@ function is_indexed_array()
     begin_scope
     set_case_sensitive
 
-    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -a ]]    || _rc="$negative"
+    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -[A-Zb-z]*a ]] \
+                                                                                || _rc="$negative"
 
     end_scope
 
@@ -167,7 +199,7 @@ function is_indexed_array()
 #
 # @example
 #   declare -A MY_ARRAY=([aaa]=aaa [bbb]=bbb [ccc]=ccc)
-#   if is_associative_array MY_ARRAY; then echo "MY_ARRAY is defined"; fi
+#   if is_associative_array MY_ARRAY; then echo "MY_ARRAY is defined associative array"; fi
 #-----------------------------------------------------------------------------------------------
 function is_associative_array()
 {
@@ -182,7 +214,8 @@ function is_associative_array()
     begin_scope
     set_case_sensitive
 
-    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -A ]]    || _rc="$negative"
+    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -[B-Za-z]*A ]] \
+                                                                                || _rc="$negative"
 
     end_scope
 
@@ -217,7 +250,8 @@ function is_array()
     local _decl
 
      # -a or -A case insensitive!
-    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -a ]]    || _rc="$negative"
+    _decl=$(declare -p "$1" 2>"$noise_sink") && [[ $_decl =~ ^declare\ -[b-z]*a ]] \
+                                                                                || _rc="$negative"
 
     end_scope
 
@@ -239,7 +273,7 @@ function is_empty_array()
 {
 
     (( $# == 1 ))                                                               || bug "$err_invalid_arguments" "${FUNCNAME[0]}() requires 1 argument (provided $#): the name of the array variable to test."
-    [[ ! -v 1 ]] || is_array "$1"                                               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to be the name of an indexed or an associative array variable (provided '${1-<missing>}')."
+    [[ ! -v 1 ]] || is_array "$1"                                               || bug "$err_invalid_nameref" "${FUNCNAME[0]}() requires argument 1 to name an indexed or an associative array (provided '${1-<missing>}')."
                                                                                 exit_if_has_bugs
 
     local -n __array="$1"
