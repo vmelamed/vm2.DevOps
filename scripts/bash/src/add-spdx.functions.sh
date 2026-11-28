@@ -182,7 +182,7 @@ function process_file()
             add_spdx_yaml_file "$_file" "$_temp_file"                           || _rc=$?
             ;;
         *            )
-            exit_with_bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be an existing writable file with one of the suffixes: .cs, .sh, .bats, .yaml, or .yml (provided '$_file')." -ec "$err_logic_error"
+            exit_with_bug "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be an existing writable file with one of the suffixes: .cs, .sh, .bats, .yaml, or .yml (provided '$_file')." "${FUNCNAME[0]}() requires argument 1, the file to add an SPDX header to, to be an existing writable file with one of the suffixes: .cs, .sh, .bats, .yaml, or .yml (provided '$_file')."
             ;;
     esac
     (( _rc == success ))                                                        || with_error _rc "$err_io_failure" "Failed to write the new contents of '$_rel'.";

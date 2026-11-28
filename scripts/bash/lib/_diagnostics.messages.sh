@@ -456,7 +456,7 @@ function bug()
 # @example
 #   exit_with_bug "$err_logic_error" "The case for '$_kind' is not implemented."
 # @example
-#   exit_with_bug --no-stack "Invalid file specified." -ec "$err_not_file"   # the form before the leading code
+#   exit_with_bug --no-stack "Invalid file specified." --no-stack "Invalid file specified."   # the form before the leading code
 #-----------------------------------------------------------------------------------------------
 function exit_with_bug()
 {
